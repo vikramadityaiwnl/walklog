@@ -18,7 +18,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#F8F6F1",
+        "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/icon.png"
       },
       "predictiveBackGestureEnabled": false,
@@ -31,7 +31,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#F8F6F1",
+          "backgroundColor": "#FFFFFF",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 160
         }
@@ -56,6 +56,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/67a78fc3-8f0e-4c11-b3d4-35138f05e68c",
+      "checkAutomatically": "ON_ERROR_RECOVERY"
     },
     "extra": {
       "eas": {

@@ -1,5 +1,6 @@
 import { getApp } from "@react-native-firebase/app";
 import { Platform, TurboModuleRegistry, type TurboModule } from "react-native";
+import { useAppCheckStore } from "../store/app-check-store";
 
 interface AppCheckNativeModule extends TurboModule {
   configureProvider(
@@ -34,9 +35,13 @@ export function initializeAppCheck(): Promise<void> {
 
       await appCheck.configureProvider(app.name, provider, debugToken ?? null);
       appCheck.setTokenAutoRefreshEnabled(app.name, true);
+
+      useAppCheckStore.getState().setAppCheck("ready");
     })().catch((error: unknown) => {
       initialization = undefined;
-      throw error;
+
+      console.warn("Firebase App Check initialization failed:", error);
+      useAppCheckStore.getState().setAppCheck("error");
     });
   }
 

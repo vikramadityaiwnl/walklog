@@ -3,6 +3,7 @@ import {
   StyleSheet,
   type GestureResponderEvent,
 } from "react-native";
+import { colors } from "../theme";
 import { AppText } from "./app-text";
 
 interface Props {
@@ -32,11 +33,11 @@ export function AppButton(props: Props) {
 const styles = StyleSheet.create({
   button: {
     alignItems: "center",
-    backgroundColor: "#A6532D",
+    backgroundColor: colors.accent,
     borderRadius: 8,
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
   dimmed: { opacity: 0.6 },
-  label: { color: "#FFFFFF" },
+  label: { color: colors.onAccent },
 });

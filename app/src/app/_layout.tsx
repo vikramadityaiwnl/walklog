@@ -7,14 +7,12 @@ import { Manrope_400Regular } from "@expo-google-fonts/manrope/400Regular";
 import { Manrope_500Medium } from "@expo-google-fonts/manrope/500Medium";
 import { Manrope_600SemiBold } from "@expo-google-fonts/manrope/600SemiBold";
 import { Manrope_700Bold } from "@expo-google-fonts/manrope/700Bold";
-import { getAuth, onAuthStateChanged } from "@react-native-firebase/auth";
 import { useFonts } from "expo-font";
-import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
-import { AppText } from "../components/app-text";
-import { AppButton } from "../components/app-button";
-import { initializeAppCheck } from "../services/app-check";
+import { useAppCheckStore } from "../store/app-check-store";
 import { useAuthStore } from "../store/auth-store";
+import { useUpdateStore } from "../store/update-store";
+import { colors } from "../theme";
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -29,74 +27,61 @@ export default function RootLayout() {
   });
 
   const auth = useAuthStore((state) => state.auth);
-  const setAuth = useAuthStore((state) => state.setAuth);
-  const [appCheck, setAppCheck] = useState<"initializing" | "ready" | "error">(
-    "initializing",
-  );
+  const appCheck = useAppCheckStore((state) => state.appCheck);
+  const updateStatus = useUpdateStore((state) => state.status);
 
-  useEffect(() => {
-    try {
-      return onAuthStateChanged(getAuth(), (user) => {
-        setAuth({ status: "ready", user });
-      });
-    } catch (error) {
-      console.warn("Firebase authentication initialization failed:", error);
-      setAuth({ status: "error" });
-    }
-  }, [setAuth]);
-
-  useEffect(() => {
-    if (appCheck !== "initializing") return;
-
-    let active = true;
-
-    void initializeAppCheck().then(
-      () => {
-        if (active) setAppCheck("ready");
-      },
-      (error: unknown) => {
-        console.warn("Firebase App Check initialization failed:", error);
-        if (active) setAppCheck("error");
-      },
-    );
-
-    return () => {
-      active = false;
-    };
-  }, [appCheck]);
-
-  if (
-    (!fontsLoaded && !fontError) ||
-    appCheck === "initializing" ||
-    auth.status === "loading"
-  ) {
+  if (!fontsLoaded && !fontError) {
     return (
       <View style={styles.container}>
         <ActivityIndicator
-          color="#292D2C"
+          color={colors.foreground}
           accessibilityLabel="Starting walklog"
         />
       </View>
     );
   }
 
-  if (appCheck === "error" || auth.status === "error") {
-    return (
-      <View style={styles.container}>
-        <AppText>walklog could not finish starting.</AppText>
-        {appCheck === "error" && auth.status !== "error" ? (
-          <AppButton
-            title="Try again"
-            onPress={() => setAppCheck("initializing")}
-          />
-        ) : null}
-      </View>
-    );
-  }
-
   return (
-    <Stack>
-      <Stack.Screen name="(protected)" options={{ headerShown: false }} />
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Protected
+        guard={
+          updateStatus === "ready" &&
+          auth.status === "ready" &&
+          appCheck === "error"
+        }
+      >
+        <Stack.Screen name="invalid-app" />
+      </Stack.Protected>
+
+      <Stack.Protected
+        guard={
+          updateStatus === "checking" ||
+          auth.status === "loading" ||
+          appCheck !== "error"
+        }
+      >
+        <Stack.Screen name="index" />
+
+        <Stack.Protected
+          guard={
+            updateStatus === "ready" && auth.status === "ready" && !auth.user
+          }
+        >
+          <Stack.Screen name="auth" />
+        </Stack.Protected>
+
+        <Stack.Protected
+          guard={
+            updateStatus === "ready" && auth.status === "ready" && !!auth.user
+          }
+        >
+          <Stack.Screen name="(protected)/(tabs)" />
+
+          <Stack.Screen name="(protected)/ai-playground" />
+
+          <Stack.Screen name="(protected)/reminders" />
+        </Stack.Protected>
+      </Stack.Protected>
     </Stack>
   );
 }
@@ -104,7 +89,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
-    backgroundColor: "#F8F6F1",
+    backgroundColor: colors.background,
     flex: 1,
     justifyContent: "center",
     padding: 24,
