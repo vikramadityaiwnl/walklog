@@ -44,7 +44,10 @@
           }
         }
       ],
-      "@react-native-firebase/app-check"
+      "@react-native-firebase/app-check",
+      "@react-native-firebase/auth",
+      "@react-native-google-signin/google-signin",
+      "./plugins/with-firebase-bom"
     ],
     "experiments": {
       "typedRoutes": true,
