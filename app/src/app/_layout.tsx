@@ -11,6 +11,7 @@ import { useFonts } from "expo-font";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useAppCheckStore } from "../store/app-check-store";
 import { useAuthStore } from "../store/auth-store";
+import { useUpdateStore } from "../store/update-store";
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -26,6 +27,7 @@ export default function RootLayout() {
 
   const auth = useAuthStore((state) => state.auth);
   const appCheck = useAppCheckStore((state) => state.appCheck);
+  const updateStatus = useUpdateStore((state) => state.status);
 
   if (!fontsLoaded && !fontError) {
     return (
@@ -40,18 +42,38 @@ export default function RootLayout() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={appCheck === "error"}>
+      <Stack.Protected
+        guard={
+          updateStatus === "ready" &&
+          auth.status === "ready" &&
+          appCheck === "error"
+        }
+      >
         <Stack.Screen name="invalid-app" />
       </Stack.Protected>
 
-      <Stack.Protected guard={appCheck !== "error"}>
+      <Stack.Protected
+        guard={
+          updateStatus === "checking" ||
+          auth.status === "loading" ||
+          appCheck !== "error"
+        }
+      >
         <Stack.Screen name="index" />
 
-        <Stack.Protected guard={auth.status === "ready" && !auth.user}>
+        <Stack.Protected
+          guard={
+            updateStatus === "ready" && auth.status === "ready" && !auth.user
+          }
+        >
           <Stack.Screen name="auth" />
         </Stack.Protected>
 
-        <Stack.Protected guard={auth.status === "ready" && !!auth.user}>
+        <Stack.Protected
+          guard={
+            updateStatus === "ready" && auth.status === "ready" && !!auth.user
+          }
+        >
           <Stack.Screen name="(protected)/home" />
 
           <Stack.Screen name="(protected)/ai-playground" />

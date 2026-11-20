@@ -57,6 +57,13 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/67a78fc3-8f0e-4c11-b3d4-35138f05e68c",
+      "checkAutomatically": "ON_ERROR_RECOVERY"
+    },
     "extra": {
       "eas": {
         "projectId": "67a78fc3-8f0e-4c11-b3d4-35138f05e68c"

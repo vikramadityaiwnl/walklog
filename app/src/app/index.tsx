@@ -3,20 +3,25 @@ import { useEffect } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { initializeAppCheck } from "../services/app-check";
 import { initializeAuth } from "../services/auth";
+import { initializeUpdates } from "../services/updates";
 import { useAppCheckStore } from "../store/app-check-store";
 import { useAuthStore } from "../store/auth-store";
+import { useUpdateStore } from "../store/update-store";
 
 export default function Index() {
   const auth = useAuthStore((state) => state.auth);
   const appCheck = useAppCheckStore((state) => state.appCheck);
+  const updateStatus = useUpdateStore((state) => state.status);
 
   useEffect(() => {
+    void initializeUpdates();
+
     if (appCheck === "initializing") void initializeAppCheck();
 
     initializeAuth();
   }, [appCheck]);
 
-  if (auth.status === "loading") {
+  if (updateStatus === "checking" || auth.status === "loading") {
     return (
       <View style={styles.container}>
         <ActivityIndicator
