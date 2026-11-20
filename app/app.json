@@ -3,6 +3,7 @@
     "name": "walklog",
     "slug": "walklog",
     "version": "0.0.1",
+    "platforms": ["ios", "android"],
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "walklog",
@@ -22,10 +23,6 @@
       "predictiveBackGestureEnabled": false,
       "googleServicesFile": "./google-services.json",
       "package": "com.thevikramaditya.walklog"
-    },
-    "web": {
-      "output": "server",
-      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "expo-router",
@@ -50,11 +47,6 @@
       "reactCompiler": true
     },
     "extra": {
-      "router": {
-        "asyncRoutes": {
-          "web": true
-        }
-      },
       "eas": {
         "projectId": "67a78fc3-8f0e-4c11-b3d4-35138f05e68c"
       }
