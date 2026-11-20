@@ -1,0 +1,24 @@
+diff --git a/node_modules/@react-native-firebase/app-check/ios/RNFBAppCheck/RNFBAppCheckProvider.m b/node_modules/@react-native-firebase/app-check/ios/RNFBAppCheck/RNFBAppCheckProvider.m
+index c32e265..ec178c1 100644
+--- a/node_modules/@react-native-firebase/app-check/ios/RNFBAppCheck/RNFBAppCheckProvider.m
++++ b/node_modules/@react-native-firebase/app-check/ios/RNFBAppCheck/RNFBAppCheckProvider.m
+@@ -16,6 +16,7 @@
+  */
+ #import "RNFBAppCheckProvider.h"
+ #import "RNFBApp/RNFBSharedUtils.h"
++#import <GoogleUtilities/GULUserDefaults.h>
+ 
+ NSString *const kRNFBAppCheckProviderNotReadyMessage =
+     @"App Check provider is not ready. Call initializeAppCheck before requesting tokens.";
+@@ -45,7 +46,10 @@ NSString *const kRNFBAppCheckProviderNotReadyMessage =
+     // The firebase-ios-sdk debug app check provider will take a token from environment if it
+     // exists:
+     if (debugToken != nil) {
+-      // We have a debug token, so just need to stuff it in the environment and it will hook up
++      // Firebase snapshots the process environment at launch, before JS configures App Check.
++      // Seed the debug provider's persisted token directly so the configured token is used.
++      [[GULUserDefaults standardUserDefaults] setObject:debugToken forKey:@"GACAppCheckDebugToken"];
++
+       char *key = "FIRAAppCheckDebugToken", *value = (char *)[debugToken UTF8String];
+       int overwrite = 1;
+       setenv(key, value, overwrite);
