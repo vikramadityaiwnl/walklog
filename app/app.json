@@ -41,13 +41,17 @@
         {
           "ios": {
             "useFrameworks": "dynamic"
+          },
+          "android": {
+            "minSdkVersion": 26
           }
         }
       ],
       "@react-native-firebase/app-check",
       "@react-native-firebase/auth",
       "@react-native-google-signin/google-signin",
-      "./plugins/with-firebase-bom"
+      "./plugins/with-firebase-bom",
+      "./plugins/with-firebase-ios-version"
     ],
     "experiments": {
       "typedRoutes": true,

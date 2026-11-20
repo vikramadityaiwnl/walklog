@@ -7,5 +7,9 @@ export default function ProtectedLayout() {
   if (auth.status !== "ready") return null;
   if (!auth.user) return <Redirect href="/auth" />;
 
-  return <Stack />;
+  return (
+    <Stack>
+      <Stack.Screen name="ai-playground" options={{ title: "AI playground" }} />
+    </Stack>
+  );
 }

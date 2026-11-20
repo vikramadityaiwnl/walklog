@@ -94,7 +94,11 @@ export default function RootLayout() {
     );
   }
 
-  return <Stack />;
+  return (
+    <Stack>
+      <Stack.Screen name="(protected)" options={{ headerShown: false }} />
+    </Stack>
+  );
 }
 
 const styles = StyleSheet.create({

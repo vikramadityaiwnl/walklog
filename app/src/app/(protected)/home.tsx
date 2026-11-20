@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { router } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { AppButton } from "../../components/app-button";
 import { AppText } from "../../components/app-text";
@@ -37,6 +38,10 @@ export default function ProtectedHome() {
         {auth.user.displayName ?? "Name unavailable"}
       </AppText>
       <AppText>{auth.user.email ?? "Email unavailable"}</AppText>
+      <AppButton
+        title="AI playground"
+        onPress={() => router.push("/(protected)/ai-playground")}
+      />
       <AppButton
         title="Sign out"
         disabled={signingOut.status === "loading"}
