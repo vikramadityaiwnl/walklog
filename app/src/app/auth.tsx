@@ -5,6 +5,7 @@ import { AppButton } from "../components/app-button";
 import { AppText } from "../components/app-text";
 import { signInWithGoogle } from "../services/google-sign-in";
 import { useAuthStore } from "../store/auth-store";
+import { colors } from "../theme";
 
 type SignInState =
   | { status: "idle" }
@@ -49,5 +50,10 @@ export default function AuthScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 24 },
+  container: {
+    backgroundColor: colors.background,
+    flex: 1,
+    justifyContent: "center",
+    padding: 24,
+  },
 });

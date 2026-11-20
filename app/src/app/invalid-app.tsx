@@ -4,6 +4,7 @@ import { AppButton } from "../components/app-button";
 import { AppText } from "../components/app-text";
 import { initializeAppCheck } from "../services/app-check";
 import { useAppCheckStore } from "../store/app-check-store";
+import { colors } from "../theme";
 
 export default function InvalidApp() {
   const setAppCheck = useAppCheckStore((state) => state.setAppCheck);
@@ -38,7 +39,11 @@ export default function InvalidApp() {
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: "#F8F6F1", flex: 1, paddingHorizontal: 24 },
+  container: {
+    backgroundColor: colors.background,
+    flex: 1,
+    paddingHorizontal: 24,
+  },
   content: {
     alignItems: "center",
     flex: 1,
@@ -46,17 +51,17 @@ const styles = StyleSheet.create({
   },
   icon: {
     alignItems: "center",
-    backgroundColor: "#F4E4D7",
+    backgroundColor: colors.accentSoft,
     borderRadius: 40,
     height: 80,
     justifyContent: "center",
     marginBottom: 28,
     width: 80,
   },
-  iconText: { color: "#AD4B1C", fontSize: 42 },
+  iconText: { color: colors.accent, fontSize: 42 },
   title: { fontSize: 28, lineHeight: 36, textAlign: "center" },
   description: {
-    color: "#5D605C",
+    color: colors.muted,
     lineHeight: 24,
     marginTop: 16,
     textAlign: "center",

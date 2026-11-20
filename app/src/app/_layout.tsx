@@ -12,6 +12,7 @@ import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useAppCheckStore } from "../store/app-check-store";
 import { useAuthStore } from "../store/auth-store";
 import { useUpdateStore } from "../store/update-store";
+import { colors } from "../theme";
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -33,7 +34,7 @@ export default function RootLayout() {
     return (
       <View style={styles.container}>
         <ActivityIndicator
-          color="#292D2C"
+          color={colors.foreground}
           accessibilityLabel="Starting walklog"
         />
       </View>
@@ -86,7 +87,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
-    backgroundColor: "#F8F6F1",
+    backgroundColor: colors.background,
     flex: 1,
     justifyContent: "center",
     padding: 24,

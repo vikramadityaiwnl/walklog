@@ -6,6 +6,7 @@ import { AppText } from "../../../components/app-text";
 import { Avatar } from "../../../components/avatar";
 import { signOutUser } from "../../../services/google-sign-in";
 import { useAuthStore } from "../../../store/auth-store";
+import { colors } from "../../../theme";
 
 type SignOutState =
   | { status: "idle" }
@@ -55,6 +56,11 @@ export default function Profile() {
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: "#F8F6F1", flex: 1, gap: 20, padding: 24 },
+  container: {
+    backgroundColor: colors.background,
+    flex: 1,
+    gap: 20,
+    padding: 24,
+  },
   details: { gap: 4 },
 });

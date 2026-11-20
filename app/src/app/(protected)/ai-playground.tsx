@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { AppButton } from "../../components/app-button";
 import { AppText } from "../../components/app-text";
+import { colors } from "../../theme";
 import {
   checkModelAvailability,
   downloadModel,
@@ -178,20 +179,28 @@ export default function AiPlayground() {
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: "#F8F6F1", flexGrow: 1, gap: 14, padding: 24 },
+  container: {
+    backgroundColor: colors.background,
+    flexGrow: 1,
+    gap: 14,
+    padding: 24,
+  },
   modes: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   mode: {
-    borderColor: "#292D2C",
+    borderColor: colors.foreground,
     borderRadius: 8,
     borderWidth: 1,
     padding: 10,
   },
-  selected: { backgroundColor: "#EBD8CD", borderColor: "#A6532D" },
+  selected: {
+    backgroundColor: colors.accentSelected,
+    borderColor: colors.accent,
+  },
   input: {
-    borderColor: "#292D2C",
+    borderColor: colors.foreground,
     borderRadius: 8,
     borderWidth: 1,
-    color: "#292D2C",
+    color: colors.foreground,
     fontFamily: "DMSans_400Regular",
     minHeight: 120,
     padding: 12,

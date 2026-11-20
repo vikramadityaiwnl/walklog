@@ -1,4 +1,5 @@
 import { StyleSheet, View } from "react-native";
+import { colors } from "../theme";
 import { AppText } from "./app-text";
 
 interface Props {
@@ -27,11 +28,11 @@ export function Avatar(props: Props) {
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
-    backgroundColor: "#A6532D",
+    backgroundColor: colors.accent,
     borderRadius: 36,
     height: 72,
     justifyContent: "center",
     width: 72,
   },
-  initials: { color: "#FFFFFF" },
+  initials: { color: colors.onAccent },
 });

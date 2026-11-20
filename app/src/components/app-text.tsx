@@ -1,4 +1,5 @@
 import { StyleSheet, Text, type TextProps } from "react-native";
+import { colors } from "../theme";
 
 type TextVariant = "title" | "body";
 type TextWeight = "regular" | "medium" | "semibold" | "bold";
@@ -42,6 +43,6 @@ export function AppText(props: Props) {
 }
 
 const styles = StyleSheet.create({
-  title: { color: "#292D2C", fontSize: 28 },
-  body: { color: "#292D2C", fontSize: 16 },
+  title: { color: colors.foreground, fontSize: 28 },
+  body: { color: colors.foreground, fontSize: 16 },
 });
