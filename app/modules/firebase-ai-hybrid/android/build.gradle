@@ -1,0 +1,11 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+group = 'expo.modules.firebaseaihybrid'
+version = '1.0.0'
+android { namespace "expo.modules.firebaseaihybrid" }
+dependencies {
+  implementation 'com.google.firebase:firebase-ai:18.1.0'
+  implementation 'com.google.firebase:firebase-ai-ondevice:16.0.0-beta07'
+}

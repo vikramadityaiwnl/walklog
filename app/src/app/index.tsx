@@ -1,17 +1,10 @@
-import { Text, View, StyleSheet } from "react-native";
+import { Redirect } from "expo-router";
+import { useAuthStore } from "../store/auth-store";
 
 export default function Index() {
-  return (
-    <View style={styles.container}>
-      <Text>Edit src/app/index.tsx to edit this screen.</Text>
-    </View>
-  );
-}
+  const auth = useAuthStore((state) => state.auth);
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
+  if (auth.status !== "ready") return null;
+
+  return <Redirect href={auth.user ? "/(protected)/home" : "/auth"} />;
+}

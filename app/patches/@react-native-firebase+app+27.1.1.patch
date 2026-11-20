@@ -1,0 +1,94 @@
+diff --git a/node_modules/@react-native-firebase/app/firebase_spm.rb b/node_modules/@react-native-firebase/app/firebase_spm.rb
+index 7425f87..e883d1f 100644
+--- a/node_modules/@react-native-firebase/app/firebase_spm.rb
++++ b/node_modules/@react-native-firebase/app/firebase_spm.rb
+@@ -367,10 +367,6 @@ def rnfirebase_spm_embed_script
+         framework_name="$(basename "${framework}")"
+         destination="${app_frameworks_dir}/${framework_name}"
+ 
+-        if [ -e "${destination}" ]; then
+-          continue
+-        fi
+-
+         # Xcode's Archive action writes EVERY SKIP_INSTALL=YES product into
+         # ${OBJROOT}/UninstalledProducts/${PLATFORM_NAME} -- not just Swift
+         # Package products. With CocoaPods + `use_frameworks!` (required for
+@@ -400,6 +396,78 @@ def rnfirebase_spm_embed_script
+           continue
+         fi
+ 
++    # React Native's SPM integration can stage the same Firebase product
++    # twice: once under its normal framework name for the app target, and
++    # once with a _PackageProduct suffix for a CocoaPods target. iOS refuses
++    # to install an app containing both bundles because their bundle IDs are
++    # identical. Inspect the application and RNFB binaries before selecting
++    # the name: recent Firebase releases may link the PackageProduct name.
++    alias_linked=0
++    for peer_framework in "${source_dir}"/*.framework "${app_frameworks_dir}"/*.framework; do
++      [ -d "${peer_framework}" ] || continue
++      peer_name="$(basename "${peer_framework}")"
++      if [[ "${framework_name}" == *_PackageProduct.framework && "${peer_name}" != *_PackageProduct.framework ]]; then
++        alias_name="${framework_name}"
++        normal_name="${peer_name}"
++      elif [[ "${framework_name}" != *_PackageProduct.framework && "${peer_name}" == *_PackageProduct.framework ]]; then
++        alias_name="${peer_name}"
++        normal_name="${framework_name}"
++      else
++        continue
++      fi
++      bundle_identifier="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "${framework}/Info.plist" 2>/dev/null || true)"
++      peer_bundle_identifier="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "${peer_framework}/Info.plist" 2>/dev/null || true)"
++      [[ -n "${bundle_identifier}" && "${bundle_identifier}" == "${peer_bundle_identifier}" ]] || continue
++      alias_linked=0
++      normal_linked=0
++      for consumer in "${TARGET_BUILD_DIR}/${EXECUTABLE_PATH}" "${TARGET_BUILD_DIR}/${PRODUCT_NAME}.app/${PRODUCT_NAME}.debug.dylib" "${BUILT_PRODUCTS_DIR}"/RNFB*/*.framework/RNFB*; do
++        [ -f "${consumer}" ] || continue
++        dependencies="$(otool -L "${consumer}" 2>/dev/null || true)"
++        [[ "${dependencies}" == *"@rpath/${alias_name}/"* ]] && alias_linked=1
++        [[ "${dependencies}" == *"@rpath/${normal_name}/"* ]] && normal_linked=1
++      done
++      if [[ "${alias_linked}" == 1 && "${normal_linked}" == 1 ]]; then
++        echo "error: Both ${alias_name} and ${normal_name} are linked; resolve the duplicate Firebase dependencies."
++        exit 1
++      fi
++      if [[ "${alias_linked}" == 1 && "${framework_name}" == "${normal_name}" ]]; then
++        rm -rf "${destination}"
++        echo "Skipping ${framework_name}: linked Firebase product is ${alias_name}"
++        continue 2
++      fi
++      if [[ "${alias_linked}" == 1 && "${framework_name}" == "${alias_name}" ]]; then
++        rm -rf "${app_frameworks_dir}/${normal_name}"
++        break
++      fi
++    done
++    if [[ "${framework_name}" == *_PackageProduct.framework && "${alias_linked}" != 1 ]]; then
++      bundle_identifier="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "${framework}/Info.plist" 2>/dev/null || true)"
++      if [[ -n "${bundle_identifier}" ]]; then
++        duplicate_found=0
++        for peer_framework in "${source_dir}"/*.framework "${app_frameworks_dir}"/*.framework; do
++          [ -d "${peer_framework}" ] || continue
++          peer_name="$(basename "${peer_framework}")"
++          [[ "${peer_name}" == *_PackageProduct.framework ]] && continue
++          peer_bundle_identifier="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "${peer_framework}/Info.plist" 2>/dev/null || true)"
++          if [[ "${peer_bundle_identifier}" == "${bundle_identifier}" ]]; then
++            duplicate_found=1
++            break
++          fi
++        done
++        if [[ "${duplicate_found}" == "1" ]]; then
++          if [ -e "${destination}" ]; then
++            rm -rf "${destination}"
++          fi
++          echo "Skipping ${framework_name}: normal framework with the same bundle identifier is present"
++          continue
++        fi
++      fi
++    fi
++
++        if [ -e "${destination}" ]; then
++          continue
++        fi
++
+         echo "Embedding Firebase SPM framework ${framework_name} (from ${source_dir})"
+         rsync -av --delete \
+           --filter "- Headers" \
