@@ -9,6 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "bundleIdentifier": "com.thevikramaditya.walklog"
     },
     "android": {
@@ -19,6 +20,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
+      "googleServicesFile": "./google-services.json",
       "package": "com.thevikramaditya.walklog"
     },
     "web": {
@@ -27,12 +29,19 @@
     },
     "plugins": [
       "expo-router",
+      "@react-native-firebase/app",
       [
         "expo-splash-screen",
         {
           "backgroundColor": "#208AEF",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": { "useFrameworks": "dynamic" }
         }
       ]
     ],
