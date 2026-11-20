@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Button, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { AppButton } from "../../components/app-button";
+import { AppText } from "../../components/app-text";
 import { signOutUser } from "../../services/google-sign-in";
 import { useAuthStore } from "../../store/auth-store";
 
@@ -31,15 +33,17 @@ export default function ProtectedHome() {
 
   return (
     <View style={styles.container}>
-      <Text>{auth.user.displayName ?? "Name unavailable"}</Text>
-      <Text>{auth.user.email ?? "Email unavailable"}</Text>
-      <Button
+      <AppText variant="title">
+        {auth.user.displayName ?? "Name unavailable"}
+      </AppText>
+      <AppText>{auth.user.email ?? "Email unavailable"}</AppText>
+      <AppButton
         title="Sign out"
         disabled={signingOut.status === "loading"}
         onPress={handleSignOut}
       />
       {signingOut.status === "error" ? (
-        <Text accessibilityRole="alert">{signingOut.message}</Text>
+        <AppText accessibilityRole="alert">{signingOut.message}</AppText>
       ) : null}
     </View>
   );

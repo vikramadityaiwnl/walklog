@@ -1,6 +1,8 @@
 import { Redirect } from "expo-router";
 import { useState } from "react";
-import { Button, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { AppButton } from "../components/app-button";
+import { AppText } from "../components/app-text";
 import { signInWithGoogle } from "../services/google-sign-in";
 import { useAuthStore } from "../store/auth-store";
 
@@ -33,14 +35,14 @@ export default function AuthScreen() {
 
   return (
     <View style={styles.container}>
-      <Text>Sign in to WalkLog</Text>
-      <Button
+      <AppText variant="title">Sign in to walklog</AppText>
+      <AppButton
         title="Continue with Google"
         disabled={signIn.status === "loading"}
         onPress={handleSignIn}
       />
       {signIn.status === "error" ? (
-        <Text accessibilityRole="alert">{signIn.message}</Text>
+        <AppText accessibilityRole="alert">{signIn.message}</AppText>
       ) : null}
     </View>
   );

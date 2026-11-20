@@ -1,5 +1,10 @@
 # Repository instructions
 
+## Brand
+
+- Write the product name as `walklog`: one word, entirely lowercase.
+- Use Manrope for titles and DM Sans for body text in the app. Prefer the shared `AppText` component for app text.
+
 ## Git workflow
 
 - Use short, lowercase, hyphenated feature branch names. Follow existing names such as `setup` and `firebase-ai`.
