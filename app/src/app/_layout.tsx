@@ -74,7 +74,7 @@ export default function RootLayout() {
             updateStatus === "ready" && auth.status === "ready" && !!auth.user
           }
         >
-          <Stack.Screen name="(protected)/home" />
+          <Stack.Screen name="(protected)/(tabs)" />
 
           <Stack.Screen name="(protected)/ai-playground" />
         </Stack.Protected>

@@ -32,7 +32,7 @@ export default function Index() {
     );
   }
 
-  return <Redirect href={auth.user ? "/(protected)/home" : "/auth"} />;
+  return <Redirect href={auth.user ? "/(protected)/(tabs)" : "/auth"} />;
 }
 
 const styles = StyleSheet.create({
