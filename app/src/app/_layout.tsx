@@ -7,13 +7,9 @@ import { Manrope_400Regular } from "@expo-google-fonts/manrope/400Regular";
 import { Manrope_500Medium } from "@expo-google-fonts/manrope/500Medium";
 import { Manrope_600SemiBold } from "@expo-google-fonts/manrope/600SemiBold";
 import { Manrope_700Bold } from "@expo-google-fonts/manrope/700Bold";
-import { getAuth, onAuthStateChanged } from "@react-native-firebase/auth";
 import { useFonts } from "expo-font";
-import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
-import { AppText } from "../components/app-text";
-import { AppButton } from "../components/app-button";
-import { initializeAppCheck } from "../services/app-check";
+import { useAppCheckStore } from "../store/app-check-store";
 import { useAuthStore } from "../store/auth-store";
 
 export default function RootLayout() {
@@ -29,47 +25,9 @@ export default function RootLayout() {
   });
 
   const auth = useAuthStore((state) => state.auth);
-  const setAuth = useAuthStore((state) => state.setAuth);
-  const [appCheck, setAppCheck] = useState<"initializing" | "ready" | "error">(
-    "initializing",
-  );
+  const appCheck = useAppCheckStore((state) => state.appCheck);
 
-  useEffect(() => {
-    try {
-      return onAuthStateChanged(getAuth(), (user) => {
-        setAuth({ status: "ready", user });
-      });
-    } catch (error) {
-      console.warn("Firebase authentication initialization failed:", error);
-      setAuth({ status: "error" });
-    }
-  }, [setAuth]);
-
-  useEffect(() => {
-    if (appCheck !== "initializing") return;
-
-    let active = true;
-
-    void initializeAppCheck().then(
-      () => {
-        if (active) setAppCheck("ready");
-      },
-      (error: unknown) => {
-        console.warn("Firebase App Check initialization failed:", error);
-        if (active) setAppCheck("error");
-      },
-    );
-
-    return () => {
-      active = false;
-    };
-  }, [appCheck]);
-
-  if (
-    (!fontsLoaded && !fontError) ||
-    appCheck === "initializing" ||
-    auth.status === "loading"
-  ) {
+  if (!fontsLoaded && !fontError) {
     return (
       <View style={styles.container}>
         <ActivityIndicator
@@ -80,23 +38,25 @@ export default function RootLayout() {
     );
   }
 
-  if (appCheck === "error" || auth.status === "error") {
-    return (
-      <View style={styles.container}>
-        <AppText>walklog could not finish starting.</AppText>
-        {appCheck === "error" && auth.status !== "error" ? (
-          <AppButton
-            title="Try again"
-            onPress={() => setAppCheck("initializing")}
-          />
-        ) : null}
-      </View>
-    );
-  }
-
   return (
-    <Stack>
-      <Stack.Screen name="(protected)" options={{ headerShown: false }} />
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Protected guard={appCheck === "error"}>
+        <Stack.Screen name="invalid-app" />
+      </Stack.Protected>
+
+      <Stack.Protected guard={appCheck !== "error"}>
+        <Stack.Screen name="index" />
+
+        <Stack.Protected guard={auth.status === "ready" && !auth.user}>
+          <Stack.Screen name="auth" />
+        </Stack.Protected>
+
+        <Stack.Protected guard={auth.status === "ready" && !!auth.user}>
+          <Stack.Screen name="(protected)/home" />
+
+          <Stack.Screen name="(protected)/ai-playground" />
+        </Stack.Protected>
+      </Stack.Protected>
     </Stack>
   );
 }
