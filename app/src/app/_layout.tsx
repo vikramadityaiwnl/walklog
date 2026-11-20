@@ -78,6 +78,8 @@ export default function RootLayout() {
           <Stack.Screen name="(protected)/(tabs)" />
 
           <Stack.Screen name="(protected)/ai-playground" />
+
+          <Stack.Screen name="(protected)/reminders" />
         </Stack.Protected>
       </Stack.Protected>
     </Stack>
