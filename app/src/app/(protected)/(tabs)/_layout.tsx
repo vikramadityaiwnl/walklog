@@ -1,5 +1,9 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
 import { Tabs } from "expo-router";
+import {
+  ClipboardDocumentListIcon,
+  Square3Stack3DIcon,
+  UserCircleIcon,
+} from "react-native-heroicons/outline";
 import { colors } from "../../../theme";
 
 export default function TabsLayout() {
@@ -21,7 +25,7 @@ export default function TabsLayout() {
         options={{
           title: "Walkthroughs",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="clipboard-outline" color={color} size={size} />
+            <ClipboardDocumentListIcon color={color} size={size} />
           ),
         }}
       />
@@ -30,7 +34,7 @@ export default function TabsLayout() {
         options={{
           title: "Projects",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="layers-outline" color={color} size={size} />
+            <Square3Stack3DIcon color={color} size={size} />
           ),
         }}
       />
@@ -39,7 +43,7 @@ export default function TabsLayout() {
         options={{
           title: "Profile",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" color={color} size={size} />
+            <UserCircleIcon color={color} size={size} />
           ),
         }}
       />
