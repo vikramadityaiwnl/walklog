@@ -12,8 +12,10 @@
 - Use kebab-case for all filenames, including component files. Use PascalCase for React component names, with the first letter of each word capitalized. For example, define `SignInForm` in `sign-in-form.tsx`.
 - Declare a typed `interface Props` above each component that receives props. Define the component as a named function with a single `props: Props` parameter. Access fields as `props.field` throughout the component body.
 - Group state for the same operation into one minimal state value. Represent mutually exclusive states with a status or discriminated union, and store details on the variant that needs them. For example, sign-in can be `idle`, `loading`, or `error`, with an error message on the `error` variant. Keep independent state separate and derive values such as `isSigningIn` from the status.
-- Keep related lines together. Leave one blank line when moving to a different concern, such as going from state declarations to derived values or from one setup block to another.
-- Run Prettier on changed code using the existing VS Code Prettier configuration. Keep intentional blank lines between groups so the formatted code is easy to scan.
+- Keep imports together as one block; do not add blank lines to separate import groups.
+- Keep related statements, state, variables, and logic together. Use one blank line to separate distinct concerns or logical groups, such as state from derived values or one operation's setup from another. Do not add a blank line between every variable or statement.
+- For app changes, use `app/.prettierrc.json`. After completing the work, run `npm run format -- <changed files>` from `app/` on changed supported code and documents. Use `npm run format:check -- <changed files>` to check without changing files. Preserve intentional blank lines between logical groups.
+- Do not format generated native files, dependency patches, lockfiles, or local environment files; they are excluded by `app/.prettierignore`. Avoid reformatting unrelated files.
 
 ```tsx
 import { Text } from "react-native";
