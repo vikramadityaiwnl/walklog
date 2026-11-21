@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { ArrowLeftIcon, BellAlertIcon } from "react-native-heroicons/outline";
+import { BellAlertIcon } from "react-native-heroicons/outline";
 import { Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText } from "../../components/app-text";
@@ -10,16 +10,6 @@ export default function Reminders() {
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          hitSlop={8}
-          onPress={() => router.back()}
-          style={styles.back}
-        >
-          <ArrowLeftIcon size={24} color={colors.foreground} />
-        </Pressable>
-
         <AppText variant="title" style={styles.heading}>
           Reminders
         </AppText>
@@ -30,6 +20,16 @@ export default function Reminders() {
         title="No reminders yet"
         description="Your reminders will appear here when you have something to follow up on."
       />
+
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => router.back()}
+        style={styles.back}
+      >
+        <AppText weight="semibold" style={{ color: colors.accent }}>
+          Back
+        </AppText>
+      </Pressable>
     </SafeAreaView>
   );
 }
@@ -47,8 +47,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     height: 44,
     justifyContent: "center",
-    width: 44,
-    marginLeft: -10,
+    alignSelf: "stretch",
   },
   heading: { fontSize: 24 },
 });

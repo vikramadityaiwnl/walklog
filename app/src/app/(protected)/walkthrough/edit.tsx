@@ -1,12 +1,21 @@
 import { useEffect, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Crypto from "expo-crypto";
-import { Pressable, ScrollView, TextInput, View } from "react-native";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  TextInput,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppButton } from "../../../components/app-button";
 import { AppText } from "../../../components/app-text";
 import { walkthroughStyles as styles } from "../../../components/walkthrough-styles";
 import type { Walkthrough } from "../../../models/walkthrough";
+import { deleteItemPhotos } from "../../../services/walkthrough-photos";
 import { createWalkthroughStorage } from "../../../services/walkthrough-storage";
 import { useAuthStore } from "../../../store/auth-store";
 
@@ -23,6 +32,7 @@ export default function WalkthroughEdit() {
   const [form, setForm] = useState<FormState>(
     id ? { status: "loading" } : { status: "ready" },
   );
+  const [deleting, setDeleting] = useState(false);
   const [title, setTitle] = useState("");
   const [clientName, setClientName] = useState("");
   const [address, setAddress] = useState("");
@@ -109,95 +119,166 @@ export default function WalkthroughEdit() {
     }
   }
 
+  function confirmDelete() {
+    if (
+      !id ||
+      !ownerId ||
+      deleting ||
+      form.status === "loading" ||
+      form.status === "saving" ||
+      !form.existing
+    )
+      return;
+
+    Alert.alert(
+      "Delete walkthrough?",
+      "This also deletes its items and photos from this device.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              setDeleting(true);
+              try {
+                const storage = createWalkthroughStorage(ownerId);
+                const items = await storage.listItems(id);
+                await storage.deleteWalkthrough(id);
+                await deleteItemPhotos(
+                  items.flatMap((item) => item.photos),
+                ).catch(() => {});
+                router.dismissTo("/(protected)/(tabs)");
+              } catch {
+                setDeleting(false);
+                Alert.alert("Couldn’t delete walkthrough", "Please try again.");
+              }
+            })();
+          },
+        },
+      ],
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        automaticallyAdjustKeyboardInsets
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.content}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          style={styles.back}
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.content}
         >
-          <AppText style={styles.link}>‹ Back</AppText>
-        </Pressable>
+          <View style={{ gap: 5, marginBottom: 8 }}>
+            <AppText variant="title" style={styles.heading}>
+              {id ? "Settings" : "New walkthrough"}
+            </AppText>
 
-        <AppText variant="title" style={styles.heading}>
-          {id ? "Edit walkthrough" : "New walkthrough"}
-        </AppText>
-
-        <AppText style={styles.subheading}>
-          Keep a record of your site visit, even when you’re offline.
-        </AppText>
-
-        {form.status === "loading" ? (
-          <AppText>Loading…</AppText>
-        ) : (
-          <>
-            <View style={styles.section}>
-              <AppText weight="semibold" style={styles.label}>
-                Walkthrough name *
-              </AppText>
-
-              <TextInput
-                accessibilityLabel="Walkthrough name"
-                value={title}
-                onChangeText={setTitle}
-                placeholder="e.g. Apartment 4B"
-                style={styles.input}
-              />
-            </View>
-
-            <View style={styles.section}>
-              <AppText weight="semibold" style={styles.label}>
-                Client (optional)
-              </AppText>
-
-              <TextInput
-                accessibilityLabel="Client"
-                value={clientName}
-                onChangeText={setClientName}
-                placeholder="Client name"
-                style={styles.input}
-              />
-            </View>
-
-            <View style={styles.section}>
-              <AppText weight="semibold" style={styles.label}>
-                Address (optional)
-              </AppText>
-
-              <TextInput
-                accessibilityLabel="Address"
-                value={address}
-                onChangeText={setAddress}
-                placeholder="Site address"
-                style={styles.input}
-              />
-            </View>
-
-            {form.status === "error" ? (
-              <AppText accessibilityRole="alert" style={styles.error}>
-                {form.message}
+            {!id ? (
+              <AppText style={styles.subheading}>
+                Keep a record of your site visit, even when you’re offline.
               </AppText>
             ) : null}
+          </View>
 
-            <AppButton
-              title={
-                form.status === "saving"
-                  ? "Saving…"
-                  : id
-                    ? "Save changes"
-                    : "Create walkthrough"
-              }
-              disabled={form.status === "saving" || (!!id && !form.existing)}
-              onPress={save}
-            />
-          </>
-        )}
-      </ScrollView>
+          {form.status === "loading" ? (
+            <AppText>Loading…</AppText>
+          ) : (
+            <>
+              <View style={styles.section}>
+                <AppText weight="semibold" style={styles.label}>
+                  Walkthrough name *
+                </AppText>
+
+                <TextInput
+                  accessibilityLabel="Walkthrough name"
+                  value={title}
+                  onChangeText={setTitle}
+                  placeholder="e.g. Apartment 4B"
+                  style={styles.input}
+                />
+              </View>
+
+              <View style={styles.section}>
+                <AppText weight="semibold" style={styles.label}>
+                  Client (optional)
+                </AppText>
+
+                <TextInput
+                  accessibilityLabel="Client"
+                  value={clientName}
+                  onChangeText={setClientName}
+                  placeholder="Client name"
+                  style={styles.input}
+                />
+              </View>
+
+              <View style={styles.section}>
+                <AppText weight="semibold" style={styles.label}>
+                  Address (optional)
+                </AppText>
+
+                <TextInput
+                  accessibilityLabel="Address"
+                  value={address}
+                  onChangeText={setAddress}
+                  placeholder="Site address"
+                  style={styles.input}
+                />
+              </View>
+
+              {form.status === "error" ? (
+                <AppText accessibilityRole="alert" style={styles.error}>
+                  {form.message}
+                </AppText>
+              ) : null}
+            </>
+          )}
+        </ScrollView>
+
+        <View style={{ paddingHorizontal: 24, paddingTop: 12, gap: 10 }}>
+          {form.status !== "loading" ? (
+            <>
+              <AppButton
+                title={
+                  form.status === "saving"
+                    ? "Saving…"
+                    : id
+                      ? "Save changes"
+                      : "Create walkthrough"
+                }
+                disabled={
+                  deleting ||
+                  form.status === "saving" ||
+                  (!!id && !form.existing)
+                }
+                onPress={save}
+              />
+
+              {id && form.existing ? (
+                <AppButton
+                  variant="danger"
+                  title={deleting ? "Deleting…" : "Delete walkthrough"}
+                  disabled={deleting || form.status === "saving"}
+                  onPress={confirmDelete}
+                />
+              ) : null}
+            </>
+          ) : null}
+
+          <Pressable
+            accessibilityRole="button"
+            disabled={deleting || form.status === "saving"}
+            onPress={() => router.back()}
+            style={{ alignItems: "center", paddingVertical: 12 }}
+          >
+            <AppText weight="semibold" style={styles.link}>
+              Back
+            </AppText>
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

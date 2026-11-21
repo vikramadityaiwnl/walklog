@@ -12,6 +12,11 @@
 - When asked to create a pull request, include the complete set of changes made for the branch. Review the full diff and commit history against the target branch so the PR title, summary, and verification cover the full scope. Target `main` by default and use the target branch the user names when they specify one.
 - After required checks and reviews pass, merge the PR into its target unless the user asks to leave it open or requests a draft. Follow branch protection and report any check or approval that prevents the merge.
 
+## Interface design
+
+- Group related titles and descriptions closely, and separate them from subsequent fields or sections. Use clear text and spacing hierarchy to communicate which elements belong together.
+- Keep back navigation out of nested screen headers; place a Back action at the bottom of the screen.
+
 ## Code style
 
 - Use kebab-case for all filenames, including component files. Use PascalCase for React component names, with the first letter of each word capitalized. For example, define `SignInForm` in `sign-in-form.tsx`.

@@ -7,5 +7,7 @@ export const colors = {
   accentFaint: "#A6532D14",
   accentSoft: "#F4E4D7",
   accentSelected: "#EBD8CD",
+  error: "#A53232",
+  errorSoft: "#FBECE8",
   onAccent: "#FFFFFF",
 } as const;

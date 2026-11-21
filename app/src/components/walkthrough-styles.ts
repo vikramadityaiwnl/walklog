@@ -40,7 +40,7 @@ export const walkthroughStyles = StyleSheet.create({
   },
   cardTitle: { fontSize: 18 },
   link: { color: colors.accent },
-  danger: { color: "#A53232" },
+  danger: { color: colors.error },
   chip: {
     borderColor: colors.border,
     borderWidth: 1,
@@ -54,6 +54,6 @@ export const walkthroughStyles = StyleSheet.create({
   },
   wrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   photo: { width: 96, height: 96, borderRadius: 10 },
-  error: { color: "#A53232" },
+  error: { color: colors.error },
   back: { paddingVertical: 10, alignSelf: "flex-start" },
 });

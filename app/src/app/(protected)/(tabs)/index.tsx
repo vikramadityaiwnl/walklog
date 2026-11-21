@@ -3,10 +3,18 @@ import { router, useFocusEffect } from "expo-router";
 import {
   ClipboardDocumentListIcon,
   ChevronRightIcon,
+  ExclamationTriangleIcon,
+  PlusIcon,
 } from "react-native-heroicons/outline";
-import { Pressable, ScrollView, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AppButton } from "../../../components/app-button";
+import { Avatar } from "../../../components/avatar";
 import { AppHeader } from "../../../components/app-header";
 import { AppText } from "../../../components/app-text";
 import { EmptyState } from "../../../components/empty-state";
@@ -36,6 +44,7 @@ export default function Walkthroughs() {
       let active = true;
       if (!ownerId) return;
 
+      setList({ status: "loading" });
       const storage = createWalkthroughStorage(ownerId);
       void (async () => {
         try {
@@ -69,7 +78,9 @@ export default function Walkthroughs() {
       <AppHeader />
 
       <View style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView
+          contentContainerStyle={[styles.content, screenStyles.content]}
+        >
           <View style={styles.section}>
             <AppText variant="title" style={styles.heading}>
               Walkthroughs
@@ -81,13 +92,24 @@ export default function Walkthroughs() {
           </View>
 
           {list.status === "loading" ? (
-            <AppText>Loading walkthroughs…</AppText>
+            <View style={screenStyles.loading}>
+              <ActivityIndicator
+                color={colors.accent}
+                accessibilityLabel="Loading walkthroughs"
+              />
+            </View>
           ) : null}
 
           {list.status === "error" ? (
-            <AppText accessibilityRole="alert" style={styles.error}>
-              Couldn’t load walkthroughs. Please reopen this screen.
-            </AppText>
+            <EmptyState
+              icon={
+                <View style={screenStyles.errorIcon}>
+                  <ExclamationTriangleIcon size={30} color={colors.error} />
+                </View>
+              }
+              title="Couldn’t load walkthroughs"
+              description="Something went wrong. Please reopen this screen to try again."
+            />
           ) : null}
 
           {list.status === "ready" && list.walkthroughs.length === 0 ? (
@@ -114,38 +136,75 @@ export default function Walkthroughs() {
                   }
                   style={styles.card}
                 >
-                  <View style={styles.between}>
-                    <AppText weight="bold" style={styles.cardTitle}>
-                      {walkthrough.title}
-                    </AppText>
+                  <View style={styles.row}>
+                    <Avatar name={walkthrough.title} size="small" />
+
+                    <View style={{ flex: 1, gap: 5 }}>
+                      <AppText weight="bold" style={styles.cardTitle}>
+                        {walkthrough.title}
+                      </AppText>
+
+                      {walkthrough.clientName || walkthrough.address ? (
+                        <AppText style={styles.subheading}>
+                          {[walkthrough.clientName, walkthrough.address]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </AppText>
+                      ) : null}
+
+                      <AppText style={styles.subheading}>
+                        {list.counts[walkthrough.id]}{" "}
+                        {list.counts[walkthrough.id] === 1 ? "item" : "items"}
+                      </AppText>
+                    </View>
 
                     <ChevronRightIcon size={20} color={colors.muted} />
                   </View>
-
-                  {walkthrough.clientName || walkthrough.address ? (
-                    <AppText style={styles.subheading}>
-                      {[walkthrough.clientName, walkthrough.address]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </AppText>
-                  ) : null}
-
-                  <AppText style={styles.subheading}>
-                    {list.counts[walkthrough.id]}{" "}
-                    {list.counts[walkthrough.id] === 1 ? "item" : "items"}
-                  </AppText>
                 </Pressable>
               ))
             : null}
         </ScrollView>
 
-        <View style={{ paddingHorizontal: 24, paddingBottom: 20 }}>
-          <AppButton
-            title="+ New walkthrough"
+        {list.status === "ready" ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="New walkthrough"
             onPress={() => router.push("/walkthrough/edit")}
-          />
-        </View>
+            style={screenStyles.floatingAction}
+          >
+            <PlusIcon size={28} color={colors.onAccent} />
+          </Pressable>
+        ) : null}
       </View>
     </SafeAreaView>
   );
 }
+
+const screenStyles = StyleSheet.create({
+  content: { flexGrow: 1, paddingBottom: 100 },
+  floatingAction: {
+    position: "absolute",
+    right: 24,
+    bottom: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
+  errorIcon: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.errorSoft,
+  },
+});

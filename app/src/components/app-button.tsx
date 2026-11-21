@@ -10,6 +10,7 @@ interface Props {
   title: string;
   onPress: (event: GestureResponderEvent) => void;
   disabled?: boolean;
+  variant?: "danger";
 }
 
 export function AppButton(props: Props) {
@@ -20,6 +21,7 @@ export function AppButton(props: Props) {
       onPress={props.onPress}
       style={({ pressed }) => [
         styles.button,
+        props.variant === "danger" && styles.danger,
         (pressed || props.disabled) && styles.dimmed,
       ]}
     >
@@ -38,6 +40,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
+  danger: { backgroundColor: colors.error },
   dimmed: { opacity: 0.6 },
   label: { color: colors.onAccent },
 });

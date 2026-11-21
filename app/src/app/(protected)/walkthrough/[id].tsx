@@ -1,14 +1,21 @@
 import { useCallback, useState } from "react";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { Alert, Image, Pressable, ScrollView, View } from "react-native";
+import { PaperClipIcon, Cog6ToothIcon } from "react-native-heroicons/outline";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppButton } from "../../../components/app-button";
 import { AppText } from "../../../components/app-text";
 import { walkthroughStyles as styles } from "../../../components/walkthrough-styles";
 import type { PunchItem, Walkthrough } from "../../../models/walkthrough";
-import { deleteItemPhotos } from "../../../services/walkthrough-photos";
 import { createWalkthroughStorage } from "../../../services/walkthrough-storage";
 import { useAuthStore } from "../../../store/auth-store";
+import { colors } from "../../../theme";
 
 type ScreenState =
   | { status: "loading" }
@@ -20,7 +27,6 @@ export default function WalkthroughDetail() {
   const auth = useAuthStore((state) => state.auth);
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
   const [screen, setScreen] = useState<ScreenState>({ status: "loading" });
-  const [deleting, setDeleting] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -54,50 +60,19 @@ export default function WalkthroughDetail() {
     }, [ownerId, id]),
   );
 
-  function confirmDelete() {
-    if (screen.status !== "ready" || !ownerId || deleting) return;
-
-    const items = screen.items;
-    Alert.alert(
-      "Delete walkthrough?",
-      "This also deletes its items and photos from this device.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            void (async () => {
-              setDeleting(true);
-              try {
-                await createWalkthroughStorage(ownerId).deleteWalkthrough(id);
-                await deleteItemPhotos(
-                  items.flatMap((item) => item.photos),
-                ).catch(() => {});
-                router.back();
-              } catch {
-                setDeleting(false);
-                Alert.alert("Couldn’t delete walkthrough", "Please try again.");
-              }
-            })();
-          },
-        },
-      ],
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          style={styles.back}
-        >
-          <AppText style={styles.link}>‹ Walkthroughs</AppText>
-        </Pressable>
-
-        {screen.status === "loading" ? <AppText>Loading…</AppText> : null}
+      <ScrollView
+        contentContainerStyle={[styles.content, screenStyles.content]}
+      >
+        {screen.status === "loading" ? (
+          <View style={screenStyles.loading}>
+            <ActivityIndicator
+              color={colors.accent}
+              accessibilityLabel="Loading walkthrough"
+            />
+          </View>
+        ) : null}
 
         {screen.status === "error" ? (
           <AppText accessibilityRole="alert" style={styles.error}>
@@ -108,32 +83,34 @@ export default function WalkthroughDetail() {
         {screen.status === "ready" ? (
           <>
             <View style={styles.between}>
-              <View style={{ flex: 1 }}>
+              <View style={{ flex: 1, gap: 5 }}>
                 <AppText variant="title" style={styles.heading}>
                   {screen.walkthrough.title}
                 </AppText>
 
-                <AppText style={styles.subheading}>
-                  {[screen.walkthrough.clientName, screen.walkthrough.address]
-                    .filter(Boolean)
-                    .join(" · ") || "Walkthrough"}
-                </AppText>
+                {screen.walkthrough.clientName || screen.walkthrough.address ? (
+                  <AppText style={styles.subheading}>
+                    {[screen.walkthrough.clientName, screen.walkthrough.address]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </AppText>
+                ) : null}
               </View>
 
               <Pressable
                 accessibilityRole="button"
+                accessibilityLabel="Walkthrough settings"
+                hitSlop={10}
                 onPress={() =>
-                  router.push({ pathname: "/walkthrough/edit", params: { id } })
+                  router.push({
+                    pathname: "/walkthrough/settings",
+                    params: { id },
+                  })
                 }
+                style={screenStyles.settings}
               >
-                <AppText style={styles.link}>Edit</AppText>
+                <Cog6ToothIcon size={24} color={colors.foreground} />
               </Pressable>
-            </View>
-
-            <View style={styles.between}>
-              <AppText weight="bold" style={styles.cardTitle}>
-                Items ({screen.items.length})
-              </AppText>
             </View>
 
             {screen.items.length === 0 ? (
@@ -146,63 +123,86 @@ export default function WalkthroughDetail() {
               <Pressable
                 key={item.id}
                 accessibilityRole="button"
-                accessibilityLabel={`Edit item ${item.issueSummary}`}
+                accessibilityLabel={`Open item ${item.issueSummary}`}
                 onPress={() =>
                   router.push({
-                    pathname: "/walkthrough/item",
+                    pathname: "/walkthrough/item-view",
                     params: { walkthroughId: id, id: item.id },
                   })
                 }
                 style={styles.card}
               >
-                <View style={styles.row}>
-                  {item.photos[0] ? (
-                    <Image
-                      source={{ uri: item.photos[0].localUri }}
-                      style={styles.photo}
-                    />
-                  ) : null}
+                <AppText weight="bold" style={styles.cardTitle}>
+                  {item.issueSummary}
+                </AppText>
 
-                  <View style={{ flex: 1, gap: 5 }}>
-                    <AppText weight="bold" style={styles.cardTitle}>
-                      {item.issueSummary}
-                    </AppText>
+                <AppText style={styles.subheading}>
+                  {item.location || "Unspecified area"} · {item.trade}
+                </AppText>
 
-                    <AppText style={styles.subheading}>
-                      {item.location || "Unspecified area"} · {item.trade}
-                    </AppText>
+                <View style={styles.between}>
+                  <AppText style={styles.link}>
+                    {item.priority} priority
+                  </AppText>
 
-                    <AppText style={styles.link}>
-                      {item.priority} priority
+                  <View style={screenStyles.attachments}>
+                    <PaperClipIcon size={16} color={colors.muted} />
+
+                    <AppText style={screenStyles.attachmentText}>
+                      {item.photos.length}{" "}
+                      {item.photos.length === 1 ? "attachment" : "attachments"}
                     </AppText>
                   </View>
                 </View>
               </Pressable>
             ))}
-
-            <AppButton
-              title="+ Add item"
-              onPress={() =>
-                router.push({
-                  pathname: "/walkthrough/item",
-                  params: { walkthroughId: id },
-                })
-              }
-            />
-
-            <Pressable
-              accessibilityRole="button"
-              disabled={deleting}
-              onPress={confirmDelete}
-              style={styles.back}
-            >
-              <AppText style={styles.danger}>
-                {deleting ? "Deleting…" : "Delete walkthrough"}
-              </AppText>
-            </Pressable>
           </>
         ) : null}
       </ScrollView>
+
+      <View style={screenStyles.actions}>
+        {screen.status === "ready" ? (
+          <AppButton
+            title="+ Add item"
+            onPress={() =>
+              router.push({
+                pathname: "/walkthrough/item",
+                params: { walkthroughId: id },
+              })
+            }
+          />
+        ) : null}
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.back()}
+          style={screenStyles.back}
+        >
+          <AppText weight="semibold" style={styles.link}>
+            Back
+          </AppText>
+        </Pressable>
+      </View>
     </SafeAreaView>
   );
 }
+
+const screenStyles = StyleSheet.create({
+  content: { flexGrow: 1 },
+  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
+  settings: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  attachments: { flexDirection: "row", alignItems: "center", gap: 4 },
+  attachmentText: { color: colors.muted, fontSize: 13 },
+  actions: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    gap: 4,
+    backgroundColor: colors.background,
+  },
+  back: { alignItems: "center", justifyContent: "center", minHeight: 44 },
+});

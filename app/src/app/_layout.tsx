@@ -85,7 +85,11 @@ export default function RootLayout() {
 
           <Stack.Screen name="(protected)/walkthrough/edit" />
 
+          <Stack.Screen name="(protected)/walkthrough/settings" />
+
           <Stack.Screen name="(protected)/walkthrough/item" />
+
+          <Stack.Screen name="(protected)/walkthrough/item-view" />
         </Stack.Protected>
       </Stack.Protected>
     </Stack>

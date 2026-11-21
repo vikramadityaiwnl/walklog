@@ -3,7 +3,8 @@ import { router, useLocalSearchParams } from "expo-router";
 import * as Crypto from "expo-crypto";
 import {
   Alert,
-  Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   TextInput,
@@ -12,6 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppButton } from "../../../components/app-button";
 import { AppText } from "../../../components/app-text";
+import { PhotoGallery } from "../../../components/photo-gallery";
 import { walkthroughStyles as styles } from "../../../components/walkthrough-styles";
 import type { Priority, PunchItem, Trade } from "../../../models/walkthrough";
 import {
@@ -227,7 +229,10 @@ export default function ItemEdit() {
               try {
                 await createWalkthroughStorage(ownerId).deleteItem(existing.id);
                 await deleteItemPhotos(existing.photos).catch(() => {});
-                router.back();
+                router.dismissTo({
+                  pathname: "/walkthrough/[id]",
+                  params: { id: walkthroughId },
+                });
               } catch {
                 setForm({
                   status: "error",
@@ -244,180 +249,171 @@ export default function ItemEdit() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        automaticallyAdjustKeyboardInsets
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.content}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          disabled={form.status === "saving" || photoBusy}
-          style={styles.back}
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.content}
         >
-          <AppText style={styles.link}>‹ Back</AppText>
-        </Pressable>
+          <AppText variant="title" style={styles.heading}>
+            {id ? "Edit item" : "New item"}
+          </AppText>
 
-        <AppText variant="title" style={styles.heading}>
-          {id ? "Edit item" : "New item"}
-        </AppText>
-
-        {form.status === "loading" ? (
-          <AppText>Loading…</AppText>
-        ) : (
-          <>
-            <View style={styles.section}>
-              <AppText weight="semibold" style={styles.label}>
-                Issue description *
-              </AppText>
-
-              <TextInput
-                accessibilityLabel="Issue description"
-                multiline
-                value={description}
-                onChangeText={setDescription}
-                placeholder="What needs attention?"
-                style={[styles.input, styles.multiline]}
-              />
-            </View>
-
-            <View style={styles.section}>
-              <AppText weight="semibold" style={styles.label}>
-                Room or location
-              </AppText>
-
-              <TextInput
-                accessibilityLabel="Room or location"
-                value={location}
-                onChangeText={setLocation}
-                placeholder="e.g. Kitchen"
-                style={styles.input}
-              />
-            </View>
-
-            <View style={styles.section}>
-              <AppText weight="semibold" style={styles.label}>
-                Trade
-              </AppText>
-
-              <View style={styles.wrap}>
-                {trades.map((value) => (
-                  <Pressable
-                    key={value}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: trade === value }}
-                    onPress={() => setTrade(value)}
-                    style={[
-                      styles.chip,
-                      trade === value && styles.chipSelected,
-                    ]}
-                  >
-                    <AppText>{value}</AppText>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.section}>
-              <AppText weight="semibold" style={styles.label}>
-                Priority
-              </AppText>
-
-              <View style={styles.wrap}>
-                {priorities.map((value) => (
-                  <Pressable
-                    key={value}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: priority === value }}
-                    onPress={() => setPriority(value)}
-                    style={[
-                      styles.chip,
-                      priority === value && styles.chipSelected,
-                    ]}
-                  >
-                    <AppText>{value}</AppText>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.section}>
-              <AppText weight="semibold" style={styles.label}>
-                Photos
-              </AppText>
-
-              <View style={styles.wrap}>
-                {photos.map((photo, index) => (
-                  <View key={photo.localUri} style={{ gap: 4 }}>
-                    <Image
-                      source={{ uri: photo.localUri }}
-                      style={styles.photo}
-                    />
-
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`Remove photo ${index + 1}`}
-                      onPress={() =>
-                        setPhotos((current) =>
-                          current.filter(
-                            (entry) => entry.localUri !== photo.localUri,
-                          ),
-                        )
-                      }
-                    >
-                      <AppText style={styles.danger}>Remove</AppText>
-                    </Pressable>
-                  </View>
-                ))}
-              </View>
-
-              <Pressable
-                accessibilityRole="button"
-                disabled={photoBusy || form.status === "saving"}
-                onPress={choosePhoto}
-                style={styles.back}
-              >
-                <AppText style={styles.link}>
-                  {photoBusy ? "Adding photo…" : "+ Add photo"}
+          {form.status === "loading" ? (
+            <AppText>Loading…</AppText>
+          ) : (
+            <>
+              <View style={styles.section}>
+                <AppText weight="semibold" style={styles.label}>
+                  Issue description *
                 </AppText>
-              </Pressable>
-            </View>
 
-            {form.status === "error" ? (
-              <AppText accessibilityRole="alert" style={styles.error}>
-                {form.message}
-              </AppText>
-            ) : null}
+                <TextInput
+                  accessibilityLabel="Issue description"
+                  multiline
+                  value={description}
+                  onChangeText={setDescription}
+                  placeholder="What needs attention?"
+                  style={[styles.input, styles.multiline]}
+                />
+              </View>
 
-            <AppButton
-              title={
-                form.status === "saving"
-                  ? "Saving…"
-                  : id
-                    ? "Save changes"
-                    : "Add item"
-              }
-              disabled={
-                photoBusy ||
-                form.status === "saving" ||
-                (!!id && !form.existing)
-              }
-              onPress={save}
-            />
+              <View style={styles.section}>
+                <AppText weight="semibold" style={styles.label}>
+                  Room or location
+                </AppText>
 
-            {id && form.existing ? (
-              <Pressable
-                accessibilityRole="button"
-                disabled={photoBusy || form.status === "saving"}
-                onPress={confirmDelete}
-                style={styles.back}
-              >
-                <AppText style={styles.danger}>Delete item</AppText>
-              </Pressable>
-            ) : null}
-          </>
-        )}
-      </ScrollView>
+                <TextInput
+                  accessibilityLabel="Room or location"
+                  value={location}
+                  onChangeText={setLocation}
+                  placeholder="e.g. Kitchen"
+                  style={styles.input}
+                />
+              </View>
+
+              <View style={styles.section}>
+                <AppText weight="semibold" style={styles.label}>
+                  Trade
+                </AppText>
+
+                <View style={styles.wrap}>
+                  {trades.map((value) => (
+                    <Pressable
+                      key={value}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: trade === value }}
+                      onPress={() => setTrade(value)}
+                      style={[
+                        styles.chip,
+                        trade === value && styles.chipSelected,
+                      ]}
+                    >
+                      <AppText>{value}</AppText>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.section}>
+                <AppText weight="semibold" style={styles.label}>
+                  Priority
+                </AppText>
+
+                <View style={styles.wrap}>
+                  {priorities.map((value) => (
+                    <Pressable
+                      key={value}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: priority === value }}
+                      onPress={() => setPriority(value)}
+                      style={[
+                        styles.chip,
+                        priority === value && styles.chipSelected,
+                      ]}
+                    >
+                      <AppText>{value}</AppText>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+
+              {!id ? (
+                <View style={styles.section}>
+                  <AppText weight="semibold" style={styles.label}>
+                    Photos
+                  </AppText>
+
+                  <PhotoGallery
+                    photos={photos}
+                    busy={photoBusy || form.status === "saving"}
+                    onAdd={choosePhoto}
+                    onRemove={async (photo) => {
+                      setPhotos((current) =>
+                        current.filter(
+                          (entry) => entry.localUri !== photo.localUri,
+                        ),
+                      );
+
+                      return true;
+                    }}
+                  />
+                </View>
+              ) : null}
+
+              {form.status === "error" ? (
+                <AppText accessibilityRole="alert" style={styles.error}>
+                  {form.message}
+                </AppText>
+              ) : null}
+            </>
+          )}
+        </ScrollView>
+
+        <View style={{ paddingHorizontal: 24, paddingTop: 12, gap: 10 }}>
+          {form.status !== "loading" ? (
+            <>
+              <AppButton
+                title={
+                  form.status === "saving"
+                    ? "Saving…"
+                    : id
+                      ? "Save changes"
+                      : "Add item"
+                }
+                disabled={
+                  photoBusy ||
+                  form.status === "saving" ||
+                  (!!id && !form.existing)
+                }
+                onPress={save}
+              />
+
+              {id && form.existing ? (
+                <AppButton
+                  title="Delete item"
+                  variant="danger"
+                  disabled={photoBusy || form.status === "saving"}
+                  onPress={confirmDelete}
+                />
+              ) : null}
+            </>
+          ) : null}
+
+          <Pressable
+            accessibilityRole="button"
+            disabled={form.status === "saving" || photoBusy}
+            onPress={() => router.back()}
+            style={{ alignItems: "center", paddingVertical: 12 }}
+          >
+            <AppText weight="semibold" style={styles.link}>
+              Back
+            </AppText>
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
