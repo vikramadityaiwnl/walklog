@@ -81,7 +81,10 @@ export default function RootLayout() {
 
           <Stack.Screen name="(protected)/reminders" />
 
-          <Stack.Screen name="(protected)/walkthrough/[id]" />
+          <Stack.Screen
+            name="(protected)/walkthrough/[id]"
+            options={{ statusBarStyle: "light" }}
+          />
 
           <Stack.Screen name="(protected)/walkthrough/edit" />
 
@@ -89,7 +92,10 @@ export default function RootLayout() {
 
           <Stack.Screen name="(protected)/walkthrough/item" />
 
-          <Stack.Screen name="(protected)/walkthrough/item-view" />
+          <Stack.Screen
+            name="(protected)/walkthrough/item-view"
+            options={{ statusBarStyle: "light" }}
+          />
         </Stack.Protected>
       </Stack.Protected>
     </Stack>

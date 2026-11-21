@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { PaperClipIcon, Cog6ToothIcon } from "react-native-heroicons/outline";
+import { PaperClipIcon } from "react-native-heroicons/outline";
 import {
   ActivityIndicator,
   Pressable,
@@ -8,6 +8,9 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { ScreenBanner } from "../../../components/screen-banner";
+import { getBannerColor } from "../../../services/banner-colors";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppButton } from "../../../components/app-button";
 import { AppText } from "../../../components/app-text";
@@ -61,10 +64,10 @@ export default function WalkthroughDetail() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={[styles.content, screenStyles.content]}
-      >
+    <SafeAreaView style={styles.container} edges={["bottom"]}>
+      <StatusBar style={screen.status === "ready" ? "light" : "dark"} />
+
+      <ScrollView contentContainerStyle={screenStyles.content}>
         {screen.status === "loading" ? (
           <View style={screenStyles.loading}>
             <ActivityIndicator
@@ -82,80 +85,74 @@ export default function WalkthroughDetail() {
 
         {screen.status === "ready" ? (
           <>
-            <View style={styles.between}>
-              <View style={{ flex: 1, gap: 5 }}>
-                <AppText variant="title" style={styles.heading}>
-                  {screen.walkthrough.title}
-                </AppText>
+            <ScreenBanner
+              title={screen.walkthrough.title}
+              subtitle={
+                [screen.walkthrough.clientName, screen.walkthrough.address]
+                  .filter(Boolean)
+                  .join(" · ") || undefined
+              }
+              color={getBannerColor(
+                screen.walkthrough.id,
+                screen.walkthrough.bannerColor,
+              )}
+              imageUri={screen.walkthrough.bannerPhotoUri}
+              action="settings"
+              onAction={() =>
+                router.push({
+                  pathname: "/walkthrough/settings",
+                  params: { id },
+                })
+              }
+            />
 
-                {screen.walkthrough.clientName || screen.walkthrough.address ? (
-                  <AppText style={styles.subheading}>
-                    {[screen.walkthrough.clientName, screen.walkthrough.address]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </AppText>
-                ) : null}
-              </View>
-
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Walkthrough settings"
-                hitSlop={10}
-                onPress={() =>
-                  router.push({
-                    pathname: "/walkthrough/settings",
-                    params: { id },
-                  })
-                }
-                style={screenStyles.settings}
-              >
-                <Cog6ToothIcon size={24} color={colors.foreground} />
-              </Pressable>
-            </View>
-
-            {screen.items.length === 0 ? (
-              <AppText style={styles.subheading}>
-                No items yet. Add an observation to get started.
-              </AppText>
-            ) : null}
-
-            {screen.items.map((item) => (
-              <Pressable
-                key={item.id}
-                accessibilityRole="button"
-                accessibilityLabel={`Open item ${item.issueSummary}`}
-                onPress={() =>
-                  router.push({
-                    pathname: "/walkthrough/item-view",
-                    params: { walkthroughId: id, id: item.id },
-                  })
-                }
-                style={styles.card}
-              >
-                <AppText weight="bold" style={styles.cardTitle}>
-                  {item.issueSummary}
-                </AppText>
-
+            <View style={styles.content}>
+              {screen.items.length === 0 ? (
                 <AppText style={styles.subheading}>
-                  {item.location || "Unspecified area"} · {item.trade}
+                  No items yet. Add an observation to get started.
                 </AppText>
+              ) : null}
 
-                <View style={styles.between}>
-                  <AppText style={styles.link}>
-                    {item.priority} priority
+              {screen.items.map((item) => (
+                <Pressable
+                  key={item.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open item ${item.issueSummary}`}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/walkthrough/item-view",
+                      params: { walkthroughId: id, id: item.id },
+                    })
+                  }
+                  style={styles.card}
+                >
+                  <AppText weight="bold" style={styles.cardTitle}>
+                    {item.issueSummary}
                   </AppText>
 
-                  <View style={screenStyles.attachments}>
-                    <PaperClipIcon size={16} color={colors.muted} />
+                  <AppText style={styles.subheading}>
+                    {item.location || "Unspecified area"} · {item.trade}
+                  </AppText>
 
-                    <AppText style={screenStyles.attachmentText}>
-                      {item.photos.length}{" "}
-                      {item.photos.length === 1 ? "attachment" : "attachments"}
+                  <View style={styles.between}>
+                    <AppText style={styles.link}>
+                      {item.priority} priority
                     </AppText>
+
+                    <View style={screenStyles.attachments}>
+                      <PaperClipIcon size={16} color={colors.muted} />
+
+                      <AppText style={screenStyles.attachmentText}>
+                        {item.photos.length}{" "}
+                        {item.photos.length === 1
+                          ? "attachment"
+                          : "attachments"}
+                      </AppText>
+                    </View>
                   </View>
-                </View>
-              </Pressable>
-            ))}
+                </Pressable>
+              ))}
+            </View>
           </>
         ) : null}
       </ScrollView>
@@ -180,12 +177,6 @@ export default function WalkthroughDetail() {
 const screenStyles = StyleSheet.create({
   content: { flexGrow: 1 },
   loading: { flex: 1, alignItems: "center", justifyContent: "center" },
-  settings: {
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   attachments: { flexDirection: "row", alignItems: "center", gap: 4 },
   attachmentText: { color: colors.muted, fontSize: 13 },
   actions: {

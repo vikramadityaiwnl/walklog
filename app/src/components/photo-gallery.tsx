@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   thumbnail: { width: "100%", height: "100%" },
   add: {
     borderWidth: 1,
-    borderStyle: "dotted",
+    borderStyle: "dashed",
     borderColor: colors.accent,
     alignItems: "center",
     justifyContent: "center",

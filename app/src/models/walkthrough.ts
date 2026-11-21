@@ -6,6 +6,8 @@ export type Priority = "High" | "Medium" | "Low";
 export interface Walkthrough {
   id: string;
   title: string;
+  bannerColor?: string;
+  bannerPhotoUri?: string;
   clientName?: string;
   address?: string;
   createdAt: number;
@@ -17,6 +19,8 @@ export interface Walkthrough {
 export interface PunchItem {
   id: string;
   walkthroughId: string;
+  bannerColor?: string;
+  bannerPhotoUri?: string;
   rawTranscript: string;
   location: string;
   trade: Trade;

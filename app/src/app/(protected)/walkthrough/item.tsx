@@ -12,6 +12,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppButton } from "../../../components/app-button";
+import { BannerPicker } from "../../../components/banner-picker";
+import { useBannerDraft } from "../../../hooks/use-banner-draft";
+import {
+  getBannerColor,
+  randomBannerColor,
+} from "../../../services/banner-colors";
 import { AppText } from "../../../components/app-text";
 import { PhotoGallery } from "../../../components/photo-gallery";
 import { walkthroughStyles as styles } from "../../../components/walkthrough-styles";
@@ -57,14 +63,16 @@ export default function ItemEdit() {
   const stagedPhotos = useRef<PunchItem["photos"]>([]);
   const mounted = useRef(false);
   const saving = useRef(false);
+  const banner = useBannerDraft();
 
   const existing = form.status === "loading" ? undefined : form.existing;
   const hasChanges =
     !!existing &&
-    (description.trim() !== existing.issueSummary ||
-      (location.trim() || "Unspecified Area") !== existing.location ||
+    (description !== existing.issueSummary ||
+      location !== existing.location ||
       trade !== existing.trade ||
-      priority !== existing.priority);
+      priority !== existing.priority ||
+      banner.uri !== existing.bannerPhotoUri);
   const showSave = !id || hasChanges;
 
   useEffect(() => {
@@ -97,6 +105,7 @@ export default function ItemEdit() {
           return;
         }
 
+        banner.load(item.bannerPhotoUri);
         setDescription(item.issueSummary);
         setLocation(item.location);
         setTrade(item.trade);
@@ -155,6 +164,7 @@ export default function ItemEdit() {
   function cancelChanges() {
     if (!existing) return;
 
+    banner.reset();
     setDescription(existing.issueSummary);
     setLocation(existing.location);
     setTrade(existing.trade);
@@ -168,7 +178,8 @@ export default function ItemEdit() {
       !walkthroughId ||
       form.status === "loading" ||
       form.status === "saving" ||
-      photoBusy
+      photoBusy ||
+      banner.busy
     )
       return;
 
@@ -186,6 +197,7 @@ export default function ItemEdit() {
     }
 
     saving.current = true;
+    banner.beginSave();
     setForm({ status: "saving", existing });
     try {
       const now = Date.now();
@@ -193,6 +205,10 @@ export default function ItemEdit() {
         ...existing,
         id: existing?.id ?? Crypto.randomUUID(),
         walkthroughId,
+        bannerColor: existing
+          ? getBannerColor(existing.id, existing.bannerColor)
+          : randomBannerColor(),
+        bannerPhotoUri: banner.uri,
         rawTranscript: existing?.rawTranscript ?? "",
         issueSummary: description.trim(),
         location: location.trim() || "Unspecified Area",
@@ -204,6 +220,7 @@ export default function ItemEdit() {
         cloudVerification: undefined,
       };
       await createWalkthroughStorage(ownerId).saveItem(item);
+      await banner.finishSave(true);
       const removed = [
         ...(existing?.photos ?? []),
         ...stagedPhotos.current,
@@ -214,6 +231,7 @@ export default function ItemEdit() {
       await deleteItemPhotos(removed).catch(() => {});
       if (mounted.current) router.back();
     } catch {
+      await banner.finishSave(false);
       if (!mounted.current) {
         void deleteItemPhotos(stagedPhotos.current).catch(() => {});
 
@@ -247,7 +265,12 @@ export default function ItemEdit() {
               setForm({ status: "saving", existing });
               try {
                 await createWalkthroughStorage(ownerId).deleteItem(existing.id);
-                await deleteItemPhotos(existing.photos).catch(() => {});
+                await deleteItemPhotos([
+                  ...existing.photos,
+                  ...(existing.bannerPhotoUri
+                    ? [{ localUri: existing.bannerPhotoUri }]
+                    : []),
+                ]).catch(() => {});
                 router.dismissTo({
                   pathname: "/walkthrough/[id]",
                   params: { id: walkthroughId },
@@ -375,7 +398,7 @@ export default function ItemEdit() {
 
                   <PhotoGallery
                     photos={photos}
-                    busy={photoBusy || form.status === "saving"}
+                    busy={banner.busy || photoBusy || form.status === "saving"}
                     onAdd={choosePhoto}
                     onRemove={async (photo) => {
                       setPhotos((current) =>
@@ -388,6 +411,15 @@ export default function ItemEdit() {
                     }}
                   />
                 </View>
+              ) : null}
+
+              {id && form.existing ? (
+                <BannerPicker
+                  uri={banner.uri}
+                  busy={banner.busy || photoBusy || form.status === "saving"}
+                  onChoose={banner.choose}
+                  onRemove={banner.remove}
+                />
               ) : null}
 
               {form.status === "error" ? (
@@ -406,7 +438,9 @@ export default function ItemEdit() {
                 <AppButton
                   title="Cancel"
                   variant="secondary"
-                  disabled={photoBusy || form.status === "saving"}
+                  disabled={
+                    banner.busy || photoBusy || form.status === "saving"
+                  }
                   onPress={cancelChanges}
                 />
               </View>
@@ -423,6 +457,7 @@ export default function ItemEdit() {
                         : "Add item"
                   }
                   disabled={
+                    banner.busy ||
                     photoBusy ||
                     form.status === "saving" ||
                     (!!id && !form.existing)
@@ -438,7 +473,9 @@ export default function ItemEdit() {
                   title="Delete"
                   accessibilityLabel="Delete item"
                   variant="danger"
-                  disabled={photoBusy || form.status === "saving"}
+                  disabled={
+                    banner.busy || photoBusy || form.status === "saving"
+                  }
                   onPress={confirmDelete}
                 />
               </View>

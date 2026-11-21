@@ -1,6 +1,5 @@
 import { useCallback, useState } from "react";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { PencilSquareIcon } from "react-native-heroicons/outline";
 import {
   ActivityIndicator,
   Alert,
@@ -9,6 +8,9 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { ScreenBanner } from "../../../components/screen-banner";
+import { getBannerColor } from "../../../services/banner-colors";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText } from "../../../components/app-text";
 import { PhotoGallery } from "../../../components/photo-gallery";
@@ -141,10 +143,10 @@ export default function ItemView() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={[styles.content, screenStyles.content]}
-      >
+    <SafeAreaView style={styles.container} edges={["bottom"]}>
+      <StatusBar style={screen.status === "ready" ? "light" : "dark"} />
+
+      <ScrollView contentContainerStyle={screenStyles.content}>
         {screen.status === "loading" ? (
           <ActivityIndicator
             color={colors.accent}
@@ -160,71 +162,61 @@ export default function ItemView() {
 
         {screen.status === "ready" ? (
           <>
-            <View style={styles.between}>
-              <AppText variant="title" style={[styles.heading, { flex: 1 }]}>
-                {screen.item.issueSummary}
-              </AppText>
+            <ScreenBanner
+              title={screen.item.issueSummary}
+              color={getBannerColor(screen.item.id, screen.item.bannerColor)}
+              imageUri={screen.item.bannerPhotoUri}
+              action="edit"
+              disabled={photoBusy}
+              onAction={() =>
+                router.push({
+                  pathname: "/walkthrough/item",
+                  params: { id, walkthroughId },
+                })
+              }
+            />
 
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Edit item"
-                disabled={photoBusy}
-                hitSlop={10}
-                onPress={() =>
-                  router.push({
-                    pathname: "/walkthrough/item",
-                    params: { id, walkthroughId },
-                  })
-                }
-                style={screenStyles.iconButton}
-              >
-                <PencilSquareIcon size={24} color={colors.foreground} />
-              </Pressable>
-            </View>
+            <View style={styles.content}>
+              <View style={screenStyles.details}>
+                <View style={styles.section}>
+                  <AppText weight="semibold" style={styles.label}>
+                    Location
+                  </AppText>
 
-            <View style={screenStyles.details}>
-              <View style={styles.section}>
-                <AppText weight="semibold" style={styles.label}>
-                  Location
-                </AppText>
+                  <AppText>
+                    {screen.item.location || "Unspecified Area"}
+                  </AppText>
+                </View>
 
-                <AppText>{screen.item.location || "Unspecified Area"}</AppText>
+                <View style={styles.section}>
+                  <AppText weight="semibold" style={styles.label}>
+                    Trade
+                  </AppText>
+
+                  <AppText>{screen.item.trade}</AppText>
+                </View>
+
+                <View style={styles.section}>
+                  <AppText weight="semibold" style={styles.label}>
+                    Priority
+                  </AppText>
+
+                  <AppText>{screen.item.priority}</AppText>
+                </View>
               </View>
 
-              <View style={styles.section}>
-                <AppText weight="semibold" style={styles.label}>
-                  Trade
+              <View style={[styles.section, { marginTop: 12 }]}>
+                <AppText weight="bold" style={styles.cardTitle}>
+                  Photos
                 </AppText>
 
-                <AppText>{screen.item.trade}</AppText>
+                <PhotoGallery
+                  photos={screen.item.photos}
+                  busy={photoBusy}
+                  onAdd={choosePhoto}
+                  onRemove={removePhoto}
+                />
               </View>
-
-              <View style={styles.section}>
-                <AppText weight="semibold" style={styles.label}>
-                  Priority
-                </AppText>
-
-                <AppText>{screen.item.priority}</AppText>
-              </View>
-            </View>
-
-            <View style={styles.section}>
-              <AppText weight="bold" style={styles.cardTitle}>
-                Photos
-              </AppText>
-
-              {screen.item.photos.length === 0 ? (
-                <AppText style={styles.subheading}>
-                  No photos added yet.
-                </AppText>
-              ) : null}
-
-              <PhotoGallery
-                photos={screen.item.photos}
-                busy={photoBusy}
-                onAdd={choosePhoto}
-                onRemove={removePhoto}
-              />
             </View>
           </>
         ) : null}
@@ -235,11 +227,5 @@ export default function ItemView() {
 
 const screenStyles = StyleSheet.create({
   content: { flexGrow: 1 },
-  iconButton: {
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   details: { gap: 18 },
 });

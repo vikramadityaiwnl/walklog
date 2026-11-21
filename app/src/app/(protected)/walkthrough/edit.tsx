@@ -11,6 +11,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppButton } from "../../../components/app-button";
+import { BannerPicker } from "../../../components/banner-picker";
+import { useBannerDraft } from "../../../hooks/use-banner-draft";
+import {
+  getBannerColor,
+  randomBannerColor,
+} from "../../../services/banner-colors";
 import { AppText } from "../../../components/app-text";
 import { walkthroughStyles as styles } from "../../../components/walkthrough-styles";
 import type { Walkthrough } from "../../../models/walkthrough";
@@ -35,13 +41,15 @@ export default function WalkthroughEdit() {
   const [title, setTitle] = useState("");
   const [clientName, setClientName] = useState("");
   const [address, setAddress] = useState("");
+  const banner = useBannerDraft();
 
   const existing = form.status === "loading" ? undefined : form.existing;
   const hasChanges =
     !!existing &&
-    (title.trim() !== existing.title ||
-      (clientName.trim() || undefined) !== existing.clientName ||
-      (address.trim() || undefined) !== existing.address);
+    (title !== existing.title ||
+      clientName !== (existing.clientName ?? "") ||
+      address !== (existing.address ?? "") ||
+      banner.uri !== existing.bannerPhotoUri);
   const showSave = !id || hasChanges;
 
   useEffect(() => {
@@ -62,6 +70,7 @@ export default function WalkthroughEdit() {
           return;
         }
 
+        banner.load(walkthrough.bannerPhotoUri);
         setTitle(walkthrough.title);
         setClientName(walkthrough.clientName ?? "");
         setAddress(walkthrough.address ?? "");
@@ -83,6 +92,7 @@ export default function WalkthroughEdit() {
   function cancelChanges() {
     if (!existing) return;
 
+    banner.reset();
     setTitle(existing.title);
     setClientName(existing.clientName ?? "");
     setAddress(existing.address ?? "");
@@ -90,7 +100,12 @@ export default function WalkthroughEdit() {
   }
 
   async function save() {
-    if (!ownerId || form.status === "loading" || form.status === "saving")
+    if (
+      !ownerId ||
+      banner.busy ||
+      form.status === "loading" ||
+      form.status === "saving"
+    )
       return;
 
     const existing = form.existing;
@@ -106,12 +121,17 @@ export default function WalkthroughEdit() {
       return;
     }
 
+    banner.beginSave();
     setForm({ status: "saving", existing });
     try {
       const now = Date.now();
       const walkthrough: Walkthrough = {
         id: existing?.id ?? Crypto.randomUUID(),
         title: title.trim(),
+        bannerColor: existing
+          ? getBannerColor(existing.id, existing.bannerColor)
+          : randomBannerColor(),
+        bannerPhotoUri: banner.uri,
         clientName: clientName.trim() || undefined,
         address: address.trim() || undefined,
         createdAt: existing?.createdAt ?? now,
@@ -120,6 +140,7 @@ export default function WalkthroughEdit() {
         status: existing?.status ?? "in_progress",
       };
       await createWalkthroughStorage(ownerId).saveWalkthrough(walkthrough);
+      await banner.finishSave(true);
       if (existing) router.back();
       else
         router.replace({
@@ -127,6 +148,7 @@ export default function WalkthroughEdit() {
           params: { id: walkthrough.id },
         });
     } catch {
+      await banner.finishSave(false);
       setForm({
         status: "error",
         message: "Couldn’t save the walkthrough. Please try again.",
@@ -139,6 +161,7 @@ export default function WalkthroughEdit() {
     if (
       !id ||
       !ownerId ||
+      banner.busy ||
       deleting ||
       form.status === "loading" ||
       form.status === "saving" ||
@@ -161,9 +184,17 @@ export default function WalkthroughEdit() {
                 const storage = createWalkthroughStorage(ownerId);
                 const items = await storage.listItems(id);
                 await storage.deleteWalkthrough(id);
-                await deleteItemPhotos(
-                  items.flatMap((item) => item.photos),
-                ).catch(() => {});
+                await deleteItemPhotos([
+                  ...items.flatMap((item) => [
+                    ...item.photos,
+                    ...(item.bannerPhotoUri
+                      ? [{ localUri: item.bannerPhotoUri }]
+                      : []),
+                  ]),
+                  ...(form.existing?.bannerPhotoUri
+                    ? [{ localUri: form.existing.bannerPhotoUri }]
+                    : []),
+                ]).catch(() => {});
                 router.dismissTo("/(protected)/(tabs)");
               } catch {
                 setDeleting(false);
@@ -244,6 +275,15 @@ export default function WalkthroughEdit() {
                 />
               </View>
 
+              {id && form.existing ? (
+                <BannerPicker
+                  uri={banner.uri}
+                  busy={banner.busy || deleting || form.status === "saving"}
+                  onChoose={banner.choose}
+                  onRemove={banner.remove}
+                />
+              ) : null}
+
               {form.status === "error" ? (
                 <AppText accessibilityRole="alert" style={styles.error}>
                   {form.message}
@@ -260,7 +300,7 @@ export default function WalkthroughEdit() {
                 <AppButton
                   title="Cancel"
                   variant="secondary"
-                  disabled={deleting || form.status === "saving"}
+                  disabled={banner.busy || deleting || form.status === "saving"}
                   onPress={cancelChanges}
                 />
               </View>
@@ -277,6 +317,7 @@ export default function WalkthroughEdit() {
                         : "Create walkthrough"
                   }
                   disabled={
+                    banner.busy ||
                     deleting ||
                     form.status === "saving" ||
                     (!!id && !form.existing)
@@ -292,7 +333,7 @@ export default function WalkthroughEdit() {
                   variant="danger"
                   title={deleting ? "Deleting…" : "Delete"}
                   accessibilityLabel="Delete walkthrough"
-                  disabled={deleting || form.status === "saving"}
+                  disabled={banner.busy || deleting || form.status === "saving"}
                   onPress={confirmDelete}
                 />
               </View>
