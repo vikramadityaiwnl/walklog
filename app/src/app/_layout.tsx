@@ -80,6 +80,12 @@ export default function RootLayout() {
           <Stack.Screen name="(protected)/ai-playground" />
 
           <Stack.Screen name="(protected)/reminders" />
+
+          <Stack.Screen name="(protected)/walkthrough/[id]" />
+
+          <Stack.Screen name="(protected)/walkthrough/edit" />
+
+          <Stack.Screen name="(protected)/walkthrough/item" />
         </Stack.Protected>
       </Stack.Protected>
     </Stack>

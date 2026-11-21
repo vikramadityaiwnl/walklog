@@ -51,7 +51,16 @@
       "@react-native-firebase/auth",
       "@react-native-google-signin/google-signin",
       "./plugins/with-firebase-bom",
-      "./plugins/with-firebase-ios-version"
+      "./plugins/with-firebase-ios-version",
+      "expo-sqlite",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow walklog to attach site photos to items.",
+          "cameraPermission": "Allow walklog to photograph site issues.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
