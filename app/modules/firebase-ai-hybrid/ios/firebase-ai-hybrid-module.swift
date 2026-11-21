@@ -30,6 +30,7 @@ public class FirebaseAiHybridModule: Module {
         ]
       }
     }
+
     AsyncFunction("generateText") {
       (prompt: String, mode: String) async throws -> [String: String] in
       guard !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {

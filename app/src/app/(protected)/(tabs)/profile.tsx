@@ -40,6 +40,7 @@ const preferences = [
 
 export default function Profile() {
   const auth = useAuthStore((state) => state.auth);
+
   const [signingOut, setSigningOut] = useState<SignOutState>({
     status: "idle",
   });

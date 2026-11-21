@@ -24,32 +24,48 @@ import { deleteItemPhotos } from "../../../services/walkthrough-photos";
 import { createWalkthroughStorage } from "../../../services/walkthrough-storage";
 import { useAuthStore } from "../../../store/auth-store";
 
+interface WalkthroughDraft {
+  title: string;
+  clientName: string;
+  address: string;
+}
+
 type FormState =
-  | { status: "loading" }
-  | { status: "ready"; existing?: Walkthrough }
-  | { status: "saving"; existing?: Walkthrough }
-  | { status: "error"; message: string; existing?: Walkthrough };
+  | { status: "loading"; draft: WalkthroughDraft }
+  | { status: "ready"; draft: WalkthroughDraft; existing?: Walkthrough }
+  | { status: "saving"; draft: WalkthroughDraft; existing?: Walkthrough }
+  | {
+      status: "error";
+      draft: WalkthroughDraft;
+      message: string;
+      existing?: Walkthrough;
+    };
 
 export default function WalkthroughEdit() {
   const { id } = useLocalSearchParams<{ id?: string }>();
+
   const auth = useAuthStore((state) => state.auth);
+
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
-  const [form, setForm] = useState<FormState>(
-    id ? { status: "loading" } : { status: "ready" },
-  );
+
   const [deleting, setDeleting] = useState(false);
-  const [title, setTitle] = useState("");
-  const [clientName, setClientName] = useState("");
-  const [address, setAddress] = useState("");
+
+  const [form, setForm] = useState<FormState>({
+    status: id ? "loading" : "ready",
+    draft: { title: "", clientName: "", address: "" },
+  });
+
   const showDialog = useDialogStore((state) => state.showDialog);
+
   const banner = useBannerDraft();
 
   const existing = form.status === "loading" ? undefined : form.existing;
+  const draft = form.draft;
   const hasChanges =
     !!existing &&
-    (title !== existing.title ||
-      clientName !== (existing.clientName ?? "") ||
-      address !== (existing.address ?? "") ||
+    (draft.title !== existing.title ||
+      draft.clientName !== (existing.clientName ?? "") ||
+      draft.address !== (existing.address ?? "") ||
       banner.uri !== existing.bannerPhotoUri);
   const showSave = !id || hasChanges;
 
@@ -63,26 +79,33 @@ export default function WalkthroughEdit() {
         if (!active) return;
 
         if (!walkthrough) {
-          setForm({
+          setForm((current) => ({
+            ...current,
             status: "error",
             message: "This walkthrough could not be found.",
-          });
+          }));
 
           return;
         }
 
         banner.load(walkthrough.bannerPhotoUri);
-        setTitle(walkthrough.title);
-        setClientName(walkthrough.clientName ?? "");
-        setAddress(walkthrough.address ?? "");
-        setForm({ status: "ready", existing: walkthrough });
+        setForm({
+          status: "ready",
+          existing: walkthrough,
+          draft: {
+            title: walkthrough.title,
+            clientName: walkthrough.clientName ?? "",
+            address: walkthrough.address ?? "",
+          },
+        });
       })
       .catch(() => {
         if (active)
-          setForm({
+          setForm((current) => ({
+            ...current,
             status: "error",
             message: "Couldn’t load this walkthrough.",
-          });
+          }));
       });
 
     return () => {
@@ -94,10 +117,15 @@ export default function WalkthroughEdit() {
     if (!existing) return;
 
     banner.reset();
-    setTitle(existing.title);
-    setClientName(existing.clientName ?? "");
-    setAddress(existing.address ?? "");
-    setForm({ status: "ready", existing });
+    setForm({
+      status: "ready",
+      existing,
+      draft: {
+        title: existing.title,
+        clientName: existing.clientName ?? "",
+        address: existing.address ?? "",
+      },
+    });
   }
 
   async function save() {
@@ -112,9 +140,10 @@ export default function WalkthroughEdit() {
     const existing = form.existing;
     if (id && !existing) return;
 
-    if (!title.trim()) {
+    if (!draft.title.trim()) {
       setForm({
         status: "error",
+        draft,
         message: "Enter a walkthrough name.",
         existing,
       });
@@ -123,18 +152,18 @@ export default function WalkthroughEdit() {
     }
 
     banner.beginSave();
-    setForm({ status: "saving", existing });
+    setForm({ status: "saving", existing, draft });
     try {
       const now = Date.now();
       const walkthrough: Walkthrough = {
         id: existing?.id ?? Crypto.randomUUID(),
-        title: title.trim(),
+        title: draft.title.trim(),
         bannerColor: existing
           ? getBannerColor(existing.id, existing.bannerColor)
           : randomBannerColor(),
         bannerPhotoUri: banner.uri,
-        clientName: clientName.trim() || undefined,
-        address: address.trim() || undefined,
+        clientName: draft.clientName.trim() || undefined,
+        address: draft.address.trim() || undefined,
         createdAt: existing?.createdAt ?? now,
         updatedAt: now,
         executiveSummary: existing?.executiveSummary,
@@ -150,11 +179,12 @@ export default function WalkthroughEdit() {
         });
     } catch {
       await banner.finishSave(false);
-      setForm({
+      setForm((current) => ({
+        ...current,
         status: "error",
         message: "Couldn’t save the walkthrough. Please try again.",
         existing,
-      });
+      }));
     }
   }
 
@@ -241,8 +271,13 @@ export default function WalkthroughEdit() {
 
                 <TextInput
                   accessibilityLabel="Walkthrough name"
-                  value={title}
-                  onChangeText={setTitle}
+                  value={draft.title}
+                  onChangeText={(title) =>
+                    setForm((current) => ({
+                      ...current,
+                      draft: { ...current.draft, title },
+                    }))
+                  }
                   placeholder="e.g. Apartment 4B"
                   style={styles.input}
                 />
@@ -255,8 +290,13 @@ export default function WalkthroughEdit() {
 
                 <TextInput
                   accessibilityLabel="Client"
-                  value={clientName}
-                  onChangeText={setClientName}
+                  value={draft.clientName}
+                  onChangeText={(clientName) =>
+                    setForm((current) => ({
+                      ...current,
+                      draft: { ...current.draft, clientName },
+                    }))
+                  }
                   placeholder="Client name"
                   style={styles.input}
                 />
@@ -269,8 +309,13 @@ export default function WalkthroughEdit() {
 
                 <TextInput
                   accessibilityLabel="Address"
-                  value={address}
-                  onChangeText={setAddress}
+                  value={draft.address}
+                  onChangeText={(address) =>
+                    setForm((current) => ({
+                      ...current,
+                      draft: { ...current.draft, address },
+                    }))
+                  }
                   placeholder="Site address"
                   style={styles.input}
                 />

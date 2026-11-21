@@ -1,7 +1,10 @@
 export type WalkthroughStatus = "in_progress" | "verified" | "shared";
+
 export type Trade =
   "Plumbing" | "Electrical" | "Paint/Finish" | "Carpentry" | "HVAC" | "General";
+
 export type Priority = "High" | "Medium" | "Low";
+
 export type ItemStatus = "Open" | "Done";
 
 export interface Walkthrough {

@@ -44,43 +44,70 @@ const trades: Trade[] = [
 ];
 const priorities: Priority[] = ["Low", "Medium", "High"];
 const statuses: ItemStatus[] = ["Open", "Done"];
+
+interface ItemDraft {
+  description: string;
+  location: string;
+  trade: Trade;
+  priority: Priority;
+  status: ItemStatus;
+  photos: PunchItem["photos"];
+}
+
 type FormState =
-  | { status: "loading" }
-  | { status: "ready"; existing?: PunchItem }
-  | { status: "saving"; existing?: PunchItem }
-  | { status: "error"; message: string; existing?: PunchItem };
+  | { status: "loading"; draft: ItemDraft }
+  | { status: "ready"; draft: ItemDraft; existing?: PunchItem }
+  | { status: "saving"; draft: ItemDraft; existing?: PunchItem }
+  | {
+      status: "error";
+      draft: ItemDraft;
+      message: string;
+      existing?: PunchItem;
+    };
 
 export default function ItemEdit() {
   const { id, walkthroughId } = useLocalSearchParams<{
     id?: string;
     walkthroughId: string;
   }>();
+
   const auth = useAuthStore((state) => state.auth);
+
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
-  const [form, setForm] = useState<FormState>(
-    id ? { status: "loading" } : { status: "ready" },
-  );
-  const [description, setDescription] = useState("");
-  const [location, setLocation] = useState("");
-  const [trade, setTrade] = useState<Trade>("General");
-  const [priority, setPriority] = useState<Priority>("Medium");
-  const [status, setStatus] = useState<ItemStatus>("Open");
-  const [photos, setPhotos] = useState<PunchItem["photos"]>([]);
+
+  const [form, setForm] = useState<FormState>({
+    status: id ? "loading" : "ready",
+    draft: {
+      description: "",
+      location: "",
+      trade: "General",
+      priority: "Medium",
+      status: "Open",
+      photos: [],
+    },
+  });
+
   const [photoBusy, setPhotoBusy] = useState(false);
+
+  const [deleting, setDeleting] = useState(false);
+
   const stagedPhotos = useRef<PunchItem["photos"]>([]);
   const mounted = useRef(false);
   const saving = useRef(false);
+
   const showDialog = useDialogStore((state) => state.showDialog);
+
   const banner = useBannerDraft();
 
   const existing = form.status === "loading" ? undefined : form.existing;
+  const draft = form.draft;
   const hasChanges =
     !!existing &&
-    (description !== existing.issueSummary ||
-      location !== existing.location ||
-      trade !== existing.trade ||
-      priority !== existing.priority ||
-      status !== existing.status ||
+    (draft.description !== existing.issueSummary ||
+      draft.location !== existing.location ||
+      draft.trade !== existing.trade ||
+      draft.priority !== existing.priority ||
+      draft.status !== existing.status ||
       banner.uri !== existing.bannerPhotoUri);
   const showSave = !id || hasChanges;
 
@@ -106,26 +133,36 @@ export default function ItemEdit() {
 
         const item = items.find((entry) => entry.id === id);
         if (!item) {
-          setForm({
+          setForm((current) => ({
+            ...current,
             status: "error",
             message: "This item could not be found.",
-          });
+          }));
 
           return;
         }
 
         banner.load(item.bannerPhotoUri);
-        setDescription(item.issueSummary);
-        setLocation(item.location);
-        setTrade(item.trade);
-        setPriority(item.priority);
-        setStatus(item.status);
-        setPhotos(item.photos);
-        setForm({ status: "ready", existing: item });
+        setForm({
+          status: "ready",
+          existing: item,
+          draft: {
+            description: item.issueSummary,
+            location: item.location,
+            trade: item.trade,
+            priority: item.priority,
+            status: item.status,
+            photos: item.photos,
+          },
+        });
       })
       .catch(() => {
         if (active)
-          setForm({ status: "error", message: "Couldn’t load this item." });
+          setForm((current) => ({
+            ...current,
+            status: "error",
+            message: "Couldn’t load this item.",
+          }));
       });
 
     return () => {
@@ -141,7 +178,13 @@ export default function ItemEdit() {
         await deleteItemPhotos([photo]);
       } else if (photo) {
         stagedPhotos.current.push(photo);
-        setPhotos((current) => [...current, photo]);
+        setForm((current) => ({
+          ...current,
+          draft: {
+            ...current.draft,
+            photos: [...current.draft.photos, photo],
+          },
+        }));
       }
     } catch (error) {
       showDialog(
@@ -177,12 +220,18 @@ export default function ItemEdit() {
     if (!existing) return;
 
     banner.reset();
-    setDescription(existing.issueSummary);
-    setLocation(existing.location);
-    setTrade(existing.trade);
-    setPriority(existing.priority);
-    setStatus(existing.status);
-    setForm({ status: "ready", existing });
+    setForm({
+      status: "ready",
+      existing,
+      draft: {
+        description: existing.issueSummary,
+        location: existing.location,
+        trade: existing.trade,
+        priority: existing.priority,
+        status: existing.status,
+        photos: existing.photos,
+      },
+    });
   }
 
   async function save() {
@@ -192,6 +241,7 @@ export default function ItemEdit() {
       form.status === "loading" ||
       form.status === "saving" ||
       photoBusy ||
+      deleting ||
       banner.busy
     )
       return;
@@ -199,9 +249,10 @@ export default function ItemEdit() {
     const existing = form.existing;
     if (id && !existing) return;
 
-    if (!description.trim()) {
+    if (!draft.description.trim()) {
       setForm({
         status: "error",
+        draft,
         message: "Enter an issue description.",
         existing,
       });
@@ -211,7 +262,7 @@ export default function ItemEdit() {
 
     saving.current = true;
     banner.beginSave();
-    setForm({ status: "saving", existing });
+    setForm({ status: "saving", existing, draft });
     try {
       const now = Date.now();
       const item: PunchItem = {
@@ -223,12 +274,12 @@ export default function ItemEdit() {
           : randomBannerColor(),
         bannerPhotoUri: banner.uri,
         rawTranscript: existing?.rawTranscript ?? "",
-        issueSummary: description.trim(),
-        location: location.trim() || "Unspecified Area",
-        trade,
-        priority,
-        status,
-        photos,
+        issueSummary: draft.description.trim(),
+        location: draft.location.trim() || "Unspecified Area",
+        trade: draft.trade,
+        priority: draft.priority,
+        status: draft.status,
+        photos: draft.photos,
         createdAt: existing?.createdAt ?? now,
         updatedAt: now,
         cloudVerification: undefined,
@@ -239,7 +290,8 @@ export default function ItemEdit() {
         ...(existing?.photos ?? []),
         ...stagedPhotos.current,
       ].filter(
-        (photo) => !photos.some((kept) => kept.localUri === photo.localUri),
+        (photo) =>
+          !draft.photos.some((kept) => kept.localUri === photo.localUri),
       );
       stagedPhotos.current = [];
       await deleteItemPhotos(removed).catch(() => {});
@@ -252,18 +304,26 @@ export default function ItemEdit() {
         return;
       }
 
-      setForm({
+      setForm((current) => ({
+        ...current,
         status: "error",
         message: "Couldn’t save the item. Please try again.",
         existing,
-      });
+      }));
     } finally {
       saving.current = false;
     }
   }
 
   function confirmDelete() {
-    if (!ownerId || form.status === "loading" || !form.existing) return;
+    if (
+      !ownerId ||
+      form.status === "loading" ||
+      form.status === "saving" ||
+      deleting ||
+      !form.existing
+    )
+      return;
 
     const existing = form.existing;
     showDialog(
@@ -276,7 +336,7 @@ export default function ItemEdit() {
           style: "destructive",
           onPress: () => {
             void (async () => {
-              setForm({ status: "saving", existing });
+              setDeleting(true);
               try {
                 await createWalkthroughStorage(ownerId).deleteItem(existing.id);
                 await deleteItemPhotos([
@@ -290,11 +350,13 @@ export default function ItemEdit() {
                   params: { id: walkthroughId },
                 });
               } catch {
-                setForm({
+                setDeleting(false);
+                setForm((current) => ({
+                  ...current,
                   status: "error",
                   message: "Couldn’t delete the item. Please try again.",
                   existing,
-                });
+                }));
               }
             })();
           },
@@ -337,8 +399,13 @@ export default function ItemEdit() {
                 <TextInput
                   accessibilityLabel="Issue description"
                   multiline
-                  value={description}
-                  onChangeText={setDescription}
+                  value={draft.description}
+                  onChangeText={(description) =>
+                    setForm((current) => ({
+                      ...current,
+                      draft: { ...current.draft, description },
+                    }))
+                  }
                   placeholder="What needs attention?"
                   style={[styles.input, styles.multiline]}
                 />
@@ -351,8 +418,13 @@ export default function ItemEdit() {
 
                 <TextInput
                   accessibilityLabel="Room or location"
-                  value={location}
-                  onChangeText={setLocation}
+                  value={draft.location}
+                  onChangeText={(location) =>
+                    setForm((current) => ({
+                      ...current,
+                      draft: { ...current.draft, location },
+                    }))
+                  }
                   placeholder="e.g. Kitchen"
                   style={styles.input}
                 />
@@ -368,8 +440,12 @@ export default function ItemEdit() {
                   options={trades}
                   selection={{
                     mode: "single",
-                    value: trade,
-                    onChange: setTrade,
+                    value: draft.trade,
+                    onChange: (trade) =>
+                      setForm((current) => ({
+                        ...current,
+                        draft: { ...current.draft, trade },
+                      })),
                   }}
                 />
               </View>
@@ -384,8 +460,12 @@ export default function ItemEdit() {
                   options={priorities}
                   selection={{
                     mode: "single",
-                    value: priority,
-                    onChange: setPriority,
+                    value: draft.priority,
+                    onChange: (priority) =>
+                      setForm((current) => ({
+                        ...current,
+                        draft: { ...current.draft, priority },
+                      })),
                   }}
                 />
               </View>
@@ -400,8 +480,12 @@ export default function ItemEdit() {
                   options={statuses}
                   selection={{
                     mode: "single",
-                    value: status,
-                    onChange: setStatus,
+                    value: draft.status,
+                    onChange: (status) =>
+                      setForm((current) => ({
+                        ...current,
+                        draft: { ...current.draft, status },
+                      })),
                   }}
                 />
               </View>
@@ -413,15 +497,19 @@ export default function ItemEdit() {
                   </AppText>
 
                   <PhotoGallery
-                    photos={photos}
+                    photos={draft.photos}
                     busy={banner.busy || photoBusy || form.status === "saving"}
                     onAdd={choosePhoto}
                     onRemove={async (photo) => {
-                      setPhotos((current) =>
-                        current.filter(
-                          (entry) => entry.localUri !== photo.localUri,
-                        ),
-                      );
+                      setForm((current) => ({
+                        ...current,
+                        draft: {
+                          ...current.draft,
+                          photos: current.draft.photos.filter(
+                            (entry) => entry.localUri !== photo.localUri,
+                          ),
+                        },
+                      }));
 
                       return true;
                     }}
@@ -432,7 +520,12 @@ export default function ItemEdit() {
               {id && form.existing ? (
                 <BannerPicker
                   uri={banner.uri}
-                  busy={banner.busy || photoBusy || form.status === "saving"}
+                  busy={
+                    banner.busy ||
+                    photoBusy ||
+                    deleting ||
+                    form.status === "saving"
+                  }
                   onChoose={banner.choose}
                   onRemove={banner.remove}
                 />
@@ -455,7 +548,10 @@ export default function ItemEdit() {
                   title="Cancel"
                   variant="secondary"
                   disabled={
-                    banner.busy || photoBusy || form.status === "saving"
+                    banner.busy ||
+                    photoBusy ||
+                    deleting ||
+                    form.status === "saving"
                   }
                   onPress={cancelChanges}
                 />
@@ -475,6 +571,7 @@ export default function ItemEdit() {
                   disabled={
                     banner.busy ||
                     photoBusy ||
+                    deleting ||
                     form.status === "saving" ||
                     (!!id && !form.existing)
                   }
@@ -486,11 +583,14 @@ export default function ItemEdit() {
             {id && form.existing && !hasChanges ? (
               <View style={styles.action}>
                 <AppButton
-                  title="Delete"
+                  title={deleting ? "Deleting…" : "Delete"}
                   accessibilityLabel="Delete item"
                   variant="danger"
                   disabled={
-                    banner.busy || photoBusy || form.status === "saving"
+                    banner.busy ||
+                    photoBusy ||
+                    deleting ||
+                    form.status === "saving"
                   }
                   onPress={confirmDelete}
                 />

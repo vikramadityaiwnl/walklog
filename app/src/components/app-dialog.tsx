@@ -1,5 +1,6 @@
 import { CameraIcon, PhotoIcon } from "react-native-heroicons/outline";
 import { Modal, Pressable, StyleSheet, View } from "react-native";
+import { useShallow } from "zustand/react/shallow";
 import { useDialogStore } from "../store/dialog-store";
 import { colors } from "../theme";
 import { AppButton } from "./app-button";
@@ -10,9 +11,13 @@ interface Props {
 }
 
 export function AppDialog(props: Props) {
-  const dialog = useDialogStore((state) => state.dialog);
-  const closeDialog = useDialogStore((state) => state.closeDialog);
-  const finishDismissal = useDialogStore((state) => state.finishDismissal);
+  const { dialog, closeDialog, finishDismissal } = useDialogStore(
+    useShallow((state) => ({
+      dialog: state.dialog,
+      closeDialog: state.closeDialog,
+      finishDismissal: state.finishDismissal,
+    })),
+  );
 
   const content =
     dialog.status === "closed" ||

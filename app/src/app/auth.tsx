@@ -14,6 +14,7 @@ type SignInState =
 
 export default function AuthScreen() {
   const auth = useAuthStore((state) => state.auth);
+
   const [signIn, setSignIn] = useState<SignInState>({ status: "idle" });
 
   async function handleSignIn() {

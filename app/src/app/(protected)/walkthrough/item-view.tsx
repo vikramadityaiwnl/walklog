@@ -34,10 +34,15 @@ export default function ItemView() {
     id: string;
     walkthroughId: string;
   }>();
+
   const auth = useAuthStore((state) => state.auth);
+
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
+
   const [screen, setScreen] = useState<ScreenState>({ status: "loading" });
+
   const [photoBusy, setPhotoBusy] = useState(false);
+
   const showDialog = useDialogStore((state) => state.showDialog);
 
   useFocusEffect(

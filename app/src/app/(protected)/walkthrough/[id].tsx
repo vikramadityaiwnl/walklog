@@ -34,8 +34,11 @@ type ScreenState =
 
 export default function WalkthroughDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
+
   const auth = useAuthStore((state) => state.auth);
+
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
+
   const [screen, setScreen] = useState<ScreenState>({ status: "loading" });
 
   useFocusEffect(

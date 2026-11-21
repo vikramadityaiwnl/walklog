@@ -23,11 +23,17 @@ type AvailabilityState =
   | { status: "checking" }
   | { status: "ready"; value: ModelAvailability }
   | { status: "error"; message: string };
+
 type OperationState =
   | { status: "idle" }
   | { status: "generating" | "downloading" }
   | { status: "complete"; result: Generation; elapsedMs: number }
   | { status: "error"; message: string };
+
+interface GenerationRequest {
+  mode: InferenceMode;
+  prompt: string;
+}
 
 const modes: { label: string; value: InferenceMode }[] = [
   { label: "Automatic", value: "auto" },
@@ -43,13 +49,16 @@ export default function AiPlayground() {
   const [availability, setAvailability] = useState<AvailabilityState>({
     status: "checking",
   });
+
   const [operation, setOperation] = useState<OperationState>({
     status: "idle",
   });
-  const [mode, setMode] = useState<InferenceMode>("auto");
-  const [prompt, setPrompt] = useState(
-    "Summarize this site note: The kitchen cabinet hinge is loose.",
-  );
+
+  const [request, setRequest] = useState<GenerationRequest>({
+    mode: "auto",
+    prompt: "Summarize this site note: The kitchen cabinet hinge is loose.",
+  });
+
   const busy =
     operation.status === "generating" || operation.status === "downloading";
 
@@ -85,7 +94,7 @@ export default function AiPlayground() {
     setOperation({ status: "generating" });
     const started = Date.now();
     try {
-      const result = await generateText(prompt, mode);
+      const result = await generateText(request.prompt, request.mode);
       setOperation({
         status: "complete",
         result,
@@ -143,12 +152,17 @@ export default function AiPlayground() {
             accessible
             accessibilityRole="radio"
             accessibilityState={{
-              checked: mode === item.value,
+              checked: request.mode === item.value,
               disabled: busy,
             }}
             disabled={busy}
-            onPress={() => setMode(item.value)}
-            style={[styles.mode, mode === item.value && styles.selected]}
+            onPress={() =>
+              setRequest((current) => ({ ...current, mode: item.value }))
+            }
+            style={[
+              styles.mode,
+              request.mode === item.value && styles.selected,
+            ]}
           >
             <AppText>{item.label}</AppText>
           </Pressable>
@@ -164,14 +178,16 @@ export default function AiPlayground() {
         accessibilityLabel="Prompt"
         multiline
         editable={!busy}
-        value={prompt}
-        onChangeText={setPrompt}
+        value={request.prompt}
+        onChangeText={(prompt) =>
+          setRequest((current) => ({ ...current, prompt }))
+        }
         style={styles.input}
       />
 
       <AppButton
         title={operation.status === "generating" ? "Generating…" : "Generate"}
-        disabled={busy || !prompt.trim()}
+        disabled={busy || !request.prompt.trim()}
         onPress={() => void handleGenerate()}
       />
 

@@ -36,6 +36,7 @@ type ListState =
 
 export default function Walkthroughs() {
   const auth = useAuthStore((state) => state.auth);
+
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
 
   const [list, setList] = useState<ListState>({ status: "loading" });
