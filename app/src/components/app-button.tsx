@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
-  danger: { backgroundColor: colors.error },
+  danger: { backgroundColor: colors.danger },
   secondary: { backgroundColor: "transparent" },
   secondaryLabel: { color: colors.foreground },
   dimmed: { opacity: 0.6 },

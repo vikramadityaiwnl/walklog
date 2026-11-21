@@ -105,7 +105,7 @@ export default function Walkthroughs() {
             <EmptyState
               icon={
                 <View style={screenStyles.errorIcon}>
-                  <ExclamationTriangleIcon size={30} color={colors.error} />
+                  <ExclamationTriangleIcon size={30} color={colors.danger} />
                 </View>
               }
               title="Couldn’t load walkthroughs"
@@ -210,6 +210,6 @@ const screenStyles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: colors.errorSoft,
+    backgroundColor: colors.dangerSoft,
   },
 });

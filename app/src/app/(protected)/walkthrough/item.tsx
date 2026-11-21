@@ -21,7 +21,12 @@ import {
 import { AppText } from "../../../components/app-text";
 import { PhotoGallery } from "../../../components/photo-gallery";
 import { walkthroughStyles as styles } from "../../../components/walkthrough-styles";
-import type { Priority, PunchItem, Trade } from "../../../models/walkthrough";
+import type {
+  ItemStatus,
+  Priority,
+  PunchItem,
+  Trade,
+} from "../../../models/walkthrough";
 import {
   deleteItemPhotos,
   selectItemPhoto,
@@ -38,6 +43,7 @@ const trades: Trade[] = [
   "HVAC",
 ];
 const priorities: Priority[] = ["Low", "Medium", "High"];
+const statuses: ItemStatus[] = ["Open", "Done"];
 type FormState =
   | { status: "loading" }
   | { status: "ready"; existing?: PunchItem }
@@ -58,6 +64,7 @@ export default function ItemEdit() {
   const [location, setLocation] = useState("");
   const [trade, setTrade] = useState<Trade>("General");
   const [priority, setPriority] = useState<Priority>("Medium");
+  const [status, setStatus] = useState<ItemStatus>("Open");
   const [photos, setPhotos] = useState<PunchItem["photos"]>([]);
   const [photoBusy, setPhotoBusy] = useState(false);
   const stagedPhotos = useRef<PunchItem["photos"]>([]);
@@ -72,6 +79,7 @@ export default function ItemEdit() {
       location !== existing.location ||
       trade !== existing.trade ||
       priority !== existing.priority ||
+      status !== existing.status ||
       banner.uri !== existing.bannerPhotoUri);
   const showSave = !id || hasChanges;
 
@@ -110,6 +118,7 @@ export default function ItemEdit() {
         setLocation(item.location);
         setTrade(item.trade);
         setPriority(item.priority);
+        setStatus(item.status);
         setPhotos(item.photos);
         setForm({ status: "ready", existing: item });
       })
@@ -169,6 +178,7 @@ export default function ItemEdit() {
     setLocation(existing.location);
     setTrade(existing.trade);
     setPriority(existing.priority);
+    setStatusexisting.status;
     setForm({ status: "ready", existing });
   }
 
@@ -214,6 +224,7 @@ export default function ItemEdit() {
         location: location.trim() || "Unspecified Area",
         trade,
         priority,
+        status,
         photos,
         createdAt: existing?.createdAt ?? now,
         updatedAt: now,
@@ -372,6 +383,22 @@ export default function ItemEdit() {
                     mode: "single",
                     value: priority,
                     onChange: setPriority,
+                  }}
+                />
+              </View>
+
+              <View style={styles.section}>
+                <AppText weight="semibold" style={styles.label}>
+                  Status
+                </AppText>
+
+                <ChipGroup
+                  label="Status"
+                  options={statuses}
+                  selection={{
+                    mode: "single",
+                    value: status,
+                    onChange: setStatus,
                   }}
                 />
               </View>

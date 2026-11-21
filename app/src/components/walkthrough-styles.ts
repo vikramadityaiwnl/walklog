@@ -48,8 +48,8 @@ export const walkthroughStyles = StyleSheet.create({
   },
   cardTitle: { fontSize: 18 },
   link: { color: colors.accent },
-  danger: { color: colors.error },
+  danger: { color: colors.danger },
   photo: { width: 96, height: 96, borderRadius: 10 },
-  error: { color: colors.error },
+  error: { color: colors.danger },
   back: { paddingVertical: 10, alignSelf: "flex-start" },
 });

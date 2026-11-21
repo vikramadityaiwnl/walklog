@@ -207,6 +207,14 @@ export default function ItemView() {
 
               <View style={styles.section}>
                 <AppText weight="semibold" style={styles.label}>
+                  Status
+                </AppText>
+
+                <AppText>{screen.item.status}</AppText>
+              </View>
+
+              <View style={styles.section}>
+                <AppText weight="semibold" style={styles.label}>
                   Photos
                 </AppText>
 

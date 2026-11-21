@@ -60,5 +60,5 @@ const styles = StyleSheet.create({
   actions: { flexDirection: "row", gap: 24 },
   action: { paddingVertical: 8 },
   link: { color: colors.accent },
-  danger: { color: colors.error },
+  danger: { color: colors.danger },
 });

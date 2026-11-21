@@ -1,6 +1,10 @@
 import { useCallback, useState } from "react";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { PaperClipIcon, PlusIcon } from "react-native-heroicons/outline";
+import {
+  ClipboardDocumentListIcon,
+  PaperClipIcon,
+  PlusIcon,
+} from "react-native-heroicons/outline";
 import {
   ActivityIndicator,
   Image,
@@ -14,6 +18,8 @@ import { ScreenBanner } from "../../../components/screen-banner";
 import { getBannerColor } from "../../../services/banner-colors";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppButton } from "../../../components/app-button";
+import { Badge } from "../../../components/badge";
+import { EmptyState } from "../../../components/empty-state";
 import { AppText } from "../../../components/app-text";
 import { walkthroughStyles as styles } from "../../../components/walkthrough-styles";
 import type { PunchItem, Walkthrough } from "../../../models/walkthrough";
@@ -107,63 +113,88 @@ export default function WalkthroughDetail() {
               }
             />
 
-            <View style={styles.content}>
+            <View
+              style={[
+                styles.content,
+                screen.items.length === 0 && screenStyles.emptyContent,
+              ]}
+            >
               {screen.items.length === 0 ? (
-                <AppText style={styles.subheading}>
-                  No items yet. Add an observation to get started.
-                </AppText>
-              ) : null}
-
-              {screen.items.map((item) => (
-                <Pressable
-                  key={item.id}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Open item ${item.issueSummary}`}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/walkthrough/item-view",
-                      params: { walkthroughId: id, id: item.id },
-                    })
+                <EmptyState
+                  icon={
+                    <ClipboardDocumentListIcon size={48} color={colors.muted} />
                   }
-                  style={styles.card}
-                >
-                  <View style={styles.row}>
-                    {item.bannerPhotoUri ? (
-                      <Image
-                        source={{ uri: item.bannerPhotoUri }}
-                        style={screenStyles.bannerThumbnail}
-                      />
-                    ) : null}
+                  title="No items yet"
+                  description="Add an item to start documenting this walkthrough."
+                  compact
+                />
+              ) : (
+                <View>
+                  {screen.items.map((item, index) => (
+                    <Pressable
+                      key={item.id}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Open item ${item.issueSummary}, ${item.status}, ${item.priority} priority, ${item.photos.length} ${item.photos.length === 1 ? "attachment" : "attachments"}`}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/walkthrough/item-view",
+                          params: { walkthroughId: id, id: item.id },
+                        })
+                      }
+                      style={[
+                        screenStyles.itemRow,
+                        index < screen.items.length - 1 &&
+                          screenStyles.itemDivider,
+                      ]}
+                    >
+                      <View style={styles.row}>
+                        {item.bannerPhotoUri ? (
+                          <Image
+                            source={{ uri: item.bannerPhotoUri }}
+                            style={screenStyles.bannerThumbnail}
+                          />
+                        ) : null}
 
-                    <View style={screenStyles.itemText}>
-                      <AppText weight="bold" style={styles.cardTitle}>
-                        {item.issueSummary}
-                      </AppText>
-
-                      <AppText style={styles.subheading}>
-                        {item.location || "Unspecified area"} · {item.trade}
-                      </AppText>
-
-                      <View style={styles.between}>
-                        <AppText style={styles.link}>
-                          {item.priority} priority
-                        </AppText>
-
-                        <View style={screenStyles.attachments}>
-                          <PaperClipIcon size={16} color={colors.muted} />
-
-                          <AppText style={screenStyles.attachmentText}>
-                            {item.photos.length}{" "}
-                            {item.photos.length === 1
-                              ? "attachment"
-                              : "attachments"}
+                        <View style={screenStyles.itemText}>
+                          <AppText weight="bold" style={styles.cardTitle}>
+                            {item.issueSummary}
                           </AppText>
+
+                          <AppText style={styles.subheading}>
+                            {item.location || "Unspecified area"} · {item.trade}
+                          </AppText>
+
+                          <View style={screenStyles.badges}>
+                            <Badge
+                              label={item.status}
+                              tone={item.status === "Done" ? "success" : "info"}
+                            />
+
+                            <Badge
+                              label={item.priority}
+                              tone={
+                                item.priority === "High"
+                                  ? "danger"
+                                  : item.priority === "Medium"
+                                    ? "warning"
+                                    : "info"
+                              }
+                            />
+
+                            <Badge
+                              label={String(item.photos.length)}
+                              accessibilityLabel={`${item.photos.length} ${item.photos.length === 1 ? "attachment" : "attachments"}`}
+                              icon={
+                                <PaperClipIcon size={14} color={colors.muted} />
+                              }
+                            />
+                          </View>
                         </View>
                       </View>
-                    </View>
-                  </View>
-                </Pressable>
-              ))}
+                    </Pressable>
+                  ))}
+                </View>
+              )}
             </View>
           </>
         ) : null}
@@ -192,10 +223,20 @@ export default function WalkthroughDetail() {
 const screenStyles = StyleSheet.create({
   content: { flexGrow: 1 },
   loading: { flex: 1, alignItems: "center", justifyContent: "center" },
+  emptyContent: { flexGrow: 1 },
+  itemRow: { paddingVertical: 16 },
+  itemDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
   bannerThumbnail: { width: 60, height: 60, borderRadius: 10 },
   itemText: { flex: 1, gap: 8 },
-  attachments: { flexDirection: "row", alignItems: "center", gap: 4 },
-  attachmentText: { color: colors.muted, fontSize: 13 },
+  badges: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 6,
+  },
   actions: {
     paddingHorizontal: 24,
     paddingTop: 12,

@@ -2,6 +2,7 @@ export type WalkthroughStatus = "in_progress" | "verified" | "shared";
 export type Trade =
   "Plumbing" | "Electrical" | "Paint/Finish" | "Carpentry" | "HVAC" | "General";
 export type Priority = "High" | "Medium" | "Low";
+export type ItemStatus = "Open" | "Done";
 
 export interface Walkthrough {
   id: string;
@@ -26,6 +27,7 @@ export interface PunchItem {
   trade: Trade;
   issueSummary: string;
   priority: Priority;
+  status: ItemStatus;
   missingInfoHint?: string | null;
   onDeviceMeta?: {
     modelLabel: string;
