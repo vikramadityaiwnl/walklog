@@ -10,10 +10,12 @@ export default function Projects() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <AppHeader />
+
       <View style={styles.header}>
         <AppText variant="title" style={styles.heading}>
           Projects
         </AppText>
+
         <AppText style={styles.subtitle}>
           Keep related site visits together.
         </AppText>

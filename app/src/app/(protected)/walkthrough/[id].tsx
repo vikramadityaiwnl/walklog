@@ -96,12 +96,15 @@ export default function WalkthroughDetail() {
         >
           <AppText style={styles.link}>‹ Walkthroughs</AppText>
         </Pressable>
+
         {screen.status === "loading" ? <AppText>Loading…</AppText> : null}
+
         {screen.status === "error" ? (
           <AppText accessibilityRole="alert" style={styles.error}>
             {screen.message}
           </AppText>
         ) : null}
+
         {screen.status === "ready" ? (
           <>
             <View style={styles.between}>
@@ -109,12 +112,14 @@ export default function WalkthroughDetail() {
                 <AppText variant="title" style={styles.heading}>
                   {screen.walkthrough.title}
                 </AppText>
+
                 <AppText style={styles.subheading}>
                   {[screen.walkthrough.clientName, screen.walkthrough.address]
                     .filter(Boolean)
                     .join(" · ") || "Walkthrough"}
                 </AppText>
               </View>
+
               <Pressable
                 accessibilityRole="button"
                 onPress={() =>
@@ -124,16 +129,19 @@ export default function WalkthroughDetail() {
                 <AppText style={styles.link}>Edit</AppText>
               </Pressable>
             </View>
+
             <View style={styles.between}>
               <AppText weight="bold" style={styles.cardTitle}>
                 Items ({screen.items.length})
               </AppText>
             </View>
+
             {screen.items.length === 0 ? (
               <AppText style={styles.subheading}>
                 No items yet. Add an observation to get started.
               </AppText>
             ) : null}
+
             {screen.items.map((item) => (
               <Pressable
                 key={item.id}
@@ -154,13 +162,16 @@ export default function WalkthroughDetail() {
                       style={styles.photo}
                     />
                   ) : null}
+
                   <View style={{ flex: 1, gap: 5 }}>
                     <AppText weight="bold" style={styles.cardTitle}>
                       {item.issueSummary}
                     </AppText>
+
                     <AppText style={styles.subheading}>
                       {item.location || "Unspecified area"} · {item.trade}
                     </AppText>
+
                     <AppText style={styles.link}>
                       {item.priority} priority
                     </AppText>
@@ -168,6 +179,7 @@ export default function WalkthroughDetail() {
                 </View>
               </Pressable>
             ))}
+
             <AppButton
               title="+ Add item"
               onPress={() =>
@@ -177,6 +189,7 @@ export default function WalkthroughDetail() {
                 })
               }
             />
+
             <Pressable
               accessibilityRole="button"
               disabled={deleting}

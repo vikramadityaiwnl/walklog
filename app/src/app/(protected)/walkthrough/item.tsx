@@ -257,9 +257,11 @@ export default function ItemEdit() {
         >
           <AppText style={styles.link}>‹ Back</AppText>
         </Pressable>
+
         <AppText variant="title" style={styles.heading}>
           {id ? "Edit item" : "New item"}
         </AppText>
+
         {form.status === "loading" ? (
           <AppText>Loading…</AppText>
         ) : (
@@ -268,6 +270,7 @@ export default function ItemEdit() {
               <AppText weight="semibold" style={styles.label}>
                 Issue description *
               </AppText>
+
               <TextInput
                 accessibilityLabel="Issue description"
                 multiline
@@ -277,10 +280,12 @@ export default function ItemEdit() {
                 style={[styles.input, styles.multiline]}
               />
             </View>
+
             <View style={styles.section}>
               <AppText weight="semibold" style={styles.label}>
                 Room or location
               </AppText>
+
               <TextInput
                 accessibilityLabel="Room or location"
                 value={location}
@@ -289,10 +294,12 @@ export default function ItemEdit() {
                 style={styles.input}
               />
             </View>
+
             <View style={styles.section}>
               <AppText weight="semibold" style={styles.label}>
                 Trade
               </AppText>
+
               <View style={styles.wrap}>
                 {trades.map((value) => (
                   <Pressable
@@ -310,10 +317,12 @@ export default function ItemEdit() {
                 ))}
               </View>
             </View>
+
             <View style={styles.section}>
               <AppText weight="semibold" style={styles.label}>
                 Priority
               </AppText>
+
               <View style={styles.wrap}>
                 {priorities.map((value) => (
                   <Pressable
@@ -331,10 +340,12 @@ export default function ItemEdit() {
                 ))}
               </View>
             </View>
+
             <View style={styles.section}>
               <AppText weight="semibold" style={styles.label}>
                 Photos
               </AppText>
+
               <View style={styles.wrap}>
                 {photos.map((photo, index) => (
                   <View key={photo.localUri} style={{ gap: 4 }}>
@@ -342,6 +353,7 @@ export default function ItemEdit() {
                       source={{ uri: photo.localUri }}
                       style={styles.photo}
                     />
+
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel={`Remove photo ${index + 1}`}
@@ -358,6 +370,7 @@ export default function ItemEdit() {
                   </View>
                 ))}
               </View>
+
               <Pressable
                 accessibilityRole="button"
                 disabled={photoBusy || form.status === "saving"}
@@ -369,11 +382,13 @@ export default function ItemEdit() {
                 </AppText>
               </Pressable>
             </View>
+
             {form.status === "error" ? (
               <AppText accessibilityRole="alert" style={styles.error}>
                 {form.message}
               </AppText>
             ) : null}
+
             <AppButton
               title={
                 form.status === "saving"
@@ -389,6 +404,7 @@ export default function ItemEdit() {
               }
               onPress={save}
             />
+
             {id && form.existing ? (
               <Pressable
                 accessibilityRole="button"

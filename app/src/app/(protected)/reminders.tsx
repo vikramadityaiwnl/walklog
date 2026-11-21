@@ -19,6 +19,7 @@ export default function Reminders() {
         >
           <ArrowLeftIcon size={24} color={colors.foreground} />
         </Pressable>
+
         <AppText variant="title" style={styles.heading}>
           Reminders
         </AppText>

@@ -74,6 +74,7 @@ export default function Walkthroughs() {
             <AppText variant="title" style={styles.heading}>
               Walkthroughs
             </AppText>
+
             <AppText style={styles.subheading}>
               A clear record of every site visit.
             </AppText>
@@ -120,6 +121,7 @@ export default function Walkthroughs() {
 
                     <ChevronRightIcon size={20} color={colors.muted} />
                   </View>
+
                   {walkthrough.clientName || walkthrough.address ? (
                     <AppText style={styles.subheading}>
                       {[walkthrough.clientName, walkthrough.address]

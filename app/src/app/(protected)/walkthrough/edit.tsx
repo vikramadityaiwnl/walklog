@@ -123,12 +123,15 @@ export default function WalkthroughEdit() {
         >
           <AppText style={styles.link}>‹ Back</AppText>
         </Pressable>
+
         <AppText variant="title" style={styles.heading}>
           {id ? "Edit walkthrough" : "New walkthrough"}
         </AppText>
+
         <AppText style={styles.subheading}>
           Keep a record of your site visit, even when you’re offline.
         </AppText>
+
         {form.status === "loading" ? (
           <AppText>Loading…</AppText>
         ) : (
@@ -137,6 +140,7 @@ export default function WalkthroughEdit() {
               <AppText weight="semibold" style={styles.label}>
                 Walkthrough name *
               </AppText>
+
               <TextInput
                 accessibilityLabel="Walkthrough name"
                 value={title}
@@ -145,10 +149,12 @@ export default function WalkthroughEdit() {
                 style={styles.input}
               />
             </View>
+
             <View style={styles.section}>
               <AppText weight="semibold" style={styles.label}>
                 Client (optional)
               </AppText>
+
               <TextInput
                 accessibilityLabel="Client"
                 value={clientName}
@@ -157,10 +163,12 @@ export default function WalkthroughEdit() {
                 style={styles.input}
               />
             </View>
+
             <View style={styles.section}>
               <AppText weight="semibold" style={styles.label}>
                 Address (optional)
               </AppText>
+
               <TextInput
                 accessibilityLabel="Address"
                 value={address}
@@ -169,11 +177,13 @@ export default function WalkthroughEdit() {
                 style={styles.input}
               />
             </View>
+
             {form.status === "error" ? (
               <AppText accessibilityRole="alert" style={styles.error}>
                 {form.message}
               </AppText>
             ) : null}
+
             <AppButton
               title={
                 form.status === "saving"

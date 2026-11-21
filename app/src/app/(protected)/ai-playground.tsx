@@ -103,7 +103,9 @@ export default function AiPlayground() {
       keyboardShouldPersistTaps="handled"
     >
       <AppText variant="title">AI playground</AppText>
+
       <AppText weight="semibold">On-device availability</AppText>
+
       <AppText>
         {availability.status === "checking"
           ? "Checking…"
@@ -111,11 +113,13 @@ export default function AiPlayground() {
             ? availability.message
             : availability.value.message}
       </AppText>
+
       <AppButton
         title="Check again"
         disabled={busy || availability.status === "checking"}
         onPress={() => void refreshAvailability()}
       />
+
       {Platform.OS === "android" &&
       availability.status === "ready" &&
       availability.value.status === "downloadable" ? (
@@ -129,7 +133,9 @@ export default function AiPlayground() {
           onPress={() => void handleDownload()}
         />
       ) : null}
+
       <AppText weight="semibold">Inference mode</AppText>
+
       <View style={styles.modes}>
         {modes.map((item) => (
           <Pressable
@@ -148,10 +154,12 @@ export default function AiPlayground() {
           </Pressable>
         ))}
       </View>
+
       <AppText>
         Automatic prefers the on-device model and may use the cloud. On device
         and Cloud only use their selected source.
       </AppText>
+
       <TextInput
         accessibilityLabel="Prompt"
         multiline
@@ -160,17 +168,21 @@ export default function AiPlayground() {
         onChangeText={setPrompt}
         style={styles.input}
       />
+
       <AppButton
         title={operation.status === "generating" ? "Generating…" : "Generate"}
         disabled={busy || !prompt.trim()}
         onPress={() => void handleGenerate()}
       />
+
       {operation.status === "error" ? (
         <AppText accessibilityRole="alert">{operation.message}</AppText>
       ) : null}
+
       {operation.status === "complete" ? (
         <View style={styles.result}>
           <AppText weight="semibold">{`Source: ${operation.result.source} · ${operation.elapsedMs} ms`}</AppText>
+
           <AppText selectable>{operation.result.text}</AppText>
         </View>
       ) : null}

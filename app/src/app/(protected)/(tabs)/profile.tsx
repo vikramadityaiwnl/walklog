@@ -61,20 +61,24 @@ export default function Profile() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <AppHeader />
+
       <ScrollView contentContainerStyle={styles.content}>
         <AppText variant="title" style={styles.heading}>
           Profile
         </AppText>
+
         <AppText style={styles.subtitle}>
           Your account and preferences, in one place.
         </AppText>
 
         <View style={styles.identity}>
           <Avatar name={auth.user.displayName ?? ""} />
+
           <View style={styles.identityText}>
             <AppText variant="title" style={styles.name}>
               {auth.user.displayName ?? "Name unavailable"}
             </AppText>
+
             <AppText style={styles.email}>
               {auth.user.email ?? "Email unavailable"}
             </AppText>
@@ -86,13 +90,16 @@ export default function Profile() {
             Preferences
           </AppText>
         </View>
+
         {preferences.map((preference) => (
           <View key={preference.title} style={styles.setting}>
             <View style={styles.settingIcon}>
               <preference.icon size={20} color={colors.accent} />
             </View>
+
             <View style={styles.settingText}>
               <AppText weight="semibold">{preference.title}</AppText>
+
               <AppText style={styles.settingDescription}>
                 {preference.description}
               </AppText>
@@ -106,6 +113,7 @@ export default function Profile() {
             disabled={signingOut.status === "loading"}
             onPress={handleSignOut}
           />
+
           {signingOut.status === "error" ? (
             <AppText accessibilityRole="alert">{signingOut.message}</AppText>
           ) : null}

@@ -38,11 +38,13 @@ export default function AuthScreen() {
   return (
     <View style={styles.container}>
       <AppText variant="title">Sign in to walklog</AppText>
+
       <AppButton
         title="Continue with Google"
         disabled={signIn.status === "loading"}
         onPress={handleSignIn}
       />
+
       {signIn.status === "error" ? (
         <AppText accessibilityRole="alert">{signIn.message}</AppText>
       ) : null}

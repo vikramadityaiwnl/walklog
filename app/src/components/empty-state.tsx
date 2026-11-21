@@ -13,9 +13,11 @@ export function EmptyState(props: Props) {
   return (
     <View style={styles.container}>
       {props.icon}
+
       <AppText variant="title" style={styles.title}>
         {props.title}
       </AppText>
+
       <AppText style={styles.description}>{props.description}</AppText>
     </View>
   );

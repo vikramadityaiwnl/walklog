@@ -13,6 +13,7 @@ export function AppHeader() {
         contentFit="contain"
         accessibilityLabel="walklog"
       />
+
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Reminders"
