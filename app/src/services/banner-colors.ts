@@ -1,10 +1,10 @@
 const bannerColors = [
-  "#586B5E",
-  "#756555",
-  "#536775",
-  "#725A5D",
-  "#746B4D",
-  "#5D6279",
+  "#A6532D",
+  "#8E4B32",
+  "#B16542",
+  "#925C46",
+  "#9F5A3C",
+  "#AA6B4E",
 ];
 
 export function randomBannerColor(): string {

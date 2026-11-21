@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -12,6 +13,7 @@ interface Props {
   disabled?: boolean;
   variant?: "danger" | "secondary";
   accessibilityLabel?: string;
+  icon?: ReactNode;
 }
 
 export function AppButton(props: Props) {
@@ -28,6 +30,8 @@ export function AppButton(props: Props) {
         (pressed || props.disabled) && styles.dimmed,
       ]}
     >
+      {props.icon}
+
       <AppText
         weight="semibold"
         style={[
@@ -44,6 +48,9 @@ export function AppButton(props: Props) {
 const styles = StyleSheet.create({
   button: {
     alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
     backgroundColor: colors.accent,
     borderRadius: 8,
     paddingHorizontal: 20,

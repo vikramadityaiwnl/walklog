@@ -5,13 +5,13 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppButton } from "../../../components/app-button";
+import { ChipGroup } from "../../../components/chip-group";
 import { BannerPicker } from "../../../components/banner-picker";
 import { useBannerDraft } from "../../../hooks/use-banner-draft";
 import {
@@ -349,22 +349,15 @@ export default function ItemEdit() {
                   Trade
                 </AppText>
 
-                <View style={styles.wrap}>
-                  {trades.map((value) => (
-                    <Pressable
-                      key={value}
-                      accessibilityRole="radio"
-                      accessibilityState={{ checked: trade === value }}
-                      onPress={() => setTrade(value)}
-                      style={[
-                        styles.chip,
-                        trade === value && styles.chipSelected,
-                      ]}
-                    >
-                      <AppText>{value}</AppText>
-                    </Pressable>
-                  ))}
-                </View>
+                <ChipGroup
+                  label="Trade"
+                  options={trades}
+                  selection={{
+                    mode: "single",
+                    value: trade,
+                    onChange: setTrade,
+                  }}
+                />
               </View>
 
               <View style={styles.section}>
@@ -372,22 +365,15 @@ export default function ItemEdit() {
                   Priority
                 </AppText>
 
-                <View style={styles.wrap}>
-                  {priorities.map((value) => (
-                    <Pressable
-                      key={value}
-                      accessibilityRole="radio"
-                      accessibilityState={{ checked: priority === value }}
-                      onPress={() => setPriority(value)}
-                      style={[
-                        styles.chip,
-                        priority === value && styles.chipSelected,
-                      ]}
-                    >
-                      <AppText>{value}</AppText>
-                    </Pressable>
-                  ))}
-                </View>
+                <ChipGroup
+                  label="Priority"
+                  options={priorities}
+                  selection={{
+                    mode: "single",
+                    value: priority,
+                    onChange: setPriority,
+                  }}
+                />
               </View>
 
               {!id ? (

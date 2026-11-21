@@ -1,8 +1,9 @@
 import { useCallback, useState } from "react";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { PaperClipIcon } from "react-native-heroicons/outline";
+import { PaperClipIcon, PlusIcon } from "react-native-heroicons/outline";
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -126,28 +127,39 @@ export default function WalkthroughDetail() {
                   }
                   style={styles.card}
                 >
-                  <AppText weight="bold" style={styles.cardTitle}>
-                    {item.issueSummary}
-                  </AppText>
+                  <View style={styles.row}>
+                    {item.bannerPhotoUri ? (
+                      <Image
+                        source={{ uri: item.bannerPhotoUri }}
+                        style={screenStyles.bannerThumbnail}
+                      />
+                    ) : null}
 
-                  <AppText style={styles.subheading}>
-                    {item.location || "Unspecified area"} · {item.trade}
-                  </AppText>
-
-                  <View style={styles.between}>
-                    <AppText style={styles.link}>
-                      {item.priority} priority
-                    </AppText>
-
-                    <View style={screenStyles.attachments}>
-                      <PaperClipIcon size={16} color={colors.muted} />
-
-                      <AppText style={screenStyles.attachmentText}>
-                        {item.photos.length}{" "}
-                        {item.photos.length === 1
-                          ? "attachment"
-                          : "attachments"}
+                    <View style={screenStyles.itemText}>
+                      <AppText weight="bold" style={styles.cardTitle}>
+                        {item.issueSummary}
                       </AppText>
+
+                      <AppText style={styles.subheading}>
+                        {item.location || "Unspecified area"} · {item.trade}
+                      </AppText>
+
+                      <View style={styles.between}>
+                        <AppText style={styles.link}>
+                          {item.priority} priority
+                        </AppText>
+
+                        <View style={screenStyles.attachments}>
+                          <PaperClipIcon size={16} color={colors.muted} />
+
+                          <AppText style={screenStyles.attachmentText}>
+                            {item.photos.length}{" "}
+                            {item.photos.length === 1
+                              ? "attachment"
+                              : "attachments"}
+                          </AppText>
+                        </View>
+                      </View>
                     </View>
                   </View>
                 </Pressable>
@@ -160,7 +172,10 @@ export default function WalkthroughDetail() {
       <View style={screenStyles.actions}>
         {screen.status === "ready" ? (
           <AppButton
-            title="+ Add item"
+            title="Add item"
+            icon={
+              <PlusIcon size={20} strokeWidth={2.2} color={colors.onAccent} />
+            }
             onPress={() =>
               router.push({
                 pathname: "/walkthrough/item",
@@ -177,6 +192,8 @@ export default function WalkthroughDetail() {
 const screenStyles = StyleSheet.create({
   content: { flexGrow: 1 },
   loading: { flex: 1, alignItems: "center", justifyContent: "center" },
+  bannerThumbnail: { width: 60, height: 60, borderRadius: 10 },
+  itemText: { flex: 1, gap: 8 },
   attachments: { flexDirection: "row", alignItems: "center", gap: 4 },
   attachmentText: { color: colors.muted, fontSize: 13 },
   actions: {

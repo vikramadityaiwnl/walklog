@@ -205,8 +205,8 @@ export default function ItemView() {
                 </View>
               </View>
 
-              <View style={[styles.section, { marginTop: 12 }]}>
-                <AppText weight="bold" style={styles.cardTitle}>
+              <View style={styles.section}>
+                <AppText weight="semibold" style={styles.label}>
                   Photos
                 </AppText>
 

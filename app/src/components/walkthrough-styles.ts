@@ -49,18 +49,6 @@ export const walkthroughStyles = StyleSheet.create({
   cardTitle: { fontSize: 18 },
   link: { color: colors.accent },
   danger: { color: colors.error },
-  chip: {
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 13,
-    paddingVertical: 8,
-  },
-  chipSelected: {
-    backgroundColor: colors.accentSoft,
-    borderColor: colors.accent,
-  },
-  wrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   photo: { width: 96, height: 96, borderRadius: 10 },
   error: { color: colors.error },
   back: { paddingVertical: 10, alignSelf: "flex-start" },

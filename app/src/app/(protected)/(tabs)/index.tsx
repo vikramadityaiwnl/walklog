@@ -8,6 +8,7 @@ import {
 } from "react-native-heroicons/outline";
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -138,7 +139,14 @@ export default function Walkthroughs() {
                   style={styles.card}
                 >
                   <View style={styles.row}>
-                    <Avatar name={walkthrough.title} size="small" />
+                    {walkthrough.bannerPhotoUri ? (
+                      <Image
+                        source={{ uri: walkthrough.bannerPhotoUri }}
+                        style={screenStyles.bannerThumbnail}
+                      />
+                    ) : (
+                      <Avatar name={walkthrough.title} size="small" />
+                    )}
 
                     <View style={{ flex: 1, gap: 5 }}>
                       <AppText weight="bold" style={styles.cardTitle}>
@@ -183,6 +191,7 @@ export default function Walkthroughs() {
 
 const screenStyles = StyleSheet.create({
   content: { flexGrow: 1, paddingBottom: 100 },
+  bannerThumbnail: { width: 48, height: 48, borderRadius: 12 },
   floatingAction: {
     position: "absolute",
     right: 24,
