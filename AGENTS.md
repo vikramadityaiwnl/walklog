@@ -15,7 +15,7 @@
 ## Interface design
 
 - Group related titles and descriptions closely, and separate them from subsequent fields or sections. Use clear text and spacing hierarchy to communicate which elements belong together.
-- Keep back navigation out of nested screen headers; place a Back action at the bottom of the screen.
+- Keep Back buttons out of nested screens; use the platform’s back navigation. Place bottom actions in one row, with equal widths when there are two.
 
 ## Code style
 

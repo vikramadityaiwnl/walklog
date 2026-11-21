@@ -5,7 +5,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   TextInput,
   View,
@@ -36,6 +35,14 @@ export default function WalkthroughEdit() {
   const [title, setTitle] = useState("");
   const [clientName, setClientName] = useState("");
   const [address, setAddress] = useState("");
+
+  const existing = form.status === "loading" ? undefined : form.existing;
+  const hasChanges =
+    !!existing &&
+    (title.trim() !== existing.title ||
+      (clientName.trim() || undefined) !== existing.clientName ||
+      (address.trim() || undefined) !== existing.address);
+  const showSave = !id || hasChanges;
 
   useEffect(() => {
     if (!id || !ownerId) return;
@@ -72,6 +79,15 @@ export default function WalkthroughEdit() {
       active = false;
     };
   }, [id, ownerId]);
+
+  function cancelChanges() {
+    if (!existing) return;
+
+    setTitle(existing.title);
+    setClientName(existing.clientName ?? "");
+    setAddress(existing.address ?? "");
+    setForm({ status: "ready", existing });
+  }
 
   async function save() {
     if (!ownerId || form.status === "loading" || form.status === "saving")
@@ -175,11 +191,11 @@ export default function WalkthroughEdit() {
               {id ? "Settings" : "New walkthrough"}
             </AppText>
 
-            {!id ? (
-              <AppText style={styles.subheading}>
-                Keep a record of your site visit, even when you’re offline.
-              </AppText>
-            ) : null}
+            <AppText style={styles.subheading}>
+              {id
+                ? "Update the details of this walkthrough."
+                : "Keep a record of your site visit, even when you’re offline."}
+            </AppText>
           </View>
 
           {form.status === "loading" ? (
@@ -237,47 +253,52 @@ export default function WalkthroughEdit() {
           )}
         </ScrollView>
 
-        <View style={{ paddingHorizontal: 24, paddingTop: 12, gap: 10 }}>
-          {form.status !== "loading" ? (
-            <>
-              <AppButton
-                title={
-                  form.status === "saving"
-                    ? "Saving…"
-                    : id
-                      ? "Save changes"
-                      : "Create walkthrough"
-                }
-                disabled={
-                  deleting ||
-                  form.status === "saving" ||
-                  (!!id && !form.existing)
-                }
-                onPress={save}
-              />
+        {form.status !== "loading" ? (
+          <View style={styles.actions}>
+            {id && hasChanges ? (
+              <View style={styles.action}>
+                <AppButton
+                  title="Cancel"
+                  variant="secondary"
+                  disabled={deleting || form.status === "saving"}
+                  onPress={cancelChanges}
+                />
+              </View>
+            ) : null}
 
-              {id && form.existing ? (
+            {showSave ? (
+              <View style={styles.action}>
+                <AppButton
+                  title={
+                    form.status === "saving"
+                      ? "Saving…"
+                      : id
+                        ? "Save changes"
+                        : "Create walkthrough"
+                  }
+                  disabled={
+                    deleting ||
+                    form.status === "saving" ||
+                    (!!id && !form.existing)
+                  }
+                  onPress={save}
+                />
+              </View>
+            ) : null}
+
+            {id && form.existing && !hasChanges ? (
+              <View style={styles.action}>
                 <AppButton
                   variant="danger"
-                  title={deleting ? "Deleting…" : "Delete walkthrough"}
+                  title={deleting ? "Deleting…" : "Delete"}
+                  accessibilityLabel="Delete walkthrough"
                   disabled={deleting || form.status === "saving"}
                   onPress={confirmDelete}
                 />
-              ) : null}
-            </>
-          ) : null}
-
-          <Pressable
-            accessibilityRole="button"
-            disabled={deleting || form.status === "saving"}
-            onPress={() => router.back()}
-            style={{ alignItems: "center", paddingVertical: 12 }}
-          >
-            <AppText weight="semibold" style={styles.link}>
-              Back
-            </AppText>
-          </Pressable>
-        </View>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

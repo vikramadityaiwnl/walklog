@@ -172,16 +172,6 @@ export default function WalkthroughDetail() {
             }
           />
         ) : null}
-
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          style={screenStyles.back}
-        >
-          <AppText weight="semibold" style={styles.link}>
-            Back
-          </AppText>
-        </Pressable>
       </View>
     </SafeAreaView>
   );
@@ -201,8 +191,7 @@ const screenStyles = StyleSheet.create({
   actions: {
     paddingHorizontal: 24,
     paddingTop: 12,
-    gap: 4,
+    paddingBottom: 16,
     backgroundColor: colors.background,
   },
-  back: { alignItems: "center", justifyContent: "center", minHeight: 44 },
 });

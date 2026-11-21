@@ -22,7 +22,7 @@ export default function Projects() {
       </View>
 
       <EmptyState
-        icon={<Square3Stack3DIcon size={48} color={colors.accent} />}
+        icon={<Square3Stack3DIcon size={48} color={colors.muted} />}
         title="A place for the bigger picture"
         description="Group walkthroughs for the same site or client into a project."
       />

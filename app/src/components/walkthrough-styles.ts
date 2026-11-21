@@ -9,6 +9,14 @@ export const walkthroughStyles = StyleSheet.create({
     paddingBottom: 40,
     gap: 18,
   },
+  actions: {
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 16,
+  },
+  action: { flex: 1 },
   row: { flexDirection: "row", alignItems: "center", gap: 12 },
   between: {
     flexDirection: "row",

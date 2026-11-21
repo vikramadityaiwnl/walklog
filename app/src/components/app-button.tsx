@@ -10,22 +10,31 @@ interface Props {
   title: string;
   onPress: (event: GestureResponderEvent) => void;
   disabled?: boolean;
-  variant?: "danger";
+  variant?: "danger" | "secondary";
+  accessibilityLabel?: string;
 }
 
 export function AppButton(props: Props) {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={props.accessibilityLabel}
       disabled={props.disabled}
       onPress={props.onPress}
       style={({ pressed }) => [
         styles.button,
         props.variant === "danger" && styles.danger,
+        props.variant === "secondary" && styles.secondary,
         (pressed || props.disabled) && styles.dimmed,
       ]}
     >
-      <AppText weight="semibold" style={styles.label}>
+      <AppText
+        weight="semibold"
+        style={[
+          styles.label,
+          props.variant === "secondary" && styles.secondaryLabel,
+        ]}
+      >
         {props.title}
       </AppText>
     </Pressable>
@@ -41,6 +50,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   danger: { backgroundColor: colors.error },
+  secondary: { backgroundColor: "transparent" },
+  secondaryLabel: { color: colors.foreground },
   dimmed: { opacity: 0.6 },
   label: { color: colors.onAccent },
 });

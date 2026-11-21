@@ -229,17 +229,6 @@ export default function ItemView() {
           </>
         ) : null}
       </ScrollView>
-
-      <Pressable
-        accessibilityRole="button"
-        disabled={photoBusy}
-        onPress={() => router.back()}
-        style={screenStyles.back}
-      >
-        <AppText weight="semibold" style={styles.link}>
-          Back
-        </AppText>
-      </Pressable>
     </SafeAreaView>
   );
 }
@@ -253,5 +242,4 @@ const screenStyles = StyleSheet.create({
     justifyContent: "center",
   },
   details: { gap: 18 },
-  back: { alignItems: "center", justifyContent: "center", minHeight: 52 },
 });

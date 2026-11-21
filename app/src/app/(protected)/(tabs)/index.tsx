@@ -115,10 +115,11 @@ export default function Walkthroughs() {
           {list.status === "ready" && list.walkthroughs.length === 0 ? (
             <EmptyState
               icon={
-                <ClipboardDocumentListIcon size={48} color={colors.accent} />
+                <ClipboardDocumentListIcon size={48} color={colors.muted} />
               }
-              title="Your first walkthrough starts here"
-              description="Capture notes and photos on site, then turn them into a clear list of work."
+              title="No walkthroughs yet"
+              description="Tap the plus button to start your first walkthrough."
+              compact
             />
           ) : null}
 
@@ -192,11 +193,6 @@ const screenStyles = StyleSheet.create({
     backgroundColor: colors.accent,
     alignItems: "center",
     justifyContent: "center",
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
   },
   loading: { flex: 1, alignItems: "center", justifyContent: "center" },
   errorIcon: {

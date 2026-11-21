@@ -58,6 +58,15 @@ export default function ItemEdit() {
   const mounted = useRef(false);
   const saving = useRef(false);
 
+  const existing = form.status === "loading" ? undefined : form.existing;
+  const hasChanges =
+    !!existing &&
+    (description.trim() !== existing.issueSummary ||
+      (location.trim() || "Unspecified Area") !== existing.location ||
+      trade !== existing.trade ||
+      priority !== existing.priority);
+  const showSave = !id || hasChanges;
+
   useEffect(() => {
     mounted.current = true;
 
@@ -141,6 +150,16 @@ export default function ItemEdit() {
       },
       { text: "Cancel", style: "cancel" },
     ]);
+  }
+
+  function cancelChanges() {
+    if (!existing) return;
+
+    setDescription(existing.issueSummary);
+    setLocation(existing.location);
+    setTrade(existing.trade);
+    setPriority(existing.priority);
+    setForm({ status: "ready", existing });
   }
 
   async function save() {
@@ -257,9 +276,17 @@ export default function ItemEdit() {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.content}
         >
-          <AppText variant="title" style={styles.heading}>
-            {id ? "Edit item" : "New item"}
-          </AppText>
+          <View style={{ gap: 5, marginBottom: 8 }}>
+            <AppText variant="title" style={styles.heading}>
+              {id ? "Edit item" : "New item"}
+            </AppText>
+
+            <AppText style={styles.subheading}>
+              {id
+                ? "Update the details of this item."
+                : "Record an issue and its details."}
+            </AppText>
+          </View>
 
           {form.status === "loading" ? (
             <AppText>Loading…</AppText>
@@ -372,47 +399,52 @@ export default function ItemEdit() {
           )}
         </ScrollView>
 
-        <View style={{ paddingHorizontal: 24, paddingTop: 12, gap: 10 }}>
-          {form.status !== "loading" ? (
-            <>
-              <AppButton
-                title={
-                  form.status === "saving"
-                    ? "Saving…"
-                    : id
-                      ? "Save changes"
-                      : "Add item"
-                }
-                disabled={
-                  photoBusy ||
-                  form.status === "saving" ||
-                  (!!id && !form.existing)
-                }
-                onPress={save}
-              />
-
-              {id && form.existing ? (
+        {form.status !== "loading" ? (
+          <View style={styles.actions}>
+            {id && hasChanges ? (
+              <View style={styles.action}>
                 <AppButton
-                  title="Delete item"
+                  title="Cancel"
+                  variant="secondary"
+                  disabled={photoBusy || form.status === "saving"}
+                  onPress={cancelChanges}
+                />
+              </View>
+            ) : null}
+
+            {showSave ? (
+              <View style={styles.action}>
+                <AppButton
+                  title={
+                    form.status === "saving"
+                      ? "Saving…"
+                      : id
+                        ? "Save changes"
+                        : "Add item"
+                  }
+                  disabled={
+                    photoBusy ||
+                    form.status === "saving" ||
+                    (!!id && !form.existing)
+                  }
+                  onPress={save}
+                />
+              </View>
+            ) : null}
+
+            {id && form.existing && !hasChanges ? (
+              <View style={styles.action}>
+                <AppButton
+                  title="Delete"
+                  accessibilityLabel="Delete item"
                   variant="danger"
                   disabled={photoBusy || form.status === "saving"}
                   onPress={confirmDelete}
                 />
-              ) : null}
-            </>
-          ) : null}
-
-          <Pressable
-            accessibilityRole="button"
-            disabled={form.status === "saving" || photoBusy}
-            onPress={() => router.back()}
-            style={{ alignItems: "center", paddingVertical: 12 }}
-          >
-            <AppText weight="semibold" style={styles.link}>
-              Back
-            </AppText>
-          </Pressable>
-        </View>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
