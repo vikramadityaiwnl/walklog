@@ -7,6 +7,7 @@ import {
 import { ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppButton } from "../../../components/app-button";
+import { useDialogStore } from "../../../store/dialog-store";
 import { AppHeader } from "../../../components/app-header";
 import { AppText } from "../../../components/app-text";
 import { Avatar } from "../../../components/avatar";
@@ -42,6 +43,21 @@ export default function Profile() {
   const [signingOut, setSigningOut] = useState<SignOutState>({
     status: "idle",
   });
+
+  const showDialog = useDialogStore((state) => state.showDialog);
+
+  function confirmSignOut() {
+    showDialog("Sign out?", "You can sign back in to access your account.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign out",
+        style: "destructive",
+        onPress: () => {
+          void handleSignOut();
+        },
+      },
+    ]);
+  }
 
   async function handleSignOut() {
     setSigningOut({ status: "loading" });
@@ -111,7 +127,7 @@ export default function Profile() {
           <AppButton
             title="Sign out"
             disabled={signingOut.status === "loading"}
-            onPress={handleSignOut}
+            onPress={confirmSignOut}
           />
 
           {signingOut.status === "error" ? (

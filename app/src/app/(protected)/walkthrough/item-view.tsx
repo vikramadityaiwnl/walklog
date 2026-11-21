@@ -2,7 +2,6 @@ import { useCallback, useState } from "react";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,6 +12,7 @@ import { ScreenBanner } from "../../../components/screen-banner";
 import { getBannerColor } from "../../../services/banner-colors";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText } from "../../../components/app-text";
+import { useDialogStore } from "../../../store/dialog-store";
 import { PhotoGallery } from "../../../components/photo-gallery";
 import { walkthroughStyles as styles } from "../../../components/walkthrough-styles";
 import type { PunchItem } from "../../../models/walkthrough";
@@ -38,6 +38,7 @@ export default function ItemView() {
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
   const [screen, setScreen] = useState<ScreenState>({ status: "loading" });
   const [photoBusy, setPhotoBusy] = useState(false);
+  const showDialog = useDialogStore((state) => state.showDialog);
 
   useFocusEffect(
     useCallback(() => {
@@ -86,7 +87,7 @@ export default function ItemView() {
       setScreen({ status: "ready", item });
     } catch (error) {
       if (added) await deleteItemPhotos([added]).catch(() => {});
-      Alert.alert(
+      showDialog(
         "Couldn’t add photo",
         error instanceof Error ? error.message : "Please try again.",
       );
@@ -96,15 +97,17 @@ export default function ItemView() {
   }
 
   function choosePhoto() {
-    Alert.alert("Add photo", "Choose a source", [
+    showDialog("Add photo", "Choose a source", [
       {
-        text: "Take photo",
+        text: "Camera",
+        icon: "camera",
         onPress: () => {
           void addPhoto("camera");
         },
       },
       {
-        text: "Choose from library",
+        text: "Photo library",
+        icon: "photo-library",
         onPress: () => {
           void addPhoto("library");
         },
@@ -134,8 +137,6 @@ export default function ItemView() {
 
       return true;
     } catch {
-      Alert.alert("Couldn’t remove photo", "Please try again.");
-
       return false;
     } finally {
       setPhotoBusy(false);

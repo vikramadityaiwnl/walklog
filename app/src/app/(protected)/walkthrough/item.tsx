@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Crypto from "expo-crypto";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -11,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppButton } from "../../../components/app-button";
+import { useDialogStore } from "../../../store/dialog-store";
 import { ChipGroup } from "../../../components/chip-group";
 import { BannerPicker } from "../../../components/banner-picker";
 import { useBannerDraft } from "../../../hooks/use-banner-draft";
@@ -70,6 +70,7 @@ export default function ItemEdit() {
   const stagedPhotos = useRef<PunchItem["photos"]>([]);
   const mounted = useRef(false);
   const saving = useRef(false);
+  const showDialog = useDialogStore((state) => state.showDialog);
   const banner = useBannerDraft();
 
   const existing = form.status === "loading" ? undefined : form.existing;
@@ -143,7 +144,7 @@ export default function ItemEdit() {
         setPhotos((current) => [...current, photo]);
       }
     } catch (error) {
-      Alert.alert(
+      showDialog(
         "Couldn’t add photo",
         error instanceof Error ? error.message : "Please try again.",
       );
@@ -153,15 +154,17 @@ export default function ItemEdit() {
   }
 
   function choosePhoto() {
-    Alert.alert("Add photo", "Choose a source", [
+    showDialog("Add photo", "Choose a source", [
       {
-        text: "Take photo",
+        text: "Camera",
+        icon: "camera",
         onPress: () => {
           void addPhoto("camera");
         },
       },
       {
-        text: "Choose from library",
+        text: "Photo library",
+        icon: "photo-library",
         onPress: () => {
           void addPhoto("library");
         },
@@ -178,7 +181,7 @@ export default function ItemEdit() {
     setLocation(existing.location);
     setTrade(existing.trade);
     setPriority(existing.priority);
-    setStatusexisting.status;
+    setStatus(existing.status);
     setForm({ status: "ready", existing });
   }
 
@@ -263,7 +266,7 @@ export default function ItemEdit() {
     if (!ownerId || form.status === "loading" || !form.existing) return;
 
     const existing = form.existing;
-    Alert.alert(
+    showDialog(
       "Delete item?",
       "This also deletes its photos from this device.",
       [

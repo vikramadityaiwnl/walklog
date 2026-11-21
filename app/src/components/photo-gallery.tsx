@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { PlusIcon, XMarkIcon } from "react-native-heroicons/outline";
 import {
-  Alert,
   Image,
   Modal,
   Pressable,
@@ -13,6 +12,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import type { PunchItem } from "../models/walkthrough";
 import { colors } from "../theme";
 import { AppButton } from "./app-button";
+import { AppDialog } from "./app-dialog";
+import { useDialogStore } from "../store/dialog-store";
 
 type Photo = PunchItem["photos"][number];
 
@@ -25,24 +26,39 @@ interface Props {
 
 export function PhotoGallery(props: Props) {
   const [selected, setSelected] = useState<Photo | null>(null);
+
+  const showDialog = useDialogStore((state) => state.showDialog);
+
   const { width } = useWindowDimensions();
   const tileWidth = Math.max(60, (width - 68) / 3);
 
   function confirmRemove() {
     if (!selected || props.busy) return;
 
-    Alert.alert("Delete photo?", "This removes the photo from this item.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: () => {
-          void props.onRemove(selected).then((removed) => {
-            if (removed) setSelected(null);
-          });
+    showDialog(
+      "Delete photo?",
+      "This removes the photo from this item.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            void props.onRemove(selected).then((removed) => {
+              if (removed) setSelected(null);
+              else
+                showDialog(
+                  "Couldn’t remove photo",
+                  "Please try again.",
+                  undefined,
+                  "photo-viewer",
+                );
+            });
+          },
         },
-      },
-    ]);
+      ],
+      "photo-viewer",
+    );
   }
 
   return (
@@ -109,6 +125,7 @@ export function PhotoGallery(props: Props) {
               onPress={confirmRemove}
             />
           </View>
+          <AppDialog surface="photo-viewer" />
         </SafeAreaView>
       </Modal>
     </>

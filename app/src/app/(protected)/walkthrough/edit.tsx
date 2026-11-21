@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Crypto from "expo-crypto";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -11,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppButton } from "../../../components/app-button";
+import { useDialogStore } from "../../../store/dialog-store";
 import { BannerPicker } from "../../../components/banner-picker";
 import { useBannerDraft } from "../../../hooks/use-banner-draft";
 import {
@@ -41,6 +41,7 @@ export default function WalkthroughEdit() {
   const [title, setTitle] = useState("");
   const [clientName, setClientName] = useState("");
   const [address, setAddress] = useState("");
+  const showDialog = useDialogStore((state) => state.showDialog);
   const banner = useBannerDraft();
 
   const existing = form.status === "loading" ? undefined : form.existing;
@@ -169,7 +170,7 @@ export default function WalkthroughEdit() {
     )
       return;
 
-    Alert.alert(
+    showDialog(
       "Delete walkthrough?",
       "This also deletes its items and photos from this device.",
       [
@@ -198,7 +199,7 @@ export default function WalkthroughEdit() {
                 router.dismissTo("/(protected)/(tabs)");
               } catch {
                 setDeleting(false);
-                Alert.alert("Couldn’t delete walkthrough", "Please try again.");
+                showDialog("Couldn’t delete walkthrough", "Please try again.");
               }
             })();
           },

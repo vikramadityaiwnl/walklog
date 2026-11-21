@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert } from "react-native";
+import { useDialogStore } from "../store/dialog-store";
 import {
   deleteItemPhotos,
   selectItemPhoto,
 } from "../services/walkthrough-photos";
 
 export function useBannerDraft() {
+  const showDialog = useDialogStore((state) => state.showDialog);
+
   const [uri, setUri] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
+
   const original = useRef<string | undefined>(undefined);
   const staged = useRef<string[]>([]);
   const mounted = useRef(false);
@@ -48,7 +51,7 @@ export function useBannerDraft() {
       staged.current.push(photo.localUri);
       setUri(photo.localUri);
     } catch (error) {
-      Alert.alert(
+      showDialog(
         "Couldn’t add banner",
         error instanceof Error ? error.message : "Please try again.",
       );
@@ -58,15 +61,17 @@ export function useBannerDraft() {
   }
 
   function choose() {
-    Alert.alert("Banner image", "Choose a source", [
+    showDialog("Banner image", "Choose a source", [
       {
-        text: "Take photo",
+        text: "Camera",
+        icon: "camera",
         onPress: () => {
           void select("camera");
         },
       },
       {
-        text: "Choose from library",
+        text: "Photo library",
+        icon: "photo-library",
         onPress: () => {
           void select("library");
         },
