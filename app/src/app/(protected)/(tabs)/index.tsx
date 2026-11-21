@@ -28,6 +28,7 @@ type ListState =
 export default function Walkthroughs() {
   const auth = useAuthStore((state) => state.auth);
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
+
   const [list, setList] = useState<ListState>({ status: "loading" });
 
   useFocusEffect(
@@ -50,6 +51,7 @@ export default function Walkthroughs() {
               ),
             ),
           );
+
           if (active) setList({ status: "ready", walkthroughs, counts });
         } catch {
           if (active) setList({ status: "error" });
@@ -65,6 +67,7 @@ export default function Walkthroughs() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <AppHeader />
+
       <View style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.section}>
@@ -75,14 +78,17 @@ export default function Walkthroughs() {
               A clear record of every site visit.
             </AppText>
           </View>
+
           {list.status === "loading" ? (
             <AppText>Loading walkthroughs…</AppText>
           ) : null}
+
           {list.status === "error" ? (
             <AppText accessibilityRole="alert" style={styles.error}>
               Couldn’t load walkthroughs. Please reopen this screen.
             </AppText>
           ) : null}
+
           {list.status === "ready" && list.walkthroughs.length === 0 ? (
             <EmptyState
               icon={
@@ -92,6 +98,7 @@ export default function Walkthroughs() {
               description="Capture notes and photos on site, then turn them into a clear list of work."
             />
           ) : null}
+
           {list.status === "ready"
             ? list.walkthroughs.map((walkthrough) => (
                 <Pressable
@@ -110,6 +117,7 @@ export default function Walkthroughs() {
                     <AppText weight="bold" style={styles.cardTitle}>
                       {walkthrough.title}
                     </AppText>
+
                     <ChevronRightIcon size={20} color={colors.muted} />
                   </View>
                   {walkthrough.clientName || walkthrough.address ? (
@@ -119,6 +127,7 @@ export default function Walkthroughs() {
                         .join(" · ")}
                     </AppText>
                   ) : null}
+
                   <AppText style={styles.subheading}>
                     {list.counts[walkthrough.id]}{" "}
                     {list.counts[walkthrough.id] === 1 ? "item" : "items"}

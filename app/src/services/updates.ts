@@ -13,6 +13,7 @@ export function initializeUpdates(): Promise<void> {
           if (update.isAvailable || update.isRollBackToEmbedded) {
             await Updates.fetchUpdateAsync();
             await Updates.reloadAsync();
+
             return;
           }
         }

@@ -32,6 +32,7 @@ export default function AuthScreen() {
   }
 
   if (auth.status !== "ready") return null;
+
   if (auth.user) return <Redirect href="/(protected)/(tabs)" />;
 
   return (

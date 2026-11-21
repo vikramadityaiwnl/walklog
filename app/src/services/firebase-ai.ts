@@ -25,6 +25,7 @@ function getNativeModule(): FirebaseAiNativeModule {
     throw new Error(
       "Firebase AI is unavailable. Install a new development build.",
     );
+
   return native;
 }
 
@@ -38,6 +39,7 @@ export function downloadModel(): Promise<void> {
       "Apple Intelligence manages its model download in Settings.",
     );
   }
+
   return getNativeModule().downloadModel();
 }
 

@@ -35,6 +35,7 @@ export async function selectItemPhoto(source: "camera" | "library") {
   await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
   const uri = `${directory}${Crypto.randomUUID()}.jpg`;
   await FileSystem.copyAsync({ from: image.uri, to: uri });
+
   return { localUri: uri };
 }
 

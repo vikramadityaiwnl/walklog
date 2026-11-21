@@ -29,18 +29,22 @@ export default function WalkthroughEdit() {
 
   useEffect(() => {
     if (!id || !ownerId) return;
+
     let active = true;
     void createWalkthroughStorage(ownerId)
       .getWalkthrough(id)
       .then((walkthrough) => {
         if (!active) return;
+
         if (!walkthrough) {
           setForm({
             status: "error",
             message: "This walkthrough could not be found.",
           });
+
           return;
         }
+
         setTitle(walkthrough.title);
         setClientName(walkthrough.clientName ?? "");
         setAddress(walkthrough.address ?? "");
@@ -53,6 +57,7 @@ export default function WalkthroughEdit() {
             message: "Couldn’t load this walkthrough.",
           });
       });
+
     return () => {
       active = false;
     };
@@ -61,16 +66,20 @@ export default function WalkthroughEdit() {
   async function save() {
     if (!ownerId || form.status === "loading" || form.status === "saving")
       return;
+
     const existing = form.existing;
     if (id && !existing) return;
+
     if (!title.trim()) {
       setForm({
         status: "error",
         message: "Enter a walkthrough name.",
         existing,
       });
+
       return;
     }
+
     setForm({ status: "saving", existing });
     try {
       const now = Date.now();

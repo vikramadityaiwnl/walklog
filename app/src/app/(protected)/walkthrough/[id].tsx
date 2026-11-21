@@ -25,6 +25,7 @@ export default function WalkthroughDetail() {
   useFocusEffect(
     useCallback(() => {
       if (!ownerId || !id) return;
+
       let active = true;
       const storage = createWalkthroughStorage(ownerId);
       void Promise.all([storage.getWalkthrough(id), storage.listItems(id)])
@@ -46,6 +47,7 @@ export default function WalkthroughDetail() {
               message: "Couldn’t load this walkthrough.",
             });
         });
+
       return () => {
         active = false;
       };
@@ -54,6 +56,7 @@ export default function WalkthroughDetail() {
 
   function confirmDelete() {
     if (screen.status !== "ready" || !ownerId || deleting) return;
+
     const items = screen.items;
     Alert.alert(
       "Delete walkthrough?",

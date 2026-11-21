@@ -79,6 +79,7 @@ export function createWalkthroughStorage(ownerId: string) {
         "SELECT data FROM walkthroughs WHERE owner_id = ? ORDER BY updated_at DESC, id ASC",
         ownerId,
       );
+
       return rows.map((row) => JSON.parse(row.data) as Walkthrough);
     },
 
@@ -90,6 +91,7 @@ export function createWalkthroughStorage(ownerId: string) {
         ownerId,
         id,
       );
+
       return row ? (JSON.parse(row.data) as Walkthrough) : null;
     },
 
@@ -127,6 +129,7 @@ export function createWalkthroughStorage(ownerId: string) {
         ownerId,
         walkthroughId,
       );
+
       return rows.map((row) => JSON.parse(row.data) as PunchItem);
     },
 

@@ -58,6 +58,7 @@ export default function ItemEdit() {
 
   useEffect(() => {
     mounted.current = true;
+
     return () => {
       mounted.current = false;
       if (!saving.current) {
@@ -65,21 +66,26 @@ export default function ItemEdit() {
       }
     };
   }, []);
+
   useEffect(() => {
     if (!id || !ownerId || !walkthroughId) return;
+
     let active = true;
     void createWalkthroughStorage(ownerId)
       .listItems(walkthroughId)
       .then((items) => {
         if (!active) return;
+
         const item = items.find((entry) => entry.id === id);
         if (!item) {
           setForm({
             status: "error",
             message: "This item could not be found.",
           });
+
           return;
         }
+
         setDescription(item.issueSummary);
         setLocation(item.location);
         setTrade(item.trade);
@@ -91,6 +97,7 @@ export default function ItemEdit() {
         if (active)
           setForm({ status: "error", message: "Couldn’t load this item." });
       });
+
     return () => {
       active = false;
     };
@@ -143,16 +150,20 @@ export default function ItemEdit() {
       photoBusy
     )
       return;
+
     const existing = form.existing;
     if (id && !existing) return;
+
     if (!description.trim()) {
       setForm({
         status: "error",
         message: "Enter an issue description.",
         existing,
       });
+
       return;
     }
+
     saving.current = true;
     setForm({ status: "saving", existing });
     try {
@@ -184,8 +195,10 @@ export default function ItemEdit() {
     } catch {
       if (!mounted.current) {
         void deleteItemPhotos(stagedPhotos.current).catch(() => {});
+
         return;
       }
+
       setForm({
         status: "error",
         message: "Couldn’t save the item. Please try again.",
@@ -198,6 +211,7 @@ export default function ItemEdit() {
 
   function confirmDelete() {
     if (!ownerId || form.status === "loading" || !form.existing) return;
+
     const existing = form.existing;
     Alert.alert(
       "Delete item?",
