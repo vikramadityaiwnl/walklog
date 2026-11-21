@@ -10,17 +10,19 @@ export default function Projects() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <AppHeader />
+
       <View style={styles.header}>
         <AppText variant="title" style={styles.heading}>
           Projects
         </AppText>
+
         <AppText style={styles.subtitle}>
           Keep related site visits together.
         </AppText>
       </View>
 
       <EmptyState
-        icon={<Square3Stack3DIcon size={48} color={colors.accent} />}
+        icon={<Square3Stack3DIcon size={48} color={colors.muted} />}
         title="A place for the bigger picture"
         description="Group walkthroughs for the same site or client into a project."
       />

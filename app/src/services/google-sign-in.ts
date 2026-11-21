@@ -27,6 +27,7 @@ export async function signInWithGoogle(): Promise<void> {
   const response = await GoogleSignin.signIn();
 
   if (!isSuccessResponse(response)) return;
+
   if (!response.data.idToken)
     throw new Error("Google did not return an ID token.");
 

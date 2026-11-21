@@ -7,6 +7,7 @@ import {
 import { ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppButton } from "../../../components/app-button";
+import { useDialogStore } from "../../../store/dialog-store";
 import { AppHeader } from "../../../components/app-header";
 import { AppText } from "../../../components/app-text";
 import { Avatar } from "../../../components/avatar";
@@ -39,9 +40,25 @@ const preferences = [
 
 export default function Profile() {
   const auth = useAuthStore((state) => state.auth);
+
   const [signingOut, setSigningOut] = useState<SignOutState>({
     status: "idle",
   });
+
+  const showDialog = useDialogStore((state) => state.showDialog);
+
+  function confirmSignOut() {
+    showDialog("Sign out?", "You can sign back in to access your account.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign out",
+        style: "destructive",
+        onPress: () => {
+          void handleSignOut();
+        },
+      },
+    ]);
+  }
 
   async function handleSignOut() {
     setSigningOut({ status: "loading" });
@@ -61,20 +78,24 @@ export default function Profile() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <AppHeader />
+
       <ScrollView contentContainerStyle={styles.content}>
         <AppText variant="title" style={styles.heading}>
           Profile
         </AppText>
+
         <AppText style={styles.subtitle}>
           Your account and preferences, in one place.
         </AppText>
 
         <View style={styles.identity}>
           <Avatar name={auth.user.displayName ?? ""} />
+
           <View style={styles.identityText}>
             <AppText variant="title" style={styles.name}>
               {auth.user.displayName ?? "Name unavailable"}
             </AppText>
+
             <AppText style={styles.email}>
               {auth.user.email ?? "Email unavailable"}
             </AppText>
@@ -86,13 +107,16 @@ export default function Profile() {
             Preferences
           </AppText>
         </View>
+
         {preferences.map((preference) => (
           <View key={preference.title} style={styles.setting}>
             <View style={styles.settingIcon}>
               <preference.icon size={20} color={colors.accent} />
             </View>
+
             <View style={styles.settingText}>
               <AppText weight="semibold">{preference.title}</AppText>
+
               <AppText style={styles.settingDescription}>
                 {preference.description}
               </AppText>
@@ -104,8 +128,9 @@ export default function Profile() {
           <AppButton
             title="Sign out"
             disabled={signingOut.status === "loading"}
-            onPress={handleSignOut}
+            onPress={confirmSignOut}
           />
+
           {signingOut.status === "error" ? (
             <AppText accessibilityRole="alert">{signingOut.message}</AppText>
           ) : null}

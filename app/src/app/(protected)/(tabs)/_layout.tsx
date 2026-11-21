@@ -29,6 +29,7 @@ export default function TabsLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="projects"
         options={{
@@ -38,6 +39,7 @@ export default function TabsLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="profile"
         options={{

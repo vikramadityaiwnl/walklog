@@ -2,10 +2,12 @@ import { requireOptionalNativeModule } from "expo";
 import { Platform } from "react-native";
 
 export type InferenceMode = "auto" | "device" | "cloud";
+
 export type ModelAvailability = {
   status: "available" | "downloadable" | "downloading" | "unavailable";
   message: string;
 };
+
 export type Generation = {
   text: string;
   source: "on-device" | "cloud" | "unknown";
@@ -25,6 +27,7 @@ function getNativeModule(): FirebaseAiNativeModule {
     throw new Error(
       "Firebase AI is unavailable. Install a new development build.",
     );
+
   return native;
 }
 
@@ -38,6 +41,7 @@ export function downloadModel(): Promise<void> {
       "Apple Intelligence manages its model download in Settings.",
     );
   }
+
   return getNativeModule().downloadModel();
 }
 

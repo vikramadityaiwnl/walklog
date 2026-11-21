@@ -14,6 +14,7 @@ type SignInState =
 
 export default function AuthScreen() {
   const auth = useAuthStore((state) => state.auth);
+
   const [signIn, setSignIn] = useState<SignInState>({ status: "idle" });
 
   async function handleSignIn() {
@@ -32,16 +33,19 @@ export default function AuthScreen() {
   }
 
   if (auth.status !== "ready") return null;
+
   if (auth.user) return <Redirect href="/(protected)/(tabs)" />;
 
   return (
     <View style={styles.container}>
       <AppText variant="title">Sign in to walklog</AppText>
+
       <AppButton
         title="Continue with Google"
         disabled={signIn.status === "loading"}
         onPress={handleSignIn}
       />
+
       {signIn.status === "error" ? (
         <AppText accessibilityRole="alert">{signIn.message}</AppText>
       ) : null}

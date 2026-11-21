@@ -45,6 +45,7 @@ end
       )
     )
       config.modResults.contents += `\n${googleSignInLink}`;
+
     return config;
   });
 
@@ -73,6 +74,7 @@ end
         comment: 'XCRemoteSwiftPackageReference "app-check"',
       });
     }
+
     return config;
   });
 };

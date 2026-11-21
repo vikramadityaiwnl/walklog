@@ -4,6 +4,7 @@ import { AppText } from "./app-text";
 
 interface Props {
   name: string;
+  size?: "small";
 }
 
 export function Avatar(props: Props) {
@@ -17,8 +18,17 @@ export function Avatar(props: Props) {
     .toLocaleUpperCase();
 
   return (
-    <View style={styles.container} accessibilityLabel={props.name}>
-      <AppText variant="title" style={styles.initials}>
+    <View
+      style={[styles.container, props.size === "small" && styles.small]}
+      accessibilityLabel={props.name}
+    >
+      <AppText
+        variant="title"
+        style={[
+          styles.initials,
+          props.size === "small" && styles.smallInitials,
+        ]}
+      >
         {initials || "?"}
       </AppText>
     </View>
@@ -35,4 +45,11 @@ const styles = StyleSheet.create({
     width: 72,
   },
   initials: { color: colors.onAccent },
+  small: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: colors.accentSoft,
+  },
+  smallInitials: { color: colors.accent, fontSize: 16 },
 });

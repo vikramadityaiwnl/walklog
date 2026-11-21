@@ -9,6 +9,7 @@ public class FirebaseAiHybridModule: Module {
       guard #available(iOS 26.0, *) else {
         return ["status": "unavailable", "message": "On-device AI requires iOS 26 or later."]
       }
+
       switch FirebaseAI.SystemLanguageModel.default.availability {
       case .available:
         return ["status": "available", "message": "Apple's on-device model is ready."]
@@ -29,6 +30,7 @@ public class FirebaseAiHybridModule: Module {
         ]
       }
     }
+
     AsyncFunction("generateText") {
       (prompt: String, mode: String) async throws -> [String: String] in
       guard !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -36,25 +38,32 @@ public class FirebaseAiHybridModule: Module {
           domain: "FirebaseAiHybrid", code: 1,
           userInfo: [NSLocalizedDescriptionKey: "Enter a prompt first."])
       }
+
       guard ["auto", "device", "cloud"].contains(mode) else {
         throw NSError(
           domain: "FirebaseAiHybrid", code: 3,
           userInfo: [NSLocalizedDescriptionKey: "Unknown inference mode."])
       }
+
       do {
         let ai = FirebaseAI.firebaseAI(backend: .googleAI())
+
         if mode == "cloud" {
           let response = try await ai.generativeModel(modelName: "gemini-3.1-flash-lite")
             .generateContent(prompt)
+
           return ["text": response.text ?? "", "source": "cloud"]
         }
+
         if #available(iOS 26.0, *) {
           if mode == "device" {
             let response = try await ai.generativeModelSession(
               model: FirebaseAI.SystemLanguageModel.default
             ).respond(to: prompt)
+
             return ["text": response.content, "source": "on-device"]
           }
+
           let cloud = ai.geminiModel(name: "gemini-3.1-flash-lite")
           let model = HybridModel(primary: FirebaseAI.SystemLanguageModel.default, secondary: cloud)
           let response = try await ai.generativeModelSession(model: model).respond(to: prompt)
@@ -67,15 +76,19 @@ public class FirebaseAiHybridModule: Module {
           } else {
             source = "unknown"
           }
+
           return ["text": response.content, "source": source]
         }
+
         if mode == "device" {
           throw NSError(
             domain: "FirebaseAiHybrid", code: 4,
             userInfo: [NSLocalizedDescriptionKey: "On-device AI requires iOS 26 or later."])
         }
+
         let response = try await ai.generativeModel(modelName: "gemini-3.1-flash-lite")
           .generateContent(prompt)
+
         return ["text": response.text ?? "", "source": "cloud"]
       } catch {
         throw NSError(
@@ -98,7 +111,9 @@ public class FirebaseAiHybridModule: Module {
       @unknown default: break
       }
     }
+
     let details = error as NSError
+
     return
       "\(String(reflecting: type(of: error))) [\(details.domain):\(details.code)]: \(details.localizedDescription)"
   }

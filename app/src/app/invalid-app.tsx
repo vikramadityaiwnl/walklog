@@ -17,13 +17,16 @@ export default function InvalidApp() {
             !
           </AppText>
         </View>
+
         <AppText variant="title" style={styles.title}>
           Unable to verify this app
         </AppText>
+
         <AppText style={styles.description}>
           We couldn’t verify this installation of walklog. Please make sure you
           downloaded the app from an official source and try again.
         </AppText>
+
         <View style={styles.action}>
           <AppButton
             title="Try again"

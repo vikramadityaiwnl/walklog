@@ -13,6 +13,7 @@ import { useAppCheckStore } from "../store/app-check-store";
 import { useAuthStore } from "../store/auth-store";
 import { useUpdateStore } from "../store/update-store";
 import { colors } from "../theme";
+import { AppDialog } from "../components/app-dialog";
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -42,47 +43,67 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected
-        guard={
-          updateStatus === "ready" &&
-          auth.status === "ready" &&
-          appCheck === "error"
-        }
-      >
-        <Stack.Screen name="invalid-app" />
-      </Stack.Protected>
-
-      <Stack.Protected
-        guard={
-          updateStatus === "checking" ||
-          auth.status === "loading" ||
-          appCheck !== "error"
-        }
-      >
-        <Stack.Screen name="index" />
-
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
         <Stack.Protected
           guard={
-            updateStatus === "ready" && auth.status === "ready" && !auth.user
+            updateStatus === "ready" &&
+            auth.status === "ready" &&
+            appCheck === "error"
           }
         >
-          <Stack.Screen name="auth" />
+          <Stack.Screen name="invalid-app" />
         </Stack.Protected>
 
         <Stack.Protected
           guard={
-            updateStatus === "ready" && auth.status === "ready" && !!auth.user
+            updateStatus === "checking" ||
+            auth.status === "loading" ||
+            appCheck !== "error"
           }
         >
-          <Stack.Screen name="(protected)/(tabs)" />
+          <Stack.Screen name="index" />
 
-          <Stack.Screen name="(protected)/ai-playground" />
+          <Stack.Protected
+            guard={
+              updateStatus === "ready" && auth.status === "ready" && !auth.user
+            }
+          >
+            <Stack.Screen name="auth" />
+          </Stack.Protected>
 
-          <Stack.Screen name="(protected)/reminders" />
+          <Stack.Protected
+            guard={
+              updateStatus === "ready" && auth.status === "ready" && !!auth.user
+            }
+          >
+            <Stack.Screen name="(protected)/(tabs)" />
+
+            <Stack.Screen name="(protected)/ai-playground" />
+
+            <Stack.Screen name="(protected)/reminders" />
+
+            <Stack.Screen
+              name="(protected)/walkthrough/[id]"
+              options={{ statusBarStyle: "light" }}
+            />
+
+            <Stack.Screen name="(protected)/walkthrough/edit" />
+
+            <Stack.Screen name="(protected)/walkthrough/settings" />
+
+            <Stack.Screen name="(protected)/walkthrough/item" />
+
+            <Stack.Screen
+              name="(protected)/walkthrough/item-view"
+              options={{ statusBarStyle: "light" }}
+            />
+          </Stack.Protected>
         </Stack.Protected>
-      </Stack.Protected>
-    </Stack>
+      </Stack>
+
+      <AppDialog />
+    </>
   );
 }
 

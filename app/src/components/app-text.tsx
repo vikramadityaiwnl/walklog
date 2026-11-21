@@ -2,6 +2,7 @@ import { StyleSheet, Text, type TextProps } from "react-native";
 import { colors } from "../theme";
 
 type TextVariant = "title" | "body";
+
 type TextWeight = "regular" | "medium" | "semibold" | "bold";
 
 interface Props extends TextProps {

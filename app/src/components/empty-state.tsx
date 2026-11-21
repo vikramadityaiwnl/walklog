@@ -7,16 +7,26 @@ interface Props {
   icon: ReactNode;
   title: string;
   description: string;
+  compact?: boolean;
 }
 
 export function EmptyState(props: Props) {
   return (
     <View style={styles.container}>
       {props.icon}
-      <AppText variant="title" style={styles.title}>
+
+      <AppText
+        variant="title"
+        style={[styles.title, props.compact && styles.compactTitle]}
+      >
         {props.title}
       </AppText>
-      <AppText style={styles.description}>{props.description}</AppText>
+
+      <AppText
+        style={[styles.description, props.compact && styles.compactDescription]}
+      >
+        {props.description}
+      </AppText>
     </View>
   );
 }
@@ -30,6 +40,8 @@ const styles = StyleSheet.create({
     paddingVertical: 32,
   },
   title: { fontSize: 22, lineHeight: 30, marginTop: 24, textAlign: "center" },
+  compactTitle: { fontSize: 19, lineHeight: 26 },
+  compactDescription: { fontSize: 14, lineHeight: 21 },
   description: {
     color: colors.muted,
     lineHeight: 24,
