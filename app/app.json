@@ -26,8 +26,15 @@
       "package": "com.thevikramaditya.walklog"
     },
     "plugins": [
+      "expo-audio",
       "expo-router",
+      "expo-sqlite",
       "@react-native-firebase/app",
+      "@react-native-firebase/app-check",
+      "@react-native-firebase/auth",
+      "@react-native-google-signin/google-signin",
+      "./plugins/with-firebase-bom",
+      "./plugins/with-firebase-ios-version",
       [
         "expo-splash-screen",
         {
@@ -47,18 +54,12 @@
           }
         }
       ],
-      "@react-native-firebase/app-check",
-      "@react-native-firebase/auth",
-      "@react-native-google-signin/google-signin",
-      "./plugins/with-firebase-bom",
-      "./plugins/with-firebase-ios-version",
-      "expo-sqlite",
       [
         "expo-image-picker",
         {
           "photosPermission": "Allow walklog to attach site photos to items.",
           "cameraPermission": "Allow walklog to photograph site issues.",
-          "microphonePermission": false
+          "microphonePermission": "Allow walklog to record your site walkthrough."
         }
       ]
     ],

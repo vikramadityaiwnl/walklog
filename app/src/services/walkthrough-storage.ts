@@ -151,6 +151,27 @@ export function createWalkthroughStorage(ownerId: string) {
       );
     },
 
+    async createItems(items: PunchItem[]): Promise<void> {
+      for (const item of items) {
+        requireId(item.id, "Item ID");
+        requireId(item.walkthroughId, "Walkthrough ID");
+      }
+
+      const database = await getDatabase();
+      await database.withExclusiveTransactionAsync(async (transaction) => {
+        for (const item of items) {
+          await transaction.runAsync(
+            "INSERT INTO punch_items (owner_id, id, walkthrough_id, created_at, data) VALUES (?, ?, ?, ?, ?)",
+            ownerId,
+            item.id,
+            item.walkthroughId,
+            item.createdAt,
+            JSON.stringify(item),
+          );
+        }
+      });
+    },
+
     async deleteItem(id: string): Promise<void> {
       requireId(id, "Item ID");
       const database = await getDatabase();

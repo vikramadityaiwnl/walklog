@@ -32,7 +32,7 @@ public class FirebaseAiHybridModule: Module {
     }
 
     AsyncFunction("generateText") {
-      (prompt: String, mode: String) async throws -> [String: String] in
+      (prompt: String, mode: String, audioUri: String?, mimeType: String?) async throws -> [String: String] in
       guard !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
         throw NSError(
           domain: "FirebaseAiHybrid", code: 1,
@@ -45,12 +45,28 @@ public class FirebaseAiHybridModule: Module {
           userInfo: [NSLocalizedDescriptionKey: "Unknown inference mode."])
       }
 
+      guard audioUri == nil || (mode == "cloud" && mimeType != nil) else {
+        throw NSError(domain: "FirebaseAiHybrid", code: 5, userInfo: [NSLocalizedDescriptionKey: "Audio input requires cloud processing and a MIME type."])
+      }
+
       do {
         let ai = FirebaseAI.firebaseAI(backend: .googleAI())
 
         if mode == "cloud" {
-          let response = try await ai.generativeModel(modelName: "gemini-3.1-flash-lite")
-            .generateContent(prompt)
+          let model = ai.generativeModel(modelName: "gemini-3.1-flash-lite")
+          let response: GenerateContentResponse
+          if let audioUri, let mimeType {
+            guard let url = URL(string: audioUri), url.isFileURL else {
+              throw NSError(domain: "FirebaseAiHybrid", code: 5, userInfo: [NSLocalizedDescriptionKey: "Invalid audio file."])
+            }
+            let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+            guard let size = attributes[.size] as? NSNumber, size.intValue <= 14_000_000 else {
+              throw NSError(domain: "FirebaseAiHybrid", code: 6, userInfo: [NSLocalizedDescriptionKey: "This recording is too large to process. Try a shorter recording."])
+            }
+            response = try await model.generateContent(InlineDataPart(data: Data(contentsOf: url), mimeType: mimeType), prompt)
+          } else {
+            response = try await model.generateContent(prompt)
+          }
 
           return ["text": response.text ?? "", "source": "cloud"]
         }

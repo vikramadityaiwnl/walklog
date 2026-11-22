@@ -17,7 +17,6 @@ import { StatusBar } from "expo-status-bar";
 import { ScreenBanner } from "../../../components/screen-banner";
 import { getBannerColor } from "../../../services/banner-colors";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AppButton } from "../../../components/app-button";
 import { Badge } from "../../../components/badge";
 import { EmptyState } from "../../../components/empty-state";
 import { AppText } from "../../../components/app-text";
@@ -137,7 +136,7 @@ export default function WalkthroughDetail() {
                     <Pressable
                       key={item.id}
                       accessibilityRole="button"
-                      accessibilityLabel={`Open item ${item.issueSummary}, ${item.status}, ${item.priority} priority, ${item.photos.length} ${item.photos.length === 1 ? "attachment" : "attachments"}`}
+                      accessibilityLabel={`Open item ${item.issueSummary}, ${item.status}, ${item.priority ? `${item.priority} priority, ` : ""}${item.photos.length} ${item.photos.length === 1 ? "attachment" : "attachments"}`}
                       onPress={() =>
                         router.push({
                           pathname: "/walkthrough/item-view",
@@ -164,7 +163,9 @@ export default function WalkthroughDetail() {
                           </AppText>
 
                           <AppText style={styles.subheading}>
-                            {item.location || "Unspecified area"} · {item.trade}
+                            {[item.location || "Unspecified area", item.trade]
+                              .filter(Boolean)
+                              .join(" · ")}
                           </AppText>
 
                           <View style={screenStyles.badges}>
@@ -173,16 +174,18 @@ export default function WalkthroughDetail() {
                               tone={item.status === "Done" ? "success" : "info"}
                             />
 
-                            <Badge
-                              label={item.priority}
-                              tone={
-                                item.priority === "High"
-                                  ? "danger"
-                                  : item.priority === "Medium"
-                                    ? "warning"
-                                    : "info"
-                              }
-                            />
+                            {item.priority ? (
+                              <Badge
+                                label={item.priority}
+                                tone={
+                                  item.priority === "High"
+                                    ? "danger"
+                                    : item.priority === "Medium"
+                                      ? "warning"
+                                      : "info"
+                                }
+                              />
+                            ) : null}
 
                             <Badge
                               label={String(item.photos.length)}
@@ -203,22 +206,21 @@ export default function WalkthroughDetail() {
         ) : null}
       </ScrollView>
 
-      <View style={screenStyles.actions}>
-        {screen.status === "ready" ? (
-          <AppButton
-            title="Add item"
-            icon={
-              <PlusIcon size={20} strokeWidth={2.2} color={colors.onAccent} />
-            }
-            onPress={() =>
-              router.push({
-                pathname: "/walkthrough/item",
-                params: { walkthroughId: id },
-              })
-            }
-          />
-        ) : null}
-      </View>
+      {screen.status === "ready" ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Add items"
+          onPress={() =>
+            router.push({
+              pathname: "/walkthrough/capture",
+              params: { walkthroughId: id },
+            })
+          }
+          style={screenStyles.floatingAction}
+        >
+          <PlusIcon size={28} color={colors.onAccent} />
+        </Pressable>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -240,10 +242,15 @@ const screenStyles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
-  actions: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 16,
-    backgroundColor: colors.background,
+  floatingAction: {
+    position: "absolute",
+    right: 24,
+    bottom: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

@@ -1,0 +1,95 @@
+diff --git a/node_modules/whisper.rn/package.json b/node_modules/whisper.rn/package.json
+--- a/node_modules/whisper.rn/package.json
++++ b/node_modules/whisper.rn/package.json
+@@ -8,6 +8,24 @@
+   "react-native": "src/index",
+   "source": "src/index",
+   "exports": {
++    ".": {
++      "types": "./lib/typescript/index.d.ts",
++      "react-native": "./src/index.ts",
++      "import": "./lib/module/index.js",
++      "require": "./lib/commonjs/index.js"
++    },
++    "./realtime-transcription": {
++      "types": "./lib/typescript/realtime-transcription/index.d.ts",
++      "react-native": "./src/realtime-transcription/index.ts",
++      "import": "./lib/module/realtime-transcription/index.js",
++      "require": "./lib/commonjs/realtime-transcription/index.js"
++    },
++    "./realtime-transcription/adapters/*": {
++      "types": "./lib/typescript/realtime-transcription/adapters/*.d.ts",
++      "react-native": "./src/realtime-transcription/adapters/*.ts",
++      "import": "./lib/module/realtime-transcription/adapters/*.js",
++      "require": "./lib/commonjs/realtime-transcription/adapters/*.js"
++    },
+     "./*": {
+       "react-native": "./src/*.ts",
+       "types": "./lib/typescript/*.d.ts",
+diff --git a/node_modules/whisper.rn/src/utils/WavFileWriter.ts b/node_modules/whisper.rn/src/utils/WavFileWriter.ts
+--- a/node_modules/whisper.rn/src/utils/WavFileWriter.ts
++++ b/node_modules/whisper.rn/src/utils/WavFileWriter.ts
+@@ -27,6 +27,8 @@
+ 
+   private writeQueue: Uint8Array[] = []
+ 
++  private writeTask: Promise<void> | null = null
++
+   constructor(fs: WavFileWriterFs, filePath: string, config: WavFileConfig) {
+     this.fs = fs
+     this.filePath = filePath
+@@ -77,33 +79,27 @@
+    * Process the write queue to avoid blocking
+    */
+   private async processWriteQueue(): Promise<void> {
+-    if (this.writeQueue.length === 0) {
+-      return
+-    }
+-
+-    try {
+-      // Combine all queued data
+-      const totalLength = this.writeQueue.reduce((sum, data) => sum + data.length, 0)
+-      const combinedData = new Uint8Array(totalLength)
+-
+-      let offset = 0
+-      this.writeQueue.forEach(data => {
+-        combinedData.set(new Uint8Array(data), offset)
+-        offset += data.length
+-      })
+-
+-      // Append to file
+-      const base64Data = uint8ArrayToBase64(combinedData)
+-      await this.fs.appendFile(this.filePath, base64Data, 'base64')
+-
+-      // Update data size
+-      this.dataSize += combinedData.length
+-
+-      // Clear the queue
+-      this.writeQueue = []
+-    } catch (error) {
+-      console.warn(`Failed to process WAV write queue: ${error}`)
+-      // Don't throw here to avoid breaking the recording
++    if (this.writeTask) return this.writeTask
++
++    this.writeTask = (async () => {
++      while (this.writeQueue.length > 0) {
++        const chunks = this.writeQueue.splice(0)
++        const totalLength = chunks.reduce((sum, data) => sum + data.length, 0)
++        const combinedData = new Uint8Array(totalLength)
++        let offset = 0
++        for (const chunk of chunks) {
++          combinedData.set(chunk, offset)
++          offset += chunk.length
++        }
++        await this.fs.appendFile(this.filePath, uint8ArrayToBase64(combinedData), 'base64')
++        this.dataSize += combinedData.length
++      }
++    })()
++
++    try {
++      await this.writeTask
++    } finally {
++      this.writeTask = null
+     }
+   }
+ 

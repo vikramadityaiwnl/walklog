@@ -33,23 +33,16 @@ import {
 } from "../../../services/walkthrough-photos";
 import { createWalkthroughStorage } from "../../../services/walkthrough-storage";
 import { useAuthStore } from "../../../store/auth-store";
+import { extractItems } from "../../../services/extract-items";
 
-const trades: Trade[] = [
-  "General",
-  "Plumbing",
-  "Electrical",
-  "Paint/Finish",
-  "Carpentry",
-  "HVAC",
-];
 const priorities: Priority[] = ["Low", "Medium", "High"];
 const statuses: ItemStatus[] = ["Open", "Done"];
 
 interface ItemDraft {
   description: string;
   location: string;
-  trade: Trade;
-  priority: Priority;
+  trade?: Trade;
+  priority?: Priority;
   status: ItemStatus;
   photos: PunchItem["photos"];
 }
@@ -80,14 +73,16 @@ export default function ItemEdit() {
     draft: {
       description: "",
       location: "",
-      trade: "General",
-      priority: "Medium",
+      trade: undefined,
+      priority: undefined,
       status: "Open",
       photos: [],
     },
   });
 
   const [photoBusy, setPhotoBusy] = useState(false);
+
+  const [suggesting, setSuggesting] = useState(false);
 
   const [deleting, setDeleting] = useState(false);
 
@@ -216,6 +211,38 @@ export default function ItemEdit() {
     ]);
   }
 
+  async function suggestDetails() {
+    if (!draft.description.trim() || suggesting) return;
+
+    const description = draft.description;
+    setSuggesting(true);
+    try {
+      const [suggestion] = await extractItems(description);
+      setForm((current) => {
+        if (current.draft.description !== description) return current;
+
+        return {
+          ...current,
+          draft: {
+            ...current.draft,
+            location: current.draft.location || suggestion.location,
+            trade: current.draft.trade || suggestion.trade,
+            priority: current.draft.priority || suggestion.priority,
+          },
+        };
+      });
+    } catch (error) {
+      showDialog(
+        "Couldn’t suggest details",
+        error instanceof Error
+          ? error.message
+          : "On-device AI is unavailable. You can enter the details yourself.",
+      );
+    } finally {
+      setSuggesting(false);
+    }
+  }
+
   function cancelChanges() {
     if (!existing) return;
 
@@ -275,7 +302,7 @@ export default function ItemEdit() {
         bannerPhotoUri: banner.uri,
         rawTranscript: existing?.rawTranscript ?? "",
         issueSummary: draft.description.trim(),
-        location: draft.location.trim() || "Unspecified Area",
+        location: draft.location.trim(),
         trade: draft.trade,
         priority: draft.priority,
         status: draft.status,
@@ -411,6 +438,17 @@ export default function ItemEdit() {
                 />
               </View>
 
+              <AppButton
+                title={suggesting ? "Suggesting…" : "Suggest details with AI"}
+                variant="secondary"
+                disabled={
+                  !draft.description.trim() ||
+                  suggesting ||
+                  form.status === "saving"
+                }
+                onPress={suggestDetails}
+              />
+
               <View style={styles.section}>
                 <AppText weight="semibold" style={styles.label}>
                   Room or location
@@ -435,18 +473,17 @@ export default function ItemEdit() {
                   Trade
                 </AppText>
 
-                <ChipGroup
-                  label="Trade"
-                  options={trades}
-                  selection={{
-                    mode: "single",
-                    value: draft.trade,
-                    onChange: (trade) =>
-                      setForm((current) => ({
-                        ...current,
-                        draft: { ...current.draft, trade },
-                      })),
-                  }}
+                <TextInput
+                  accessibilityLabel="Trade"
+                  value={draft.trade ?? ""}
+                  onChangeText={(trade) =>
+                    setForm((current) => ({
+                      ...current,
+                      draft: { ...current.draft, trade: trade || undefined },
+                    }))
+                  }
+                  placeholder="e.g. Plumbing"
+                  style={styles.input}
                 />
               </View>
 
@@ -470,25 +507,27 @@ export default function ItemEdit() {
                 />
               </View>
 
-              <View style={styles.section}>
-                <AppText weight="semibold" style={styles.label}>
-                  Status
-                </AppText>
+              {id ? (
+                <View style={styles.section}>
+                  <AppText weight="semibold" style={styles.label}>
+                    Status
+                  </AppText>
 
-                <ChipGroup
-                  label="Status"
-                  options={statuses}
-                  selection={{
-                    mode: "single",
-                    value: draft.status,
-                    onChange: (status) =>
-                      setForm((current) => ({
-                        ...current,
-                        draft: { ...current.draft, status },
-                      })),
-                  }}
-                />
-              </View>
+                  <ChipGroup
+                    label="Status"
+                    options={statuses}
+                    selection={{
+                      mode: "single",
+                      value: draft.status,
+                      onChange: (status) =>
+                        setForm((current) => ({
+                          ...current,
+                          draft: { ...current.draft, status },
+                        })),
+                    }}
+                  />
+                </View>
+              ) : null}
 
               {!id ? (
                 <View style={styles.section}>

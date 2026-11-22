@@ -199,7 +199,7 @@ export default function ItemView() {
                     Trade
                   </AppText>
 
-                  <AppText>{screen.item.trade}</AppText>
+                  <AppText>{screen.item.trade || "Not specified"}</AppText>
                 </View>
 
                 <View style={styles.section}>
@@ -207,7 +207,7 @@ export default function ItemView() {
                     Priority
                   </AppText>
 
-                  <AppText>{screen.item.priority}</AppText>
+                  <AppText>{screen.item.priority || "Not specified"}</AppText>
                 </View>
               </View>
 
