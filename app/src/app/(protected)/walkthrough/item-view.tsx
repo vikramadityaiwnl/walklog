@@ -163,7 +163,7 @@ export default function ItemView() {
     <SafeAreaView style={styles.container} edges={["bottom"]}>
       <StatusBar style={screen.status === "ready" ? "light" : "dark"} />
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         {screen.status === "loading" ? (
           <ActivityIndicator
             color={colors.accent}
@@ -302,6 +302,7 @@ export default function ItemView() {
 
 const styles = StyleSheet.create({
   container: { backgroundColor: colors.background, flex: 1 },
+  scrollContent: { flexGrow: 1 },
   content: {
     flexGrow: 1,
     paddingHorizontal: 24,

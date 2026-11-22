@@ -1,7 +1,40 @@
 import * as SQLite from "expo-sqlite";
+import * as FileSystem from "expo-file-system/legacy";
 import type { PunchItem, Walkthrough } from "../../models/walkthrough";
 
 const DATABASE_NAME = "walklog.db";
+
+function localPhotoUri(uri?: string): string | undefined {
+  if (!uri) return uri;
+  const marker = "/walkthrough-photos/";
+  const index = uri.lastIndexOf(marker);
+
+  return index < 0 || !FileSystem.documentDirectory
+    ? uri
+    : `${FileSystem.documentDirectory}walkthrough-photos/${uri.slice(index + marker.length)}`;
+}
+
+function readWalkthrough(data: string): Walkthrough {
+  const walkthrough = JSON.parse(data) as Walkthrough;
+
+  return {
+    ...walkthrough,
+    bannerPhotoUri: localPhotoUri(walkthrough.bannerPhotoUri),
+  };
+}
+
+function readItem(data: string): PunchItem {
+  const item = JSON.parse(data) as PunchItem;
+
+  return {
+    ...item,
+    bannerPhotoUri: localPhotoUri(item.bannerPhotoUri),
+    photos: item.photos.map((photo) => ({
+      ...photo,
+      localUri: localPhotoUri(photo.localUri) ?? photo.localUri,
+    })),
+  };
+}
 let databasePromise: Promise<SQLite.SQLiteDatabase> | undefined;
 
 async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
@@ -80,7 +113,7 @@ export function createWalkthroughStorage(ownerId: string) {
         ownerId,
       );
 
-      return rows.map((row) => JSON.parse(row.data) as Walkthrough);
+      return rows.map((row) => readWalkthrough(row.data));
     },
 
     async getWalkthrough(id: string): Promise<Walkthrough | null> {
@@ -92,7 +125,7 @@ export function createWalkthroughStorage(ownerId: string) {
         id,
       );
 
-      return row ? (JSON.parse(row.data) as Walkthrough) : null;
+      return row ? readWalkthrough(row.data) : null;
     },
 
     async saveWalkthrough(walkthrough: Walkthrough): Promise<void> {
@@ -130,7 +163,7 @@ export function createWalkthroughStorage(ownerId: string) {
         walkthroughId,
       );
 
-      return rows.map((row) => JSON.parse(row.data) as PunchItem);
+      return rows.map((row) => readItem(row.data));
     },
 
     async saveItem(item: PunchItem): Promise<void> {

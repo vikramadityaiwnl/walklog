@@ -211,7 +211,7 @@ export default function WalkthroughDetail() {
     <SafeAreaView style={styles.container} edges={["bottom"]}>
       <StatusBar style={screen.status === "ready" ? "light" : "dark"} />
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         {screen.status === "loading" ? (
           <View style={styles.loading}>
             <ActivityIndicator
@@ -474,6 +474,7 @@ export default function WalkthroughDetail() {
 
 const styles = StyleSheet.create({
   container: { backgroundColor: colors.background, flex: 1 },
+  scrollContent: { flexGrow: 1 },
   content: {
     flexGrow: 1,
     paddingHorizontal: 24,
