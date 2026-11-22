@@ -1,4 +1,5 @@
-import { Image, Pressable, StyleSheet, View } from "react-native";
+import { Image } from "expo-image";
+import { Pressable, StyleSheet, View } from "react-native";
 import { CameraIcon } from "react-native-heroicons/outline";
 import { AppText } from "./app-text";
 import { colors } from "../theme";

@@ -1,3 +1,4 @@
+import { Image } from "expo-image";
 import { useCallback, useState } from "react";
 import { router, useFocusEffect } from "expo-router";
 import {
@@ -7,7 +8,6 @@ import {
 } from "react-native-heroicons/outline";
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -110,7 +110,7 @@ export default function Projects() {
                       <Image
                         source={{ uri: project.bannerPhotoUri }}
                         style={StyleSheet.absoluteFill}
-                        resizeMode="cover"
+                        contentFit="cover"
                       />
                     ) : null}
                     {!project.bannerPhotoUri ? (

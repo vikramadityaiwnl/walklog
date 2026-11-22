@@ -1,7 +1,7 @@
+import { Image } from "expo-image";
 import { useState } from "react";
 import { PlusIcon, XMarkIcon } from "react-native-heroicons/outline";
 import {
-  Image,
   Modal,
   Pressable,
   StyleSheet,
@@ -112,7 +112,7 @@ export function PhotoGallery(props: Props) {
           {selected ? (
             <Image
               source={{ uri: selected.localUri }}
-              resizeMode="contain"
+              contentFit="contain"
               style={styles.fullImage}
             />
           ) : null}

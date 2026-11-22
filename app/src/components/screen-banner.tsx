@@ -1,10 +1,5 @@
-import {
-  Image,
-  Pressable,
-  StyleSheet,
-  useWindowDimensions,
-  View,
-} from "react-native";
+import { Image } from "expo-image";
+import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import {
   Cog6ToothIcon,
   PencilSquareIcon,
@@ -46,7 +41,7 @@ export function ScreenBanner(props: Props) {
         <Image
           source={{ uri: props.imageUri }}
           style={StyleSheet.absoluteFill}
-          resizeMode="cover"
+          contentFit="cover"
         />
       ) : null}
 

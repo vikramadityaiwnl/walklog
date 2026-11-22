@@ -3,6 +3,7 @@ import {
   collection,
   doc,
   getDoc,
+  getDocFromCache,
   getDocs,
   getFirestore,
   onSnapshot,
@@ -10,9 +11,17 @@ import {
   where,
   writeBatch,
   type WriteBatch,
+  type DocumentData,
+  type DocumentReference,
 } from "@react-native-firebase/firestore";
 import type { Project, PunchItem, Walkthrough } from "../../models/walkthrough";
 import { getBannerIllustration } from "../../utils/banner-illustrations";
+import {
+  localMediaId,
+  localMediaUri,
+  isRemoteMedia,
+  mediaStoragePath,
+} from "./media-refs";
 import { useDialogStore } from "../../store/dialog-store";
 
 const database = getFirestore();
@@ -26,37 +35,116 @@ function localPhotoUri(uri?: string): string | undefined {
     : `${FileSystem.documentDirectory}walkthrough-photos/${uri.slice(index + marker.length)}`;
 }
 
-function readWalkthrough(value: Walkthrough): Walkthrough {
+type StoredBanner = { pendingBannerId?: string };
+
+type StoredItem = Omit<PunchItem, "photos"> &
+  StoredBanner & {
+    photos?: (string | PunchItem["photos"][number])[];
+    pendingPhotoIds?: string[];
+  };
+
+function readWalkthrough(value: Walkthrough & StoredBanner): Walkthrough {
   return {
     ...value,
     bannerIllustration: getBannerIllustration(
       value.id,
       value.bannerIllustration,
     ),
-    bannerPhotoUri: localPhotoUri(value.bannerPhotoUri),
+    bannerPhotoUri: value.pendingBannerId
+      ? localMediaUri(value.pendingBannerId)
+      : localPhotoUri(value.bannerPhotoUri),
   };
 }
 
-function readProject(value: Project): Project {
+function readProject(value: Project & StoredBanner): Project {
   return {
     ...value,
     bannerIllustration: getBannerIllustration(
       value.id,
       value.bannerIllustration,
     ),
-    bannerPhotoUri: localPhotoUri(value.bannerPhotoUri),
+    bannerPhotoUri: value.pendingBannerId
+      ? localMediaUri(value.pendingBannerId)
+      : localPhotoUri(value.bannerPhotoUri),
   };
 }
 
-function readItem(value: PunchItem): PunchItem {
-  return {
-    ...value,
-    bannerPhotoUri: localPhotoUri(value.bannerPhotoUri),
-    photos: (value.photos ?? []).map((photo) => ({
-      ...photo,
-      localUri: localPhotoUri(photo.localUri) ?? photo.localUri,
+function readItem(value: StoredItem): PunchItem {
+  const photos: PunchItem["photos"] = (value.photos ?? []).map((photo) =>
+    typeof photo === "string"
+      ? { localUri: photo, remoteUrl: photo }
+      : {
+          ...photo,
+          localUri:
+            photo.remoteUrl ?? localPhotoUri(photo.localUri) ?? photo.localUri,
+        },
+  );
+  photos.push(
+    ...(value.pendingPhotoIds ?? []).map((id) => ({
+      localUri: localMediaUri(id),
+      remoteUrl: undefined,
     })),
+  );
+
+  return {
+    ...value,
+    bannerPhotoUri: value.pendingBannerId
+      ? localMediaUri(value.pendingBannerId)
+      : localPhotoUri(value.bannerPhotoUri),
+    photos,
   };
+}
+
+function serializeBanner<T extends { bannerPhotoUri?: string }>(value: T) {
+  const id = localMediaId(value.bannerPhotoUri);
+  return {
+    ...value,
+    bannerPhotoUri: isRemoteMedia(value.bannerPhotoUri)
+      ? value.bannerPhotoUri
+      : undefined,
+    pendingBannerId: id,
+  };
+}
+
+function serializeItem(item: PunchItem) {
+  const remote: string[] = [];
+  const pending: string[] = [];
+  for (const photo of item.photos) {
+    const url =
+      photo.remoteUrl ??
+      (isRemoteMedia(photo.localUri) ? photo.localUri : undefined);
+    const id = localMediaId(photo.localUri);
+    if (url) remote.push(url);
+    else if (id) pending.push(id);
+    else throw new Error("This image is unavailable on this device.");
+  }
+
+  return { ...serializeBanner(item), photos: remote, pendingPhotoIds: pending };
+}
+
+function mediaUrls(value: unknown): string[] {
+  if (!value || typeof value !== "object") return [];
+  const data = value as { bannerPhotoUri?: unknown; photos?: unknown };
+  const result: string[] = [];
+  if (
+    typeof data.bannerPhotoUri === "string" &&
+    isRemoteMedia(data.bannerPhotoUri)
+  )
+    result.push(data.bannerPhotoUri);
+  if (Array.isArray(data.photos)) {
+    for (const photo of data.photos) {
+      if (typeof photo === "string" && isRemoteMedia(photo)) result.push(photo);
+      else if (
+        photo &&
+        typeof photo === "object" &&
+        typeof photo.remoteUrl === "string" &&
+        isRemoteMedia(photo.remoteUrl)
+      )
+        result.push(photo.remoteUrl);
+    }
+  }
+
+  return result;
 }
 
 function clean<T>(value: T): T {
@@ -124,6 +212,12 @@ export function createWalkthroughStorage(ownerId: string) {
   const projects = collection(database, "users", ownerId, "projects");
   const walkthroughs = collection(database, "users", ownerId, "walkthroughs");
   const items = collection(database, "users", ownerId, "items");
+  const mediaDeletions = collection(
+    database,
+    "users",
+    ownerId,
+    "media-deletions",
+  );
   const projectRef = (id: string) => doc(projects, id);
   const walkthroughRef = (id: string) => doc(walkthroughs, id);
   const itemRef = (id: string) => doc(items, id);
@@ -142,7 +236,7 @@ export function createWalkthroughStorage(ownerId: string) {
 
   async function allItems() {
     return (await getDocs(items)).docs.map((entry) =>
-      readItem(entry.data() as PunchItem),
+      readItem(entry.data() as StoredItem),
     );
   }
 
@@ -151,15 +245,51 @@ export function createWalkthroughStorage(ownerId: string) {
       throw new Error("Too many changes at once. Try a smaller selection.");
   }
 
+  async function cachedData(
+    reference: DocumentReference<DocumentData>,
+  ): Promise<DocumentData | undefined> {
+    const snapshot = await getDocFromCache(reference).catch(() => null);
+
+    return snapshot?.exists() ? snapshot.data() : undefined;
+  }
+
+  function queueRemovedMedia(
+    batch: WriteBatch,
+    before: unknown,
+    after?: unknown,
+  ): number {
+    const retained = new Set(
+      mediaUrls(after)
+        .map((url) => mediaStoragePath(url, ownerId))
+        .filter(Boolean),
+    );
+    const removed = new Set(
+      mediaUrls(before)
+        .map((url) => mediaStoragePath(url, ownerId))
+        .filter((path): path is string => !!path && !retained.has(path)),
+    );
+    for (const path of removed)
+      batch.set(doc(mediaDeletions), { path, createdAt: Date.now() });
+
+    return removed.size;
+  }
+
   async function saveItemBatch(changed: PunchItem[]) {
     const affected = [...new Set(changed.map((item) => item.walkthroughId))];
-    checkBatchSize(changed.length + affected.length);
     const batch = writeBatch(database);
+    let count = changed.length + affected.length;
     for (const item of changed) {
       requireId(item.id, "Item ID");
       requireId(item.walkthroughId, "Walkthrough ID");
-      batch.set(itemRef(item.id), clean(item));
+      const updated = clean(serializeItem(item));
+      count += queueRemovedMedia(
+        batch,
+        await cachedData(itemRef(item.id)),
+        updated,
+      );
+      batch.set(itemRef(item.id), updated);
     }
+    checkBatchSize(count);
     for (const id of affected)
       batch.update(walkthroughRef(id), { updatedAt: Date.now() });
     await commitLocally(ownerId, batch);
@@ -168,9 +298,13 @@ export function createWalkthroughStorage(ownerId: string) {
   async function deleteItemBatch(ids: string[]) {
     const current = (await allItems()).filter((item) => ids.includes(item.id));
     const affected = [...new Set(current.map((item) => item.walkthroughId))];
-    checkBatchSize(current.length + affected.length);
     const batch = writeBatch(database);
-    for (const item of current) batch.delete(itemRef(item.id));
+    let count = current.length + affected.length;
+    for (const item of current) {
+      count += queueRemovedMedia(batch, await cachedData(itemRef(item.id)));
+      batch.delete(itemRef(item.id));
+    }
+    checkBatchSize(count);
     for (const id of affected)
       batch.update(walkthroughRef(id), { updatedAt: Date.now() });
     await commitLocally(ownerId, batch);
@@ -182,7 +316,7 @@ export function createWalkthroughStorage(ownerId: string) {
     },
     async createProject(project: Project): Promise<void> {
       const batch = writeBatch(database);
-      batch.set(projectRef(project.id), clean(project));
+      batch.set(projectRef(project.id), clean(serializeBanner(project)));
       await commitLocally(ownerId, batch);
     },
     async createProjectAndMove(project: Project, ids: string[]): Promise<void> {
@@ -193,17 +327,32 @@ export function createWalkthroughStorage(ownerId: string) {
         throw new Error("Walkthrough not found");
       checkBatchSize(selected.length + 1);
       const batch = writeBatch(database);
-      batch.set(projectRef(project.id), clean(project));
+      batch.set(projectRef(project.id), clean(serializeBanner(project)));
       for (const entry of selected)
         batch.set(
           walkthroughRef(entry.id),
-          clean({ ...entry, projectId: project.id, updatedAt: Date.now() }),
+          clean(
+            serializeBanner({
+              ...entry,
+              projectId: project.id,
+              updatedAt: Date.now(),
+            }),
+          ),
         );
       await commitLocally(ownerId, batch);
     },
     async saveProject(project: Project): Promise<void> {
       const batch = writeBatch(database);
-      batch.set(projectRef(project.id), clean(project));
+      const updated = clean(serializeBanner(project));
+      checkBatchSize(
+        1 +
+          queueRemovedMedia(
+            batch,
+            await cachedData(projectRef(project.id)),
+            updated,
+          ),
+      );
+      batch.set(projectRef(project.id), updated);
       await commitLocally(ownerId, batch);
     },
     async listWalkthroughs(): Promise<Walkthrough[]> {
@@ -221,7 +370,16 @@ export function createWalkthroughStorage(ownerId: string) {
     async saveWalkthrough(walkthrough: Walkthrough): Promise<void> {
       requireId(walkthrough.id, "Walkthrough ID");
       const batch = writeBatch(database);
-      batch.set(walkthroughRef(walkthrough.id), clean(walkthrough));
+      const updated = clean(serializeBanner(walkthrough));
+      checkBatchSize(
+        1 +
+          queueRemovedMedia(
+            batch,
+            await cachedData(walkthroughRef(walkthrough.id)),
+            updated,
+          ),
+      );
+      batch.set(walkthroughRef(walkthrough.id), updated);
       await commitLocally(ownerId, batch);
     },
     async listItems(walkthroughId: string): Promise<PunchItem[]> {
@@ -231,7 +389,7 @@ export function createWalkthroughStorage(ownerId: string) {
       );
 
       return snapshot.docs
-        .map((entry) => readItem(entry.data() as PunchItem))
+        .map((entry) => readItem(entry.data() as StoredItem))
         .sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
     },
     async saveItem(item: PunchItem): Promise<void> {
@@ -265,11 +423,13 @@ export function createWalkthroughStorage(ownerId: string) {
       for (const entry of selected)
         batch.set(
           walkthroughRef(entry.id),
-          clean({
-            ...entry,
-            projectId: projectId ?? undefined,
-            updatedAt: Date.now(),
-          }),
+          clean(
+            serializeBanner({
+              ...entry,
+              projectId: projectId ?? undefined,
+              updatedAt: Date.now(),
+            }),
+          ),
         );
       await commitLocally(ownerId, batch);
     },
@@ -277,9 +437,16 @@ export function createWalkthroughStorage(ownerId: string) {
       const children = (await allItems()).filter(
         (item) => item.walkthroughId === id,
       );
-      checkBatchSize(children.length + 1);
       const batch = writeBatch(database);
-      for (const item of children) batch.delete(itemRef(item.id));
+      let count =
+        children.length +
+        1 +
+        queueRemovedMedia(batch, await cachedData(walkthroughRef(id)));
+      for (const item of children) {
+        count += queueRemovedMedia(batch, await cachedData(itemRef(item.id)));
+        batch.delete(itemRef(item.id));
+      }
+      checkBatchSize(count);
       batch.delete(walkthroughRef(id));
       await commitLocally(ownerId, batch);
     },
@@ -293,15 +460,25 @@ export function createWalkthroughStorage(ownerId: string) {
       const selected = allWalkthroughsList.filter(
         (entry) => entry.projectId === id,
       );
-      checkBatchSize(1 + selected.length);
       const photos: PunchItem["photos"] = [];
       if (project.bannerPhotoUri)
         photos.push({ localUri: project.bannerPhotoUri });
       const batch = writeBatch(database);
+      checkBatchSize(
+        1 +
+          selected.length +
+          queueRemovedMedia(batch, await cachedData(projectRef(id))),
+      );
       for (const entry of selected)
         batch.set(
           walkthroughRef(entry.id),
-          clean({ ...entry, projectId: undefined, updatedAt: Date.now() }),
+          clean(
+            serializeBanner({
+              ...entry,
+              projectId: undefined,
+              updatedAt: Date.now(),
+            }),
+          ),
         );
       batch.delete(projectRef(id));
       await commitLocally(ownerId, batch);

@@ -14,6 +14,7 @@ import { useAppCheckStore } from "../store/app-check-store";
 import { useAuthStore } from "../store/auth-store";
 import { useUpdateStore } from "../store/update-store";
 import { colors } from "../theme";
+import { observeMedia } from "../services/firebase/media-sync";
 import { observeFirestore } from "../services/firebase/firestore-sync";
 import { AppDialog } from "../components/app-dialog";
 
@@ -37,7 +38,13 @@ export default function RootLayout() {
   useEffect(() => {
     if (!userId || appCheck !== "ready") return;
 
-    return observeFirestore(userId);
+    const stopFirestore = observeFirestore(userId);
+    const stopMedia = observeMedia(userId);
+
+    return () => {
+      stopMedia();
+      stopFirestore();
+    };
   }, [userId, appCheck]);
 
   if (!fontsLoaded && !fontError) {

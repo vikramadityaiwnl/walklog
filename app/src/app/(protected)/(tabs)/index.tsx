@@ -1,3 +1,4 @@
+import { Image } from "expo-image";
 import { useCallback, useLayoutEffect, useState } from "react";
 import { router, useFocusEffect, useNavigation } from "expo-router";
 import {
@@ -9,7 +10,6 @@ import {
 } from "react-native-heroicons/outline";
 import {
   ActivityIndicator,
-  Image,
   LayoutAnimation,
   Pressable,
   ScrollView,
@@ -27,6 +27,7 @@ import { bannerColor } from "../../../utils/banner-illustrations";
 import { BannerIllustration } from "../../../components/banner-illustration";
 import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
 import { useFirestoreStore } from "../../../store/firestore-store";
+import { useMediaSyncStore } from "../../../store/media-sync-store";
 import { useAuthStore } from "../../../store/auth-store";
 import { colors } from "../../../theme";
 
@@ -41,6 +42,7 @@ type ListState =
 
 export default function Walkthroughs() {
   const navigation = useNavigation();
+  const mediaStatus = useMediaSyncStore((state) => state.status);
   const auth = useAuthStore((state) => state.auth);
   const firestoreRevision = useFirestoreStore((state) => state.revision);
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
@@ -145,7 +147,7 @@ export default function Walkthroughs() {
           <Image
             source={{ uri: walkthrough.bannerPhotoUri }}
             style={StyleSheet.absoluteFill}
-            resizeMode="cover"
+            contentFit="cover"
           />
         ) : null}
         {!walkthrough.bannerPhotoUri ? (
@@ -236,6 +238,16 @@ export default function Walkthroughs() {
               </Pressable>
             </View>
           ) : null}
+          {mediaStatus !== "idle" ? (
+            <AppText accessibilityRole="status" style={styles.subheading}>
+              {mediaStatus === "uploading"
+                ? "Uploading photos…"
+                : mediaStatus === "error"
+                  ? "Photo sync paused. We’ll retry automatically."
+                  : "Photos waiting to sync."}
+            </AppText>
+          ) : null}
+
           {list.status === "loading" ? (
             <ActivityIndicator
               color={colors.accent}
