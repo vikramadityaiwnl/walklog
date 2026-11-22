@@ -5,7 +5,7 @@ import {
   selectItemPhoto,
 } from "../services/walkthrough/photos";
 
-export function useBannerDraft() {
+export function useBannerDraft(surface: "root" | "project-picker" = "root") {
   const showDialog = useDialogStore((state) => state.showDialog);
 
   const [uri, setUri] = useState<string | undefined>();
@@ -54,6 +54,8 @@ export function useBannerDraft() {
       showDialog(
         "Couldn’t add banner",
         error instanceof Error ? error.message : "Please try again.",
+        undefined,
+        surface,
       );
     } finally {
       if (mounted.current) setBusy(false);
@@ -61,23 +63,28 @@ export function useBannerDraft() {
   }
 
   function choose() {
-    showDialog("Banner image", "Choose a source", [
-      {
-        text: "Camera",
-        icon: "camera",
-        onPress: () => {
-          void select("camera");
+    showDialog(
+      "Banner image",
+      "Choose a source",
+      [
+        {
+          text: "Camera",
+          icon: "camera",
+          onPress: () => {
+            void select("camera");
+          },
         },
-      },
-      {
-        text: "Photo library",
-        icon: "photo-library",
-        onPress: () => {
-          void select("library");
+        {
+          text: "Photo library",
+          icon: "photo-library",
+          onPress: () => {
+            void select("library");
+          },
         },
-      },
-      { text: "Cancel", style: "cancel" },
-    ]);
+        { text: "Cancel", style: "cancel" },
+      ],
+      surface,
+    );
   }
 
   function reset() {

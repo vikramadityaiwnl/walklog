@@ -12,7 +12,7 @@ export interface DialogContent {
   title: string;
   message?: string;
   actions: DialogAction[];
-  surface: "root" | "photo-viewer";
+  surface: "root" | "photo-viewer" | "project-picker";
 }
 
 type DialogState =

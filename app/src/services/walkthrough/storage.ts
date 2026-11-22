@@ -185,6 +185,22 @@ export function createWalkthroughStorage(ownerId: string) {
       batch.set(projectRef(project.id), clean(project));
       await commitLocally(ownerId, batch);
     },
+    async createProjectAndMove(project: Project, ids: string[]): Promise<void> {
+      const selected = (await allWalkthroughs()).filter((entry) =>
+        ids.includes(entry.id),
+      );
+      if (selected.length !== ids.length)
+        throw new Error("Walkthrough not found");
+      checkBatchSize(selected.length + 1);
+      const batch = writeBatch(database);
+      batch.set(projectRef(project.id), clean(project));
+      for (const entry of selected)
+        batch.set(
+          walkthroughRef(entry.id),
+          clean({ ...entry, projectId: project.id, updatedAt: Date.now() }),
+        );
+      await commitLocally(ownerId, batch);
+    },
     async saveProject(project: Project): Promise<void> {
       const batch = writeBatch(database);
       batch.set(projectRef(project.id), clean(project));
@@ -268,32 +284,25 @@ export function createWalkthroughStorage(ownerId: string) {
       await commitLocally(ownerId, batch);
     },
     async deleteProject(id: string): Promise<PunchItem["photos"]> {
-      const [allProjectsList, allWalkthroughsList, allItemsList] =
-        await Promise.all([allProjects(), allWalkthroughs(), allItems()]);
+      const [allProjectsList, allWalkthroughsList] = await Promise.all([
+        allProjects(),
+        allWalkthroughs(),
+      ]);
       const project = allProjectsList.find((entry) => entry.id === id);
       if (!project) throw new Error("Project not found");
       const selected = allWalkthroughsList.filter(
         (entry) => entry.projectId === id,
       );
-      const selectedIds = new Set(selected.map((entry) => entry.id));
-      const children = allItemsList.filter((entry) =>
-        selectedIds.has(entry.walkthroughId),
-      );
-      checkBatchSize(1 + selected.length + children.length);
+      checkBatchSize(1 + selected.length);
       const photos: PunchItem["photos"] = [];
       if (project.bannerPhotoUri)
         photos.push({ localUri: project.bannerPhotoUri });
-      for (const entry of selected)
-        if (entry.bannerPhotoUri)
-          photos.push({ localUri: entry.bannerPhotoUri });
-      for (const entry of children) {
-        photos.push(...entry.photos);
-        if (entry.bannerPhotoUri)
-          photos.push({ localUri: entry.bannerPhotoUri });
-      }
       const batch = writeBatch(database);
-      for (const entry of children) batch.delete(itemRef(entry.id));
-      for (const entry of selected) batch.delete(walkthroughRef(entry.id));
+      for (const entry of selected)
+        batch.set(
+          walkthroughRef(entry.id),
+          clean({ ...entry, projectId: undefined, updatedAt: Date.now() }),
+        );
       batch.delete(projectRef(id));
       await commitLocally(ownerId, batch);
       return photos;

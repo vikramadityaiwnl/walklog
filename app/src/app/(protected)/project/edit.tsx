@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
+import { FolderIcon } from "react-native-heroicons/outline";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -12,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppButton } from "../../../components/app-button";
 import { AppText } from "../../../components/app-text";
 import { BannerPicker } from "../../../components/banner-picker";
+import { ProjectPicker } from "../../../components/project-picker";
 import { useBannerDraft } from "../../../hooks/use-banner-draft";
 import type { Project } from "../../../models/walkthrough";
 import {
@@ -40,6 +42,10 @@ export default function ProjectEdit() {
     name: "",
   });
   const [deleting, setDeleting] = useState(false);
+  const [move, setMove] = useState<
+    | { status: "idle" | "loading" }
+    | { status: "ready"; projects: Project[]; ids: string[] }
+  >({ status: "idle" });
   const showDialog = useDialogStore((state) => state.showDialog);
   const banner = useBannerDraft();
   const changed =
@@ -147,7 +153,7 @@ export default function ProjectEdit() {
 
     showDialog(
       "Delete project?",
-      "This permanently deletes the project, all its walkthroughs, items and photos from this device.",
+      "The project will be deleted. Its walkthroughs and their items will remain available in Walkthroughs.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -170,6 +176,37 @@ export default function ProjectEdit() {
         },
       ],
     );
+  }
+
+  async function moveWalkthroughs() {
+    if (!ownerId || !id || move.status !== "idle") return;
+    setMove({ status: "loading" });
+    try {
+      const storage = createWalkthroughStorage(ownerId);
+      const [projects, walkthroughs] = await Promise.all([
+        storage.listProjects(),
+        storage.listWalkthroughs(),
+      ]);
+      const ids = walkthroughs
+        .filter((entry) => entry.projectId === id)
+        .map((entry) => entry.id);
+      if (!ids.length) {
+        setMove({ status: "idle" });
+        showDialog(
+          "No walkthroughs to move",
+          "Add walkthroughs to this project first.",
+        );
+        return;
+      }
+      setMove({
+        status: "ready",
+        projects: projects.filter((entry) => entry.id !== id),
+        ids,
+      });
+    } catch {
+      setMove({ status: "idle" });
+      showDialog("Couldn’t load walkthroughs", "Please try again.");
+    }
   }
 
   return (
@@ -206,7 +243,7 @@ export default function ProjectEdit() {
                   style={styles.input}
                 />
               </View>
-              {id && form.project ? (
+              {!id || form.project ? (
                 <BannerPicker
                   uri={banner.uri}
                   busy={banner.busy || deleting || form.status === "saving"}
@@ -214,6 +251,7 @@ export default function ProjectEdit() {
                   onRemove={banner.remove}
                 />
               ) : null}
+
               {form.message ? (
                 <AppText accessibilityRole="alert" style={styles.error}>
                   {form.message}
@@ -257,16 +295,44 @@ export default function ProjectEdit() {
           <View style={styles.actions}>
             <View style={styles.action}>
               <AppButton
+                title={move.status === "loading" ? "Loading" : "Move all"}
+                accessibilityLabel="Move all walkthroughs"
+                variant="secondary"
+                icon={<FolderIcon size={18} color={colors.foreground} />}
+                disabled={move.status !== "idle" || deleting || banner.busy}
+                onPress={moveWalkthroughs}
+              />
+            </View>
+
+            <View style={styles.action}>
+              <AppButton
                 variant="danger"
                 title={deleting ? "Deleting" : "Delete"}
                 accessibilityLabel="Delete project"
-                disabled={banner.busy || deleting || form.status === "saving"}
+                disabled={
+                  banner.busy ||
+                  deleting ||
+                  form.status === "saving" ||
+                  move.status !== "idle"
+                }
                 onPress={confirmDelete}
               />
             </View>
           </View>
         ) : null}
       </KeyboardAvoidingView>
+
+      {ownerId && move.status === "ready" ? (
+        <ProjectPicker
+          visible
+          ownerId={ownerId}
+          projects={move.projects}
+          walkthroughIds={move.ids}
+          canRemoveFromProject={false}
+          onClose={() => setMove({ status: "idle" })}
+          onMoved={() => setMove({ status: "idle" })}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }
