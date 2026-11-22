@@ -19,9 +19,8 @@ import { AppHeader } from "../../../components/app-header";
 import { AppText } from "../../../components/app-text";
 import { EmptyState } from "../../../components/empty-state";
 import { Overlay } from "../../../components/overlay";
-import { walkthroughStyles as styles } from "../../../components/walkthrough-styles";
 import type { Walkthrough } from "../../../models/walkthrough";
-import { getBannerColor } from "../../../services/banner-colors";
+import { getBannerColor } from "../../../utils/banner-colors";
 import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
 import { useAuthStore } from "../../../store/auth-store";
 import { colors } from "../../../theme";
@@ -81,9 +80,7 @@ export default function Walkthroughs() {
       <AppHeader />
 
       <View style={{ flex: 1 }}>
-        <ScrollView
-          contentContainerStyle={[styles.content, screenStyles.content]}
-        >
+        <ScrollView contentContainerStyle={[styles.content, styles.content]}>
           <View style={styles.section}>
             <AppText variant="title" style={styles.heading}>
               Walkthroughs
@@ -95,7 +92,7 @@ export default function Walkthroughs() {
           </View>
 
           {list.status === "loading" ? (
-            <View style={screenStyles.loading}>
+            <View style={styles.loading}>
               <ActivityIndicator
                 color={colors.accent}
                 accessibilityLabel="Loading walkthroughs"
@@ -106,7 +103,7 @@ export default function Walkthroughs() {
           {list.status === "error" ? (
             <EmptyState
               icon={
-                <View style={screenStyles.errorIcon}>
+                <View style={styles.errorIcon}>
                   <ExclamationTriangleIcon size={30} color={colors.danger} />
                 </View>
               }
@@ -139,7 +136,7 @@ export default function Walkthroughs() {
                     })
                   }
                   style={[
-                    screenStyles.card,
+                    styles.card,
                     {
                       backgroundColor: getBannerColor(
                         walkthrough.id,
@@ -158,21 +155,21 @@ export default function Walkthroughs() {
 
                   <Overlay />
 
-                  <View style={screenStyles.cardContent}>
-                    <View style={screenStyles.cardText}>
-                      <AppText variant="title" style={screenStyles.cardTitle}>
+                  <View style={styles.cardContent}>
+                    <View style={styles.cardText}>
+                      <AppText variant="title" style={styles.cardTitle}>
                         {walkthrough.title}
                       </AppText>
 
                       {walkthrough.clientName || walkthrough.address ? (
-                        <AppText style={screenStyles.cardSubtitle}>
+                        <AppText style={styles.cardSubtitle}>
                           {[walkthrough.clientName, walkthrough.address]
                             .filter(Boolean)
                             .join(" · ")}
                         </AppText>
                       ) : null}
 
-                      <AppText style={screenStyles.cardCount}>
+                      <AppText style={styles.cardCount}>
                         {list.counts[walkthrough.id]}{" "}
                         {list.counts[walkthrough.id] === 1 ? "item" : "items"}
                       </AppText>
@@ -190,7 +187,7 @@ export default function Walkthroughs() {
             accessibilityRole="button"
             accessibilityLabel="New walkthrough"
             onPress={() => router.push("/walkthrough/edit")}
-            style={screenStyles.floatingAction}
+            style={styles.floatingAction}
           >
             <PlusIcon size={28} color={colors.onAccent} />
           </Pressable>
@@ -200,8 +197,18 @@ export default function Walkthroughs() {
   );
 }
 
-const screenStyles = StyleSheet.create({
-  content: { flexGrow: 1, paddingBottom: 100 },
+const styles = StyleSheet.create({
+  container: { backgroundColor: colors.background, flex: 1 },
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 18,
+    paddingBottom: 100,
+    gap: 18,
+  },
+  section: { gap: 8 },
+  heading: { fontSize: 30, lineHeight: 38, letterSpacing: -0.8 },
+  subheading: { color: colors.muted, lineHeight: 22 },
   card: {
     minHeight: 180,
     justifyContent: "flex-end",

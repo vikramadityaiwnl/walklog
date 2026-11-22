@@ -5,10 +5,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
   TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { colors } from "../../../theme";
 import { AppButton } from "../../../components/app-button";
 import { useDialogStore } from "../../../store/dialog-store";
 import { BannerPicker } from "../../../components/banner-picker";
@@ -16,9 +18,8 @@ import { useBannerDraft } from "../../../hooks/use-banner-draft";
 import {
   getBannerColor,
   randomBannerColor,
-} from "../../../services/banner-colors";
+} from "../../../utils/banner-colors";
 import { AppText } from "../../../components/app-text";
-import { walkthroughStyles as styles } from "../../../components/walkthrough-styles";
 import type { Walkthrough } from "../../../models/walkthrough";
 import { deleteItemPhotos } from "../../../services/walkthrough/photos";
 import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
@@ -390,3 +391,56 @@ export default function WalkthroughEdit() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { backgroundColor: colors.background, flex: 1 },
+  content: {
+    paddingHorizontal: 24,
+    paddingTop: 18,
+    paddingBottom: 40,
+    gap: 18,
+  },
+  actions: {
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 16,
+  },
+  action: { flex: 1 },
+  row: { flexDirection: "row", alignItems: "center", gap: 12 },
+  between: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  heading: { fontSize: 30, lineHeight: 38, letterSpacing: -0.8 },
+  subheading: { color: colors.muted, lineHeight: 22 },
+  section: { gap: 8 },
+  label: { fontSize: 14 },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: colors.foreground,
+    fontFamily: "DMSans_400Regular",
+    fontSize: 16,
+  },
+  multiline: { minHeight: 100, textAlignVertical: "top" },
+  card: {
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 16,
+    gap: 8,
+  },
+  cardTitle: { fontSize: 18 },
+  link: { color: colors.accent },
+  danger: { color: colors.danger },
+  photo: { width: 96, height: 96, borderRadius: 10 },
+  error: { color: colors.danger },
+  back: { paddingVertical: 10, alignSelf: "flex-start" },
+});

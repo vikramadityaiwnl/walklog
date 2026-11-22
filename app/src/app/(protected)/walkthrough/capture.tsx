@@ -35,11 +35,10 @@ import { AppText } from "../../../components/app-text";
 import { EmptyState } from "../../../components/empty-state";
 import { InferenceSelector } from "../../../components/inference-selector";
 import { LoadingState } from "../../../components/loading-state";
-import { walkthroughStyles as styles } from "../../../components/walkthrough-styles";
 import { extractItems } from "../../../services/walkthrough/extract-items";
-import { randomBannerColor } from "../../../services/banner-colors";
+import { randomBannerColor } from "../../../utils/banner-colors";
 import { cleanTranscript } from "../../../services/transcription/transcript";
-import { transcribeImportedAudio } from "../../../services/transcription/transcription/imported-audio";
+import { transcribeImportedAudio } from "../../../services/transcription/imported-audio";
 import {
   downloadWhisperModel,
   getWhisperModel,
@@ -590,7 +589,7 @@ export default function Capture() {
     <SafeAreaView style={styles.container}>
       <ScrollView
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={[styles.content, screenStyles.content]}
+        contentContainerStyle={[styles.content, styles.content]}
       >
         <View style={styles.section}>
           <AppText variant="title" style={styles.heading}>
@@ -603,7 +602,7 @@ export default function Capture() {
         </View>
 
         {showModeSelector ? (
-          <View style={screenStyles.segments}>
+          <View style={styles.segments}>
             {(["voice", "type"] as const).map((option) => (
               <Pressable
                 key={option}
@@ -615,8 +614,8 @@ export default function Capture() {
                 disabled={operation.status !== "idle"}
                 onPress={() => setCaptureMode(option)}
                 style={[
-                  screenStyles.segment,
-                  captureMode === option && screenStyles.selected,
+                  styles.segment,
+                  captureMode === option && styles.selected,
                 ]}
               >
                 <AppText weight="semibold">
@@ -630,9 +629,9 @@ export default function Capture() {
         {captureMode === "voice" ? (
           <View
             style={[
-              screenStyles.voice,
+              styles.voice,
               (initialVoice || operation.status === "transcribing") &&
-                screenStyles.initialVoice,
+                styles.initialVoice,
             ]}
           >
             {!audio &&
@@ -640,7 +639,7 @@ export default function Capture() {
             (operation.status === "idle" ||
               operation.status === "preparing" ||
               operation.status === "downloading") ? (
-              <View style={screenStyles.voiceIntro}>
+              <View style={styles.voiceIntro}>
                 {operation.status === "preparing" ? (
                   <ActivityIndicator
                     size="large"
@@ -653,7 +652,7 @@ export default function Capture() {
                     accessibilityLabel="Start recording"
                     disabled={busy}
                     onPress={startRecording}
-                    style={screenStyles.bigMic}
+                    style={styles.bigMic}
                   >
                     <MicrophoneIcon size={38} color={colors.onAccent} />
                   </Pressable>
@@ -676,11 +675,11 @@ export default function Capture() {
                       accessibilityRole="button"
                       accessibilityLabel="Edit transcript"
                       onPress={() => transcriptInput.current?.focus()}
-                      style={screenStyles.editTranscript}
+                      style={styles.editTranscript}
                     >
                       <PencilSquareIcon size={16} color={colors.muted} />
 
-                      <AppText style={screenStyles.editLabel}>Edit</AppText>
+                      <AppText style={styles.editLabel}>Edit</AppText>
                     </Pressable>
                   ) : null}
                 </View>
@@ -698,9 +697,8 @@ export default function Capture() {
                     muted ? "Microphone muted" : "Your words will appear here"
                   }
                   style={[
-                    screenStyles.transcript,
-                    operation.status === "idle" &&
-                      screenStyles.completedTranscript,
+                    styles.transcript,
+                    operation.status === "idle" && styles.completedTranscript,
                   ]}
                 />
               </View>
@@ -719,19 +717,19 @@ export default function Capture() {
             ) : null}
 
             {!audio && operation.status === "idle" ? (
-              <View style={screenStyles.importSection}>
-                <View style={screenStyles.divider}>
-                  <View style={screenStyles.dividerLine} />
+              <View style={styles.importSection}>
+                <View style={styles.divider}>
+                  <View style={styles.dividerLine} />
 
-                  <AppText style={screenStyles.dividerText}>OR</AppText>
+                  <AppText style={styles.dividerText}>OR</AppText>
 
-                  <View style={screenStyles.dividerLine} />
+                  <View style={styles.dividerLine} />
                 </View>
 
                 <Pressable
                   accessibilityRole="button"
                   onPress={importAudio}
-                  style={screenStyles.importButton}
+                  style={styles.importButton}
                 >
                   <ArrowUpTrayIcon size={20} color={colors.foreground} />
 
@@ -773,7 +771,7 @@ export default function Capture() {
       </ScrollView>
 
       {progress && operation.status === "downloading" ? (
-        <View style={screenStyles.download}>
+        <View style={styles.download}>
           <AppText weight="semibold">Downloading speech model</AppText>
 
           <AppText style={styles.subheading}>
@@ -782,10 +780,10 @@ export default function Capture() {
             %
           </AppText>
 
-          <View style={screenStyles.progressTrack}>
+          <View style={styles.progressTrack}>
             <View
               style={[
-                screenStyles.progressFill,
+                styles.progressFill,
                 {
                   width: `${Math.min(100, (progress.bytes / progress.total) * 100)}%`,
                 },
@@ -796,7 +794,7 @@ export default function Capture() {
       ) : null}
 
       {operation.status === "stopping" ? (
-        <View style={screenStyles.finishing}>
+        <View style={styles.finishing}>
           <ActivityIndicator color={colors.accent} />
 
           <AppText style={styles.subheading}>Finishing recording</AppText>
@@ -806,10 +804,10 @@ export default function Capture() {
       {captureMode === "voice" &&
       (operation.status === "recording" ||
         (audio?.source === "recording" && operation.status === "idle")) ? (
-        <View style={screenStyles.recordBar}>
+        <View style={styles.recordBar}>
           {operation.status === "recording" ? (
             <>
-              <AppText style={screenStyles.barText}>
+              <AppText style={styles.barText}>
                 {muted ? "Microphone muted" : "Listening"}
               </AppText>
 
@@ -819,7 +817,7 @@ export default function Capture() {
                   muted ? "Unmute microphone" : "Mute microphone"
                 }
                 onPress={toggleMute}
-                style={screenStyles.iconButton}
+                style={styles.iconButton}
               >
                 {muted ? (
                   <SpeakerXMarkIcon size={22} color={colors.foreground} />
@@ -832,21 +830,21 @@ export default function Capture() {
                 accessibilityRole="button"
                 accessibilityLabel="Stop recording"
                 onPress={stopRecording}
-                style={screenStyles.stopButton}
+                style={styles.stopButton}
               >
                 <StopIcon size={20} color={colors.onAccent} />
               </Pressable>
             </>
           ) : (
             <>
-              <AppText style={screenStyles.barText}>Continue recording</AppText>
+              <AppText style={styles.barText}>Continue recording</AppText>
 
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Continue recording"
                 disabled={busy}
                 onPress={startRecording}
-                style={screenStyles.stopButton}
+                style={styles.stopButton}
               >
                 <MicrophoneIcon size={20} color={colors.onAccent} />
               </Pressable>
@@ -887,8 +885,58 @@ export default function Capture() {
   );
 }
 
-const screenStyles = StyleSheet.create({
-  content: { flexGrow: 1 },
+const styles = StyleSheet.create({
+  container: { backgroundColor: colors.background, flex: 1 },
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 18,
+    paddingBottom: 40,
+    gap: 18,
+  },
+  actions: {
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 16,
+  },
+  action: { flex: 1 },
+  row: { flexDirection: "row", alignItems: "center", gap: 12 },
+  between: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  heading: { fontSize: 30, lineHeight: 38, letterSpacing: -0.8 },
+  subheading: { color: colors.muted, lineHeight: 22 },
+  section: { gap: 8 },
+  label: { fontSize: 14 },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: colors.foreground,
+    fontFamily: "DMSans_400Regular",
+    fontSize: 16,
+  },
+  multiline: { minHeight: 100, textAlignVertical: "top" },
+  card: {
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 16,
+    gap: 8,
+  },
+  cardTitle: { fontSize: 18 },
+  link: { color: colors.accent },
+  danger: { color: colors.danger },
+  photo: { width: 96, height: 96, borderRadius: 10 },
+  error: { color: colors.danger },
+  back: { paddingVertical: 10, alignSelf: "flex-start" },
   editTranscript: {
     flexDirection: "row",
     alignItems: "center",

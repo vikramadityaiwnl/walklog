@@ -18,12 +18,11 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { ScreenBanner } from "../../../components/screen-banner";
-import { getBannerColor } from "../../../services/banner-colors";
+import { getBannerColor } from "../../../utils/banner-colors";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Badge } from "../../../components/badge";
 import { EmptyState } from "../../../components/empty-state";
 import { AppText } from "../../../components/app-text";
-import { walkthroughStyles as styles } from "../../../components/walkthrough-styles";
 import type { PunchItem, Walkthrough } from "../../../models/walkthrough";
 import { deleteItemPhotos } from "../../../services/walkthrough/photos";
 import { useDialogStore } from "../../../store/dialog-store";
@@ -212,9 +211,9 @@ export default function WalkthroughDetail() {
     <SafeAreaView style={styles.container} edges={["bottom"]}>
       <StatusBar style={screen.status === "ready" ? "light" : "dark"} />
 
-      <ScrollView contentContainerStyle={screenStyles.content}>
+      <ScrollView contentContainerStyle={styles.content}>
         {screen.status === "loading" ? (
-          <View style={screenStyles.loading}>
+          <View style={styles.loading}>
             <ActivityIndicator
               color={colors.accent}
               accessibilityLabel="Loading walkthrough"
@@ -254,11 +253,11 @@ export default function WalkthroughDetail() {
             <View
               style={[
                 styles.content,
-                screen.items.length === 0 && screenStyles.emptyContent,
+                screen.items.length === 0 && styles.emptyContent,
               ]}
             >
               {selecting ? (
-                <View style={screenStyles.selectionHeader}>
+                <View style={styles.selectionHeader}>
                   <AppText weight="semibold">{`${selectedIds.length} selected`}</AppText>
 
                   <Pressable
@@ -274,7 +273,7 @@ export default function WalkthroughDetail() {
                       })
                     }
                   >
-                    <AppText weight="semibold" style={screenStyles.selectAll}>
+                    <AppText weight="semibold" style={styles.selectAll}>
                       {selectedIds.length === screen.items.length
                         ? "Deselect all"
                         : "Select all"}
@@ -314,18 +313,17 @@ export default function WalkthroughDetail() {
                           });
                       }}
                       style={[
-                        screenStyles.itemRow,
-                        index < screen.items.length - 1 &&
-                          screenStyles.itemDivider,
+                        styles.itemRow,
+                        index < screen.items.length - 1 && styles.itemDivider,
                       ]}
                     >
                       <View style={styles.row}>
                         {selecting ? (
                           <View
                             style={[
-                              screenStyles.checkbox,
+                              styles.checkbox,
                               selectedIds.includes(item.id) &&
-                                screenStyles.checkboxSelected,
+                                styles.checkboxSelected,
                             ]}
                           >
                             {selectedIds.includes(item.id) ? (
@@ -337,39 +335,39 @@ export default function WalkthroughDetail() {
                         {item.bannerPhotoUri ? (
                           <Image
                             source={{ uri: item.bannerPhotoUri }}
-                            style={screenStyles.bannerThumbnail}
+                            style={styles.bannerThumbnail}
                           />
                         ) : null}
 
-                        <View style={screenStyles.itemText}>
+                        <View style={styles.itemText}>
                           <AppText weight="bold" style={styles.cardTitle}>
                             {item.issueSummary}
                           </AppText>
 
-                          <View style={screenStyles.metadata}>
-                            <View style={screenStyles.metadataItem}>
+                          <View style={styles.metadata}>
+                            <View style={styles.metadataItem}>
                               <MapPinIcon size={15} color={colors.muted} />
 
-                              <AppText style={screenStyles.metadataText}>
+                              <AppText style={styles.metadataText}>
                                 {item.location || "Unspecified area"}
                               </AppText>
                             </View>
 
                             {item.trade ? (
-                              <View style={screenStyles.metadataItem}>
+                              <View style={styles.metadataItem}>
                                 <WrenchScrewdriverIcon
                                   size={15}
                                   color={colors.muted}
                                 />
 
-                                <AppText style={screenStyles.metadataText}>
+                                <AppText style={styles.metadataText}>
                                   {item.trade}
                                 </AppText>
                               </View>
                             ) : null}
                           </View>
 
-                          <View style={screenStyles.badges}>
+                          <View style={styles.badges}>
                             <Badge
                               label={item.status}
                               tone={item.status === "Done" ? "success" : "info"}
@@ -408,14 +406,14 @@ export default function WalkthroughDetail() {
       </ScrollView>
 
       {selecting ? (
-        <View style={screenStyles.selectionActions}>
+        <View style={styles.selectionActions}>
           <Pressable
             accessibilityRole="button"
             disabled={selection.status === "saving"}
             onPress={() => setSelection({ status: "inactive" })}
-            style={screenStyles.selectionButton}
+            style={styles.selectionButton}
           >
-            <AppText weight="semibold" style={screenStyles.selectionText}>
+            <AppText weight="semibold" style={styles.selectionText}>
               Cancel
             </AppText>
           </Pressable>
@@ -425,13 +423,13 @@ export default function WalkthroughDetail() {
             disabled={selection.status === "saving" || !selectedIds.length}
             onPress={confirmDelete}
             style={[
-              screenStyles.selectionButton,
-              !selectedIds.length && screenStyles.disabledAction,
+              styles.selectionButton,
+              !selectedIds.length && styles.disabledAction,
             ]}
           >
             <AppText
               weight="semibold"
-              style={[screenStyles.selectionText, screenStyles.deleteText]}
+              style={[styles.selectionText, styles.deleteText]}
             >
               Delete
             </AppText>
@@ -442,14 +440,14 @@ export default function WalkthroughDetail() {
             disabled={selection.status === "saving" || !selectedIds.length}
             onPress={updateSelected}
             style={[
-              screenStyles.selectionButton,
-              screenStyles.primaryAction,
-              !selectedIds.length && screenStyles.disabledAction,
+              styles.selectionButton,
+              styles.primaryAction,
+              !selectedIds.length && styles.disabledAction,
             ]}
           >
             <AppText
               weight="semibold"
-              style={[screenStyles.selectionText, screenStyles.primaryText]}
+              style={[styles.selectionText, styles.primaryText]}
             >
               {allDone ? "Mark open" : "Mark done"}
             </AppText>
@@ -465,7 +463,7 @@ export default function WalkthroughDetail() {
               params: { walkthroughId: id },
             })
           }
-          style={screenStyles.floatingAction}
+          style={styles.floatingAction}
         >
           <PlusIcon size={28} color={colors.onAccent} />
         </Pressable>
@@ -474,8 +472,58 @@ export default function WalkthroughDetail() {
   );
 }
 
-const screenStyles = StyleSheet.create({
-  content: { flexGrow: 1 },
+const styles = StyleSheet.create({
+  container: { backgroundColor: colors.background, flex: 1 },
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 18,
+    paddingBottom: 40,
+    gap: 18,
+  },
+  actions: {
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 16,
+  },
+  action: { flex: 1 },
+  row: { flexDirection: "row", alignItems: "center", gap: 12 },
+  between: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  heading: { fontSize: 30, lineHeight: 38, letterSpacing: -0.8 },
+  subheading: { color: colors.muted, lineHeight: 22 },
+  section: { gap: 8 },
+  label: { fontSize: 14 },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: colors.foreground,
+    fontFamily: "DMSans_400Regular",
+    fontSize: 16,
+  },
+  multiline: { minHeight: 100, textAlignVertical: "top" },
+  card: {
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 16,
+    gap: 8,
+  },
+  cardTitle: { fontSize: 18 },
+  link: { color: colors.accent },
+  danger: { color: colors.danger },
+  photo: { width: 96, height: 96, borderRadius: 10 },
+  error: { color: colors.danger },
+  back: { paddingVertical: 10, alignSelf: "flex-start" },
   loading: { flex: 1, alignItems: "center", justifyContent: "center" },
   emptyContent: { flexGrow: 1 },
   selectionHeader: {

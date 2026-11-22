@@ -21,6 +21,8 @@
 
 ## Code style
 
+- Keep screen-specific styles in the screen that uses them. Match shared visual patterns through theme tokens and existing components rather than a cross-screen style sheet.
+
 - Use kebab-case for all filenames, including component files. Use PascalCase for React component names, with the first letter of each word capitalized. For example, define `SignInForm` in `sign-in-form.tsx`.
 - Declare a typed `interface Props` above each component that receives props. Define the component as a named function with a single `props: Props` parameter. Access fields as `props.field` throughout the component body.
 - Group state for the same operation into one minimal state value. Represent mutually exclusive states with a status or discriminated union, and store details on the variant that needs them. For example, sign-in can be `idle`, `loading`, or `error`, with an error message on the `error` variant. Keep independent state separate and derive values such as `isSigningIn` from the status.
