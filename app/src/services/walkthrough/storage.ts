@@ -35,7 +35,7 @@ function localPhotoUri(uri?: string): string | undefined {
     : `${FileSystem.documentDirectory}walkthrough-photos/${uri.slice(index + marker.length)}`;
 }
 
-type StoredBanner = { pendingBannerId?: string };
+type StoredBanner = { pendingBannerId?: string; deletionPending?: boolean };
 
 type StoredItem = Omit<PunchItem, "photos"> &
   StoredBanner & {
@@ -122,7 +122,7 @@ function serializeItem(item: PunchItem) {
   return { ...serializeBanner(item), photos: remote, pendingPhotoIds: pending };
 }
 
-function mediaUrls(value: unknown): string[] {
+export function mediaUrls(value: unknown): string[] {
   if (!value || typeof value !== "object") return [];
   const data = value as { bannerPhotoUri?: unknown; photos?: unknown };
   const result: string[] = [];
@@ -218,20 +218,21 @@ export function createWalkthroughStorage(ownerId: string) {
     ownerId,
     "media-deletions",
   );
+  const deletionJobs = collection(database, "users", ownerId, "deletion-jobs");
   const projectRef = (id: string) => doc(projects, id);
   const walkthroughRef = (id: string) => doc(walkthroughs, id);
   const itemRef = (id: string) => doc(items, id);
 
   async function allProjects() {
-    return (await getDocs(projects)).docs.map((entry) =>
-      readProject(entry.data() as Project),
-    );
+    return (await getDocs(projects)).docs
+      .filter((entry) => entry.data().deletionPending !== true)
+      .map((entry) => readProject(entry.data() as Project));
   }
 
   async function allWalkthroughs() {
-    return (await getDocs(walkthroughs)).docs.map((entry) =>
-      readWalkthrough(entry.data() as Walkthrough),
-    );
+    return (await getDocs(walkthroughs)).docs
+      .filter((entry) => entry.data().deletionPending !== true)
+      .map((entry) => readWalkthrough(entry.data() as Walkthrough));
   }
 
   async function allItems() {
@@ -281,6 +282,9 @@ export function createWalkthroughStorage(ownerId: string) {
     for (const item of changed) {
       requireId(item.id, "Item ID");
       requireId(item.walkthroughId, "Walkthrough ID");
+      const parent = await cachedData(walkthroughRef(item.walkthroughId));
+      if (parent?.deletionPending === true)
+        throw new Error("This walkthrough is being deleted.");
       const updated = clean(serializeItem(item));
       count += queueRemovedMedia(
         batch,
@@ -342,6 +346,8 @@ export function createWalkthroughStorage(ownerId: string) {
       await commitLocally(ownerId, batch);
     },
     async saveProject(project: Project): Promise<void> {
+      if ((await cachedData(projectRef(project.id)))?.deletionPending === true)
+        throw new Error("This project is being deleted.");
       const batch = writeBatch(database);
       const updated = clean(serializeBanner(project));
       checkBatchSize(
@@ -363,12 +369,17 @@ export function createWalkthroughStorage(ownerId: string) {
     async getWalkthrough(id: string): Promise<Walkthrough | null> {
       requireId(id, "Walkthrough ID");
       const snapshot = await getDoc(walkthroughRef(id));
-      return snapshot.exists()
+      return snapshot.exists() && snapshot.data().deletionPending !== true
         ? readWalkthrough(snapshot.data() as Walkthrough)
         : null;
     },
     async saveWalkthrough(walkthrough: Walkthrough): Promise<void> {
       requireId(walkthrough.id, "Walkthrough ID");
+      if (
+        (await cachedData(walkthroughRef(walkthrough.id)))?.deletionPending ===
+        true
+      )
+        throw new Error("This walkthrough is being deleted.");
       const batch = writeBatch(database);
       const updated = clean(serializeBanner(walkthrough));
       checkBatchSize(
@@ -384,6 +395,11 @@ export function createWalkthroughStorage(ownerId: string) {
     },
     async listItems(walkthroughId: string): Promise<PunchItem[]> {
       requireId(walkthroughId, "Walkthrough ID");
+      if (
+        (await getDoc(walkthroughRef(walkthroughId))).data()
+          ?.deletionPending === true
+      )
+        throw new Error("This walkthrough is being deleted.");
       const snapshot = await getDocs(
         query(items, where("walkthroughId", "==", walkthroughId)),
       );
@@ -434,55 +450,28 @@ export function createWalkthroughStorage(ownerId: string) {
       await commitLocally(ownerId, batch);
     },
     async deleteWalkthrough(id: string): Promise<void> {
-      const children = (await allItems()).filter(
-        (item) => item.walkthroughId === id,
-      );
+      requireId(id, "Walkthrough ID");
       const batch = writeBatch(database);
-      let count =
-        children.length +
-        1 +
-        queueRemovedMedia(batch, await cachedData(walkthroughRef(id)));
-      for (const item of children) {
-        count += queueRemovedMedia(batch, await cachedData(itemRef(item.id)));
-        batch.delete(itemRef(item.id));
-      }
-      checkBatchSize(count);
-      batch.delete(walkthroughRef(id));
+      batch.update(walkthroughRef(id), { deletionPending: true });
+      batch.set(doc(deletionJobs), {
+        kind: "walkthrough",
+        targetId: id,
+        createdAt: Date.now(),
+      });
       await commitLocally(ownerId, batch);
     },
-    async deleteProject(id: string): Promise<PunchItem["photos"]> {
-      const [allProjectsList, allWalkthroughsList] = await Promise.all([
-        allProjects(),
-        allWalkthroughs(),
-      ]);
+    async deleteProject(id: string): Promise<void> {
+      const allProjectsList = await allProjects();
       const project = allProjectsList.find((entry) => entry.id === id);
       if (!project) throw new Error("Project not found");
-      const selected = allWalkthroughsList.filter(
-        (entry) => entry.projectId === id,
-      );
-      const photos: PunchItem["photos"] = [];
-      if (project.bannerPhotoUri)
-        photos.push({ localUri: project.bannerPhotoUri });
       const batch = writeBatch(database);
-      checkBatchSize(
-        1 +
-          selected.length +
-          queueRemovedMedia(batch, await cachedData(projectRef(id))),
-      );
-      for (const entry of selected)
-        batch.set(
-          walkthroughRef(entry.id),
-          clean(
-            serializeBanner({
-              ...entry,
-              projectId: undefined,
-              updatedAt: Date.now(),
-            }),
-          ),
-        );
-      batch.delete(projectRef(id));
+      batch.update(projectRef(id), { deletionPending: true });
+      batch.set(doc(deletionJobs), {
+        kind: "project",
+        targetId: id,
+        createdAt: Date.now(),
+      });
       await commitLocally(ownerId, batch);
-      return photos;
     },
   };
 }

@@ -18,7 +18,6 @@ import { ProjectPicker } from "../../../components/project-picker";
 import { useBannerDraft } from "../../../hooks/use-banner-draft";
 import { AppText } from "../../../components/app-text";
 import type { Project, Walkthrough } from "../../../models/walkthrough";
-import { deleteItemPhotos } from "../../../services/walkthrough/photos";
 import {
   createFirestoreId,
   createWalkthroughStorage,
@@ -210,7 +209,7 @@ export default function WalkthroughEdit() {
 
     showDialog(
       "Delete walkthrough?",
-      "This also deletes its items and photos from this device.",
+      "This removes the walkthrough, its items and photos. Cleanup finishes when you’re online.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -221,19 +220,7 @@ export default function WalkthroughEdit() {
               setDeleting(true);
               try {
                 const storage = createWalkthroughStorage(ownerId);
-                const items = await storage.listItems(id);
                 await storage.deleteWalkthrough(id);
-                await deleteItemPhotos([
-                  ...items.flatMap((item) => [
-                    ...item.photos,
-                    ...(item.bannerPhotoUri
-                      ? [{ localUri: item.bannerPhotoUri }]
-                      : []),
-                  ]),
-                  ...(form.existing?.bannerPhotoUri
-                    ? [{ localUri: form.existing.bannerPhotoUri }]
-                    : []),
-                ]).catch(() => {});
                 if (fromProjectId)
                   router.dismissTo({
                     pathname: "/project/[id]",

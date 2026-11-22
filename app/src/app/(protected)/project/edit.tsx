@@ -20,7 +20,6 @@ import {
   createFirestoreId,
   createWalkthroughStorage,
 } from "../../../services/walkthrough/storage";
-import { deleteItemPhotos } from "../../../services/walkthrough/photos";
 import { useAuthStore } from "../../../store/auth-store";
 import { useDialogStore } from "../../../store/dialog-store";
 import { colors } from "../../../theme";
@@ -153,7 +152,7 @@ export default function ProjectEdit() {
 
     showDialog(
       "Delete project?",
-      "The project will be deleted. Its walkthroughs and their items will remain available in Walkthroughs.",
+      "The project will be removed when you’re online. Its walkthroughs and items will remain available in Walkthroughs.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -163,9 +162,7 @@ export default function ProjectEdit() {
             void (async () => {
               setDeleting(true);
               try {
-                const photos =
-                  await createWalkthroughStorage(ownerId).deleteProject(id);
-                await deleteItemPhotos(photos).catch(() => {});
+                await createWalkthroughStorage(ownerId).deleteProject(id);
                 router.dismissTo("/(protected)/(tabs)/projects");
               } catch {
                 setDeleting(false);

@@ -15,6 +15,7 @@ import { useAuthStore } from "../store/auth-store";
 import { useUpdateStore } from "../store/update-store";
 import { colors } from "../theme";
 import { observeMedia } from "../services/firebase/media-sync";
+import { observeDeletions } from "../services/firebase/deletion-sync";
 import { observeFirestore } from "../services/firebase/firestore-sync";
 import { AppDialog } from "../components/app-dialog";
 
@@ -40,9 +41,11 @@ export default function RootLayout() {
 
     const stopFirestore = observeFirestore(userId);
     const stopMedia = observeMedia(userId);
+    const stopDeletions = observeDeletions(userId);
 
     return () => {
       stopMedia();
+      stopDeletions();
       stopFirestore();
     };
   }, [userId, appCheck]);

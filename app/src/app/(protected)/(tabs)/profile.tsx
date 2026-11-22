@@ -44,6 +44,8 @@ const preferences = [
 export default function Profile() {
   const auth = useAuthStore((state) => state.auth);
   const pendingChanges = useFirestoreStore((state) => state.pending);
+  const deletionsPending = useFirestoreStore((state) => state.deletionsPending);
+  const deletionError = useFirestoreStore((state) => state.deletionError);
   const mediaStatus = useMediaSyncStore((state) => state.status);
 
   const [signingOut, setSigningOut] = useState<SignOutState>({
@@ -52,19 +54,25 @@ export default function Profile() {
 
   const showDialog = useDialogStore((state) => state.showDialog);
 
-  const showSync = pendingChanges || mediaStatus !== "idle";
-  const syncError = mediaStatus === "error";
+  const showSync = pendingChanges || deletionsPending || mediaStatus !== "idle";
+  const syncError = mediaStatus === "error" || deletionError;
   const syncWaiting = mediaStatus === "waiting";
   const syncTitle = syncError
     ? "Sync paused"
     : syncWaiting
       ? "Waiting to sync"
-      : "Syncing to cloud";
-  const syncDescription = syncError
-    ? "Some photos couldn’t sync. We’ll retry automatically."
-    : syncWaiting
-      ? "Photos will sync when the device that captured them is online."
-      : "Your local changes are waiting to reach the cloud.";
+      : deletionsPending
+        ? "Finishing deletions"
+        : "Syncing to cloud";
+  const syncDescription = deletionError
+    ? "Deletion cleanup paused. We’ll retry automatically."
+    : syncError
+      ? "Some photos couldn’t sync. We’ll retry automatically."
+      : deletionsPending
+        ? "Deleted records will be cleaned up when you’re online."
+        : syncWaiting
+          ? "Photos and changes will sync when they’re ready."
+          : "Your local changes are waiting to reach the cloud.";
 
   function confirmSignOut() {
     showDialog("Sign out?", "You can sign back in to access your account.", [

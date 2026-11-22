@@ -66,11 +66,25 @@ export function observeMedia(ownerId: string): () => void {
     running = true;
     try {
       const jobs: MediaJob[] = [];
+      const deletingWalkthroughs = new Set(
+        [...documents.entries()]
+          .filter(
+            ([key, entry]) =>
+              key.startsWith("walkthroughs/") &&
+              entry.data.deletionPending === true,
+          )
+          .map(([key]) => key.slice("walkthroughs/".length)),
+      );
       for (const {
         reference,
         data,
         pending: pendingWrite,
       } of documents.values()) {
+        if (
+          data.deletionPending === true ||
+          deletingWalkthroughs.has(data.walkthroughId)
+        )
+          continue;
         const bannerId =
           typeof data.pendingBannerId === "string"
             ? data.pendingBannerId
@@ -113,12 +127,12 @@ export function observeMedia(ownerId: string): () => void {
       if (!network?.isConnected || network.isInternetReachable === false) {
         useMediaSyncStore
           .getState()
-          .setStatus(jobs.length ? "waiting" : "idle");
+          .setStatus(jobs.length || deletions.length ? "waiting" : "idle");
         return;
       }
       useMediaSyncStore
         .getState()
-        .setStatus(jobs.length ? "uploading" : "idle");
+        .setStatus(jobs.length || deletions.length ? "uploading" : "idle");
       let failed = false;
       let unavailable = false;
       for (const job of jobs) {
@@ -205,11 +219,6 @@ export function observeMedia(ownerId: string): () => void {
           // The next connectivity or document update retries unfinished uploads.
         }
       }
-      if (active)
-        useMediaSyncStore
-          .getState()
-          .setStatus(failed ? "error" : unavailable ? "waiting" : "idle");
-
       for (const deletion of deletions) {
         if (!active || getAuth().currentUser?.uid !== ownerId) break;
         try {
@@ -218,48 +227,70 @@ export function observeMedia(ownerId: string): () => void {
               getDocsFromServer(collection(database, "users", ownerId, name)),
             ),
           );
+          if (
+            snapshots.some(
+              (snapshot) =>
+                snapshot.metadata.fromCache ||
+                snapshot.metadata.hasPendingWrites,
+            )
+          )
+            continue;
           const mediaId = deletion.path
             .slice(deletion.path.lastIndexOf("/") + 1)
             .replace(/\.jpg$/, "");
-          const referenced = snapshots.some((snapshot) =>
-            snapshot.docs.some((entry) => {
+          const deletingWalkthroughs = new Set(
+            snapshots[1].docs
+              .filter((entry) => entry.data().deletionPending === true)
+              .map((entry) => entry.id),
+          );
+          let referenced = false;
+          let awaitingDeletion = false;
+          for (const snapshot of snapshots) {
+            for (const entry of snapshot.docs) {
               const data = entry.data();
-              if (
+              const matches =
                 data.pendingBannerId === mediaId ||
                 localMediaId(data.bannerPhotoUri) === mediaId ||
                 (Array.isArray(data.pendingPhotoIds) &&
-                  data.pendingPhotoIds.includes(mediaId))
-              )
-                return true;
-              if (
-                typeof data.bannerPhotoUri === "string" &&
-                mediaStoragePath(data.bannerPhotoUri, ownerId) === deletion.path
-              )
-                return true;
-              return (
-                Array.isArray(data.photos) &&
-                data.photos.some((photo: unknown) => {
-                  if (
-                    photo &&
-                    typeof photo === "object" &&
-                    localMediaId((photo as { localUri?: string }).localUri) ===
-                      mediaId
-                  )
-                    return true;
-                  const url =
-                    typeof photo === "string"
-                      ? photo
-                      : photo && typeof photo === "object"
-                        ? (photo as { remoteUrl?: string }).remoteUrl
-                        : undefined;
-                  return (
-                    !!url && mediaStoragePath(url, ownerId) === deletion.path
-                  );
-                })
-              );
-            }),
-          );
+                  data.pendingPhotoIds.includes(mediaId)) ||
+                (typeof data.bannerPhotoUri === "string" &&
+                  mediaStoragePath(data.bannerPhotoUri, ownerId) ===
+                    deletion.path) ||
+                (Array.isArray(data.photos) &&
+                  data.photos.some((photo: unknown) => {
+                    if (
+                      photo &&
+                      typeof photo === "object" &&
+                      localMediaId(
+                        (photo as { localUri?: string }).localUri,
+                      ) === mediaId
+                    )
+                      return true;
+                    const url =
+                      typeof photo === "string"
+                        ? photo
+                        : photo && typeof photo === "object"
+                          ? (photo as { remoteUrl?: string }).remoteUrl
+                          : undefined;
+                    return (
+                      !!url && mediaStoragePath(url, ownerId) === deletion.path
+                    );
+                  }));
+              if (matches) {
+                if (
+                  data.deletionPending === true ||
+                  deletingWalkthroughs.has(data.walkthroughId)
+                )
+                  awaitingDeletion = true;
+                else referenced = true;
+              }
+            }
+          }
           if (!active || getAuth().currentUser?.uid !== ownerId) break;
+          if (awaitingDeletion) {
+            unavailable = true;
+            continue;
+          }
           if (!referenced) {
             await deleteObject(ref(bucket, deletion.path)).catch(
               (error: { code?: string }) => {
@@ -269,10 +300,14 @@ export function observeMedia(ownerId: string): () => void {
           }
           await deleteDoc(deletion.reference);
         } catch {
-          if (active) useMediaSyncStore.getState().setStatus("error");
+          failed = true;
           // Keep the deletion record to retry when the network is available.
         }
       }
+      if (active)
+        useMediaSyncStore
+          .getState()
+          .setStatus(failed ? "error" : unavailable ? "waiting" : "idle");
     } finally {
       running = false;
       if (rerun && active) {

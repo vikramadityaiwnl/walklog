@@ -2,10 +2,52 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function owner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function activeProject(userId, projectId) {
+      return projectId == null || (
+        projectId is string &&
+        existsAfter(/databases/$(database)/documents/users/$(userId)/projects/$(projectId)) &&
+        getAfter(/databases/$(database)/documents/users/$(userId)/projects/$(projectId)).data.get('deletionPending', false) == false
+      );
+    }
+
+    function activeWalkthrough(userId, walkthroughId) {
+      return walkthroughId is string &&
+        exists(/databases/$(database)/documents/users/$(userId)/walkthroughs/$(walkthroughId)) &&
+        get(/databases/$(database)/documents/users/$(userId)/walkthroughs/$(walkthroughId)).data.get('deletionPending', false) == false;
+    }
+
+    function validDeletionMark() {
+      return request.resource.data.get('deletionPending', false) == false ||
+        (request.resource.data.get('deletionPending', false) == true && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deletionPending']));
+    }
+
+    match /users/{userId}/projects/{projectId} {
+      allow read: if owner(userId);
+      allow create: if owner(userId) && request.resource.data.get('deletionPending', false) == false;
+      allow update: if owner(userId) && resource.data.get('deletionPending', false) == false && validDeletionMark();
+      allow delete: if owner(userId) && resource.data.get('deletionPending', false) == true;
+    }
+
+    match /users/{userId}/walkthroughs/{walkthroughId} {
+      allow read: if owner(userId);
+      allow create: if owner(userId) && request.resource.data.get('deletionPending', false) == false && activeProject(userId, request.resource.data.get('projectId', null));
+      allow update: if owner(userId) && resource.data.get('deletionPending', false) == false && validDeletionMark() &&
+        (request.resource.data.get('projectId', null) == resource.data.get('projectId', null) || activeProject(userId, request.resource.data.get('projectId', null)));
+      allow delete: if owner(userId) && resource.data.get('deletionPending', false) == true;
+    }
+
+    match /users/{userId}/items/{itemId} {
+      allow read, delete: if owner(userId);
+      allow create: if owner(userId) && activeWalkthrough(userId, request.resource.data.get('walkthroughId', null));
+      allow update: if owner(userId) && request.resource.data.get('walkthroughId', null) == resource.data.get('walkthroughId', null) && activeWalkthrough(userId, request.resource.data.get('walkthroughId', null));
+    }
+
     match /users/{userId}/{collection}/{documentId} {
-      allow read, write: if request.auth != null
-        && request.auth.uid == userId
-        && collection in ['projects', 'walkthroughs', 'items', 'mutations', 'media-deletions'];
+      allow read, write: if owner(userId) && collection in ['mutations', 'media-deletions', 'deletion-jobs'];
     }
   }
 }
