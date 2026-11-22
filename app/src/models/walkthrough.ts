@@ -25,6 +25,7 @@ export interface PunchItem {
   bannerColor?: string;
   bannerPhotoUri?: string;
   rawTranscript: string;
+  processingMode: "device" | "cloud" | "manual";
   location: string;
   trade?: Trade;
   issueSummary: string;

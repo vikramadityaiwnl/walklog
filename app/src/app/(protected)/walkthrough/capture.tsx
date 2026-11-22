@@ -499,6 +499,7 @@ export default function Capture() {
         walkthroughId,
         bannerColor: randomBannerColor(),
         rawTranscript,
+        processingMode: mode,
         status: "Open" as const,
         photos: [],
         createdAt: now,

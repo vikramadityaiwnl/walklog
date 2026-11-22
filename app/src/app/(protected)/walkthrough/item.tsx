@@ -301,6 +301,7 @@ export default function ItemEdit() {
           : randomBannerColor(),
         bannerPhotoUri: banner.uri,
         rawTranscript: existing?.rawTranscript ?? "",
+        processingMode: existing ? existing.processingMode : "manual",
         issueSummary: draft.description.trim(),
         location: draft.location.trim(),
         trade: draft.trade,

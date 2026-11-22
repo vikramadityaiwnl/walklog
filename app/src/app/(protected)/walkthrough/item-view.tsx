@@ -8,10 +8,16 @@ import {
   View,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import {
+  CameraIcon,
+  MapPinIcon,
+  WrenchScrewdriverIcon,
+} from "react-native-heroicons/outline";
 import { ScreenBanner } from "../../../components/screen-banner";
 import { getBannerColor } from "../../../services/banner-colors";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText } from "../../../components/app-text";
+import { Badge } from "../../../components/badge";
 import { useDialogStore } from "../../../store/dialog-store";
 import { PhotoGallery } from "../../../components/photo-gallery";
 import { walkthroughStyles as styles } from "../../../components/walkthrough-styles";
@@ -23,6 +29,12 @@ import {
 import { createWalkthroughStorage } from "../../../services/walkthrough-storage";
 import { useAuthStore } from "../../../store/auth-store";
 import { colors } from "../../../theme";
+
+const processingLabels: Record<PunchItem["processingMode"], string> = {
+  device: "On device",
+  cloud: "Cloud",
+  manual: "Manual",
+};
 
 type ScreenState =
   | { status: "loading" }
@@ -182,54 +194,104 @@ export default function ItemView() {
               }
             />
 
-            <View style={styles.content}>
-              <View style={screenStyles.details}>
-                <View style={styles.section}>
-                  <AppText weight="semibold" style={styles.label}>
-                    Location
-                  </AppText>
+            <View style={screenStyles.body}>
+              <View style={screenStyles.overview}>
+                <View style={screenStyles.badges}>
+                  <Badge
+                    label={screen.item.status}
+                    tone={screen.item.status === "Done" ? "success" : "info"}
+                  />
 
-                  <AppText>
-                    {screen.item.location || "Unspecified Area"}
-                  </AppText>
+                  {screen.item.priority ? (
+                    <Badge
+                      label={`${screen.item.priority} priority`}
+                      tone={
+                        screen.item.priority === "High"
+                          ? "danger"
+                          : screen.item.priority === "Medium"
+                            ? "warning"
+                            : "neutral"
+                      }
+                    />
+                  ) : null}
+
+                  <Badge label={processingLabels[screen.item.processingMode]} />
                 </View>
 
-                <View style={styles.section}>
-                  <AppText weight="semibold" style={styles.label}>
-                    Trade
-                  </AppText>
+                <View style={screenStyles.details}>
+                  <View style={screenStyles.detail}>
+                    <View style={screenStyles.detailLabel}>
+                      <MapPinIcon size={16} color={colors.muted} />
 
-                  <AppText>{screen.item.trade || "Not specified"}</AppText>
-                </View>
+                      <AppText style={screenStyles.label}>Location</AppText>
+                    </View>
 
-                <View style={styles.section}>
-                  <AppText weight="semibold" style={styles.label}>
-                    Priority
-                  </AppText>
+                    <AppText
+                      weight="semibold"
+                      style={!screen.item.location && screenStyles.unspecified}
+                    >
+                      {screen.item.location || "Not specified"}
+                    </AppText>
+                  </View>
 
-                  <AppText>{screen.item.priority || "Not specified"}</AppText>
+                  <View style={screenStyles.detail}>
+                    <View style={screenStyles.detailLabel}>
+                      <WrenchScrewdriverIcon size={16} color={colors.muted} />
+
+                      <AppText style={screenStyles.label}>Trade</AppText>
+                    </View>
+
+                    <AppText
+                      weight="semibold"
+                      style={!screen.item.trade && screenStyles.unspecified}
+                    >
+                      {screen.item.trade || "Not specified"}
+                    </AppText>
+                  </View>
                 </View>
               </View>
 
-              <View style={styles.section}>
-                <AppText weight="semibold" style={styles.label}>
-                  Status
-                </AppText>
+              <View style={screenStyles.photos}>
+                <View style={screenStyles.headingRow}>
+                  <AppText variant="title" style={screenStyles.sectionTitle}>
+                    Photos
+                  </AppText>
 
-                <AppText>{screen.item.status}</AppText>
-              </View>
+                  {screen.item.photos.length ? (
+                    <AppText style={screenStyles.photoCount}>
+                      {screen.item.photos.length}
+                    </AppText>
+                  ) : null}
+                </View>
 
-              <View style={styles.section}>
-                <AppText weight="semibold" style={styles.label}>
-                  Photos
-                </AppText>
+                {screen.item.photos.length ? (
+                  <PhotoGallery
+                    photos={screen.item.photos}
+                    busy={photoBusy}
+                    onAdd={choosePhoto}
+                    onRemove={removePhoto}
+                  />
+                ) : (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Add photos"
+                    disabled={photoBusy}
+                    onPress={choosePhoto}
+                    style={screenStyles.addPhoto}
+                  >
+                    <View style={screenStyles.photoIcon}>
+                      <CameraIcon size={22} color={colors.accent} />
+                    </View>
 
-                <PhotoGallery
-                  photos={screen.item.photos}
-                  busy={photoBusy}
-                  onAdd={choosePhoto}
-                  onRemove={removePhoto}
-                />
+                    <View style={screenStyles.photoCopy}>
+                      <AppText weight="semibold">Add photos</AppText>
+
+                      <AppText style={screenStyles.photoHint}>
+                        Capture or choose photos of this item
+                      </AppText>
+                    </View>
+                  </Pressable>
+                )}
               </View>
             </View>
           </>
@@ -241,5 +303,43 @@ export default function ItemView() {
 
 const screenStyles = StyleSheet.create({
   content: { flexGrow: 1 },
-  details: { gap: 18 },
+  body: { paddingHorizontal: 24, paddingTop: 28, paddingBottom: 40, gap: 32 },
+  overview: { gap: 24 },
+  headingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap",
+  },
+  sectionTitle: { fontSize: 19, lineHeight: 26 },
+  badges: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  details: {
+    flexDirection: "row",
+    gap: 20,
+  },
+  detail: { flex: 1, gap: 8 },
+  detailLabel: { flexDirection: "row", alignItems: "center", gap: 6 },
+  label: { color: colors.muted, fontSize: 13 },
+  unspecified: { color: colors.muted },
+  photos: { gap: 16 },
+  photoCount: { color: colors.muted, fontSize: 13 },
+  addPhoto: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: colors.accentFaint,
+    borderRadius: 14,
+    padding: 16,
+  },
+  photoIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.background,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photoCopy: { flex: 1, gap: 3 },
+  photoHint: { color: colors.muted, fontSize: 13, lineHeight: 19 },
 });
