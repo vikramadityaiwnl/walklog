@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNetworkState } from "expo-network";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useShallow } from "zustand/react/shallow";
-import { checkModelAvailability } from "../services/firebase-ai";
+import { checkModelAvailability } from "../services/firebase/ai";
 import { useInferenceStore } from "../store/inference-store";
 import { colors } from "../theme";
 import { AppText } from "./app-text";

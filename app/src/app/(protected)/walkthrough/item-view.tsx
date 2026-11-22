@@ -25,8 +25,8 @@ import type { PunchItem } from "../../../models/walkthrough";
 import {
   deleteItemPhotos,
   selectItemPhoto,
-} from "../../../services/walkthrough-photos";
-import { createWalkthroughStorage } from "../../../services/walkthrough-storage";
+} from "../../../services/walkthrough/photos";
+import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
 import { useAuthStore } from "../../../store/auth-store";
 import { colors } from "../../../theme";
 

@@ -8,7 +8,7 @@ import {
   GoogleSignin,
   isSuccessResponse,
 } from "@react-native-google-signin/google-signin";
-import googleServices from "../../google-services.json";
+import googleServices from "../../../google-services.json";
 
 const webClientId = googleServices.client[0]?.oauth_client.find(
   (client) => client.client_type === 3,

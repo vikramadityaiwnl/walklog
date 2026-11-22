@@ -1,5 +1,5 @@
 import * as SQLite from "expo-sqlite";
-import type { PunchItem, Walkthrough } from "../models/walkthrough";
+import type { PunchItem, Walkthrough } from "../../models/walkthrough";
 
 const DATABASE_NAME = "walklog.db";
 let databasePromise: Promise<SQLite.SQLiteDatabase> | undefined;

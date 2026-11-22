@@ -1,8 +1,8 @@
 import { Redirect } from "expo-router";
 import { useEffect } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
-import { initializeAppCheck } from "../services/app-check";
-import { initializeAuth } from "../services/auth";
+import { initializeAppCheck } from "../services/firebase/app-check";
+import { initializeAuth } from "../services/firebase/auth";
 import { initializeUpdates } from "../services/updates";
 import { useAppCheckStore } from "../store/app-check-store";
 import { useAuthStore } from "../store/auth-store";

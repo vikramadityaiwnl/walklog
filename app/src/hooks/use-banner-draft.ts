@@ -3,7 +3,7 @@ import { useDialogStore } from "../store/dialog-store";
 import {
   deleteItemPhotos,
   selectItemPhoto,
-} from "../services/walkthrough-photos";
+} from "../services/walkthrough/photos";
 
 export function useBannerDraft() {
   const showDialog = useDialogStore((state) => state.showDialog);

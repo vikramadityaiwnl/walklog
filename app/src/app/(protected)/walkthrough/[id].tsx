@@ -25,9 +25,9 @@ import { EmptyState } from "../../../components/empty-state";
 import { AppText } from "../../../components/app-text";
 import { walkthroughStyles as styles } from "../../../components/walkthrough-styles";
 import type { PunchItem, Walkthrough } from "../../../models/walkthrough";
-import { deleteItemPhotos } from "../../../services/walkthrough-photos";
+import { deleteItemPhotos } from "../../../services/walkthrough/photos";
 import { useDialogStore } from "../../../store/dialog-store";
-import { createWalkthroughStorage } from "../../../services/walkthrough-storage";
+import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
 import { useAuthStore } from "../../../store/auth-store";
 import { colors } from "../../../theme";
 

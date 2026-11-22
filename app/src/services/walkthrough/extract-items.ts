@@ -1,5 +1,5 @@
-import { generateText } from "./firebase-ai";
-import type { Priority, Trade } from "../models/walkthrough";
+import { generateText } from "../firebase/ai";
+import type { Priority, Trade } from "../../models/walkthrough";
 
 export interface ExtractedItem {
   issueSummary: string;

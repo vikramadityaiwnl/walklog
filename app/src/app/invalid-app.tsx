@@ -2,7 +2,7 @@ import { StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppButton } from "../components/app-button";
 import { AppText } from "../components/app-text";
-import { initializeAppCheck } from "../services/app-check";
+import { initializeAppCheck } from "../services/firebase/app-check";
 import { useAppCheckStore } from "../store/app-check-store";
 import { colors } from "../theme";
 

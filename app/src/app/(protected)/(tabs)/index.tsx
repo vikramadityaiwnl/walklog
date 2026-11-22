@@ -22,7 +22,7 @@ import { Overlay } from "../../../components/overlay";
 import { walkthroughStyles as styles } from "../../../components/walkthrough-styles";
 import type { Walkthrough } from "../../../models/walkthrough";
 import { getBannerColor } from "../../../services/banner-colors";
-import { createWalkthroughStorage } from "../../../services/walkthrough-storage";
+import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
 import { useAuthStore } from "../../../store/auth-store";
 import { colors } from "../../../theme";
 

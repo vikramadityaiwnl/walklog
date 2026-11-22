@@ -30,10 +30,10 @@ import type {
 import {
   deleteItemPhotos,
   selectItemPhoto,
-} from "../../../services/walkthrough-photos";
-import { createWalkthroughStorage } from "../../../services/walkthrough-storage";
+} from "../../../services/walkthrough/photos";
+import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
 import { useAuthStore } from "../../../store/auth-store";
-import { extractItems } from "../../../services/extract-items";
+import { extractItems } from "../../../services/walkthrough/extract-items";
 
 const priorities: Priority[] = ["Low", "Medium", "High"];
 const statuses: ItemStatus[] = ["Open", "Done"];

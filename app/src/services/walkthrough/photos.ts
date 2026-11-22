@@ -2,7 +2,7 @@ import * as Crypto from "expo-crypto";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
-import type { PunchItem } from "../models/walkthrough";
+import type { PunchItem } from "../../models/walkthrough";
 
 const directory = `${FileSystem.documentDirectory}walkthrough-photos/`;
 

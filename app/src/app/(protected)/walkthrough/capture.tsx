@@ -36,16 +36,16 @@ import { EmptyState } from "../../../components/empty-state";
 import { InferenceSelector } from "../../../components/inference-selector";
 import { LoadingState } from "../../../components/loading-state";
 import { walkthroughStyles as styles } from "../../../components/walkthrough-styles";
-import { extractItems } from "../../../services/extract-items";
+import { extractItems } from "../../../services/walkthrough/extract-items";
 import { randomBannerColor } from "../../../services/banner-colors";
-import { cleanTranscript } from "../../../services/transcript";
-import { transcribeImportedAudio } from "../../../services/transcribe-imported-audio";
+import { cleanTranscript } from "../../../services/transcription/transcript";
+import { transcribeImportedAudio } from "../../../services/transcription/transcription/imported-audio";
 import {
   downloadWhisperModel,
   getWhisperModel,
-} from "../../../services/whisper-model";
-import { createWalkthroughStorage } from "../../../services/walkthrough-storage";
-import { WhisperAudioStream } from "../../../services/whisper-audio-stream";
+} from "../../../services/whisper/model";
+import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
+import { WhisperAudioStream } from "../../../services/whisper/audio-stream";
 import { useAuthStore } from "../../../store/auth-store";
 import { useInferenceStore } from "../../../store/inference-store";
 import { colors } from "../../../theme";
