@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { DMSans_400Regular } from "@expo-google-fonts/dm-sans/400Regular";
 import { DMSans_500Medium } from "@expo-google-fonts/dm-sans/500Medium";
@@ -13,6 +14,7 @@ import { useAppCheckStore } from "../store/app-check-store";
 import { useAuthStore } from "../store/auth-store";
 import { useUpdateStore } from "../store/update-store";
 import { colors } from "../theme";
+import { observeFirestore } from "../services/firebase/firestore-sync";
 import { AppDialog } from "../components/app-dialog";
 
 export default function RootLayout() {
@@ -30,6 +32,13 @@ export default function RootLayout() {
   const auth = useAuthStore((state) => state.auth);
   const appCheck = useAppCheckStore((state) => state.appCheck);
   const updateStatus = useUpdateStore((state) => state.status);
+  const userId = auth.status === "ready" ? auth.user?.uid : undefined;
+
+  useEffect(() => {
+    if (!userId || appCheck !== "ready") return;
+
+    return observeFirestore(userId);
+  }, [userId, appCheck]);
 
   if (!fontsLoaded && !fontError) {
     return (

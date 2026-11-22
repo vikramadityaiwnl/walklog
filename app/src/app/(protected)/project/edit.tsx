@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
-import * as Crypto from "expo-crypto";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -15,7 +14,10 @@ import { AppText } from "../../../components/app-text";
 import { BannerPicker } from "../../../components/banner-picker";
 import { useBannerDraft } from "../../../hooks/use-banner-draft";
 import type { Project } from "../../../models/walkthrough";
-import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
+import {
+  createFirestoreId,
+  createWalkthroughStorage,
+} from "../../../services/walkthrough/storage";
 import { deleteItemPhotos } from "../../../services/walkthrough/photos";
 import { useAuthStore } from "../../../store/auth-store";
 import { useDialogStore } from "../../../store/dialog-store";
@@ -95,7 +97,7 @@ export default function ProjectEdit() {
     try {
       const project: Project = {
         ...form.project,
-        id: form.project?.id ?? Crypto.randomUUID(),
+        id: form.project?.id ?? createFirestoreId(ownerId, "projects"),
         name: form.name.trim(),
         bannerIllustration:
           form.project?.bannerIllustration ?? randomBannerIllustration(),

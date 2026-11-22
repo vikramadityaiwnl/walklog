@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
-import * as Crypto from "expo-crypto";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -18,7 +17,10 @@ import { useBannerDraft } from "../../../hooks/use-banner-draft";
 import { AppText } from "../../../components/app-text";
 import type { Walkthrough } from "../../../models/walkthrough";
 import { deleteItemPhotos } from "../../../services/walkthrough/photos";
-import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
+import {
+  createFirestoreId,
+  createWalkthroughStorage,
+} from "../../../services/walkthrough/storage";
 import { useAuthStore } from "../../../store/auth-store";
 import { randomBannerIllustration } from "../../../utils/banner-illustrations";
 
@@ -158,7 +160,7 @@ export default function WalkthroughEdit() {
       const now = Date.now();
       const walkthrough: Walkthrough = {
         ...existing,
-        id: existing?.id ?? Crypto.randomUUID(),
+        id: existing?.id ?? createFirestoreId(ownerId, "walkthroughs"),
         title: draft.title.trim(),
         bannerIllustration:
           existing?.bannerIllustration ?? randomBannerIllustration(),

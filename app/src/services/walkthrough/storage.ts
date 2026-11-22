@@ -1,411 +1,302 @@
-import * as SQLite from "expo-sqlite";
 import * as FileSystem from "expo-file-system/legacy";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  getFirestore,
+  onSnapshot,
+  query,
+  where,
+  writeBatch,
+  type WriteBatch,
+} from "@react-native-firebase/firestore";
 import type { Project, PunchItem, Walkthrough } from "../../models/walkthrough";
 import { getBannerIllustration } from "../../utils/banner-illustrations";
+import { useDialogStore } from "../../store/dialog-store";
 
-const DATABASE_NAME = "walklog.db";
+const database = getFirestore();
 
 function localPhotoUri(uri?: string): string | undefined {
   if (!uri) return uri;
   const marker = "/walkthrough-photos/";
   const index = uri.lastIndexOf(marker);
-
   return index < 0 || !FileSystem.documentDirectory
     ? uri
     : `${FileSystem.documentDirectory}walkthrough-photos/${uri.slice(index + marker.length)}`;
 }
 
-function readWalkthrough(data: string): Walkthrough {
-  const walkthrough = JSON.parse(data) as Walkthrough;
-
+function readWalkthrough(value: Walkthrough): Walkthrough {
   return {
-    ...walkthrough,
+    ...value,
     bannerIllustration: getBannerIllustration(
-      walkthrough.id,
-      walkthrough.bannerIllustration,
+      value.id,
+      value.bannerIllustration,
     ),
-    bannerPhotoUri: localPhotoUri(walkthrough.bannerPhotoUri),
+    bannerPhotoUri: localPhotoUri(value.bannerPhotoUri),
   };
 }
 
-function readItem(data: string): PunchItem {
-  const item = JSON.parse(data) as PunchItem;
-
+function readProject(value: Project): Project {
   return {
-    ...item,
-    bannerPhotoUri: localPhotoUri(item.bannerPhotoUri),
-    photos: item.photos.map((photo) => ({
+    ...value,
+    bannerIllustration: getBannerIllustration(
+      value.id,
+      value.bannerIllustration,
+    ),
+    bannerPhotoUri: localPhotoUri(value.bannerPhotoUri),
+  };
+}
+
+function readItem(value: PunchItem): PunchItem {
+  return {
+    ...value,
+    bannerPhotoUri: localPhotoUri(value.bannerPhotoUri),
+    photos: (value.photos ?? []).map((photo) => ({
       ...photo,
       localUri: localPhotoUri(photo.localUri) ?? photo.localUri,
     })),
   };
 }
-let databasePromise: Promise<SQLite.SQLiteDatabase> | undefined;
 
-async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
-  if (!databasePromise) {
-    databasePromise = initializeDatabase().catch((error: unknown) => {
-      databasePromise = undefined;
-      throw error;
-    });
-  }
-
-  return databasePromise;
+function clean<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
 }
 
-async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
-  const database = await SQLite.openDatabaseAsync(DATABASE_NAME);
+function requireId(value: string, label: string) {
+  if (!value.trim() || value.includes("/"))
+    throw new Error(`${label} is invalid`);
+}
 
-  try {
-    await database.execAsync("PRAGMA foreign_keys = ON;");
-    const version = await database.getFirstAsync<{ user_version: number }>(
-      "PRAGMA user_version",
+/** Resolve when the atomic batch is visible in Firestore's persistent local cache. */
+function commitLocally(ownerId: string, batch: WriteBatch): Promise<void> {
+  const marker = doc(collection(database, "users", ownerId, "mutations"));
+  batch.set(marker, { createdAt: Date.now() });
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let unsubscribe = () => {};
+    unsubscribe = onSnapshot(
+      marker,
+      (snapshot) => {
+        if (snapshot.exists() && !settled) {
+          settled = true;
+          unsubscribe();
+          resolve();
+        }
+      },
+      (error) => {
+        if (!settled) {
+          settled = true;
+          unsubscribe();
+          reject(error);
+        }
+      },
     );
-
-    if (!version || version.user_version > 3) {
-      throw new Error("Unsupported local database version");
-    }
-
-    if (version.user_version === 0) {
-      await database.execAsync(`
-        BEGIN TRANSACTION;
-        CREATE TABLE walkthroughs (
-          owner_id TEXT NOT NULL,
-          id TEXT NOT NULL,
-          updated_at INTEGER NOT NULL,
-          data TEXT NOT NULL,
-          PRIMARY KEY (owner_id, id)
-        );
-        CREATE TABLE punch_items (
-          owner_id TEXT NOT NULL,
-          id TEXT NOT NULL,
-          walkthrough_id TEXT NOT NULL,
-          created_at INTEGER NOT NULL,
-          data TEXT NOT NULL,
-          PRIMARY KEY (owner_id, id),
-          FOREIGN KEY (owner_id, walkthrough_id)
-            REFERENCES walkthroughs (owner_id, id) ON DELETE CASCADE
-        );
-        CREATE INDEX punch_items_walkthrough_idx
-          ON punch_items (owner_id, walkthrough_id, created_at);
-        PRAGMA user_version = 1;
-        COMMIT;
-      `);
-    }
-
-    if (version.user_version < 2) {
-      await database.execAsync(`
-        CREATE TABLE IF NOT EXISTS projects (
-          owner_id TEXT NOT NULL,
-          id TEXT NOT NULL,
-          data TEXT NOT NULL,
-          PRIMARY KEY (owner_id, id)
-        );
-        PRAGMA user_version = 2;
-      `);
-    }
-
-    if (version.user_version < 3) {
-      await database.execAsync(`
-        BEGIN TRANSACTION;
-        CREATE TRIGGER punch_item_inserted AFTER INSERT ON punch_items BEGIN
-          UPDATE walkthroughs SET updated_at = CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER), data = json_set(data, '$.updatedAt', CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)) WHERE owner_id = NEW.owner_id AND id = NEW.walkthrough_id;
-        END;
-        CREATE TRIGGER punch_item_updated AFTER UPDATE ON punch_items BEGIN
-          UPDATE walkthroughs SET updated_at = CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER), data = json_set(data, '$.updatedAt', CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)) WHERE owner_id = NEW.owner_id AND id = NEW.walkthrough_id;
-        END;
-        CREATE TRIGGER punch_item_deleted AFTER DELETE ON punch_items BEGIN
-          UPDATE walkthroughs SET updated_at = CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER), data = json_set(data, '$.updatedAt', CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)) WHERE owner_id = OLD.owner_id AND id = OLD.walkthrough_id;
-        END;
-        PRAGMA user_version = 3;
-        COMMIT;
-      `);
-    }
-
-    return database;
-  } catch (error) {
-    await database.closeAsync();
-    throw error;
-  }
+    void batch.commit().catch((error: unknown) => {
+      if (!settled) {
+        settled = true;
+        unsubscribe();
+        reject(error);
+      } else
+        useDialogStore
+          .getState()
+          .showDialog(
+            "Couldn’t sync changes",
+            "Some changes were rejected. Check your connection and try again.",
+          );
+    });
+  });
 }
 
-function requireId(value: string, name: string): void {
-  if (!value.trim()) {
-    throw new Error(`${name} is required`);
-  }
+export function createFirestoreId(
+  ownerId: string,
+  kind: "projects" | "walkthroughs" | "items",
+): string {
+  requireId(ownerId, "Owner ID");
+
+  return doc(collection(database, "users", ownerId, kind)).id;
 }
 
-/** All records are scoped to the signed-in user's Firebase UID. */
+/** Documents are scoped to the signed-in user's Firebase UID. */
 export function createWalkthroughStorage(ownerId: string) {
   requireId(ownerId, "Owner ID");
+  const projects = collection(database, "users", ownerId, "projects");
+  const walkthroughs = collection(database, "users", ownerId, "walkthroughs");
+  const items = collection(database, "users", ownerId, "items");
+  const projectRef = (id: string) => doc(projects, id);
+  const walkthroughRef = (id: string) => doc(walkthroughs, id);
+  const itemRef = (id: string) => doc(items, id);
+
+  async function allProjects() {
+    return (await getDocs(projects)).docs.map((entry) =>
+      readProject(entry.data() as Project),
+    );
+  }
+
+  async function allWalkthroughs() {
+    return (await getDocs(walkthroughs)).docs.map((entry) =>
+      readWalkthrough(entry.data() as Walkthrough),
+    );
+  }
+
+  async function allItems() {
+    return (await getDocs(items)).docs.map((entry) =>
+      readItem(entry.data() as PunchItem),
+    );
+  }
+
+  function checkBatchSize(count: number) {
+    if (count > 499)
+      throw new Error("Too many changes at once. Try a smaller selection.");
+  }
+
+  async function saveItemBatch(changed: PunchItem[]) {
+    const affected = [...new Set(changed.map((item) => item.walkthroughId))];
+    checkBatchSize(changed.length + affected.length);
+    const batch = writeBatch(database);
+    for (const item of changed) {
+      requireId(item.id, "Item ID");
+      requireId(item.walkthroughId, "Walkthrough ID");
+      batch.set(itemRef(item.id), clean(item));
+    }
+    for (const id of affected)
+      batch.update(walkthroughRef(id), { updatedAt: Date.now() });
+    await commitLocally(ownerId, batch);
+  }
+
+  async function deleteItemBatch(ids: string[]) {
+    const current = (await allItems()).filter((item) => ids.includes(item.id));
+    const affected = [...new Set(current.map((item) => item.walkthroughId))];
+    checkBatchSize(current.length + affected.length);
+    const batch = writeBatch(database);
+    for (const item of current) batch.delete(itemRef(item.id));
+    for (const id of affected)
+      batch.update(walkthroughRef(id), { updatedAt: Date.now() });
+    await commitLocally(ownerId, batch);
+  }
 
   return {
     async listProjects(): Promise<Project[]> {
-      const database = await getDatabase();
-      const rows = await database.getAllAsync<{ data: string }>(
-        "SELECT data FROM projects WHERE owner_id = ? ORDER BY json_extract(data, '$.name') COLLATE NOCASE",
-        ownerId,
-      );
-
-      return rows.map((row) => {
-        const project = JSON.parse(row.data) as Project;
-
-        return {
-          ...project,
-          bannerIllustration: getBannerIllustration(
-            project.id,
-            project.bannerIllustration,
-          ),
-          bannerPhotoUri: localPhotoUri(project.bannerPhotoUri),
-        };
-      });
+      return (await allProjects()).sort((a, b) => a.name.localeCompare(b.name));
     },
-
     async createProject(project: Project): Promise<void> {
-      const database = await getDatabase();
-      await database.runAsync(
-        "INSERT INTO projects (owner_id, id, data) VALUES (?, ?, ?)",
-        ownerId,
-        project.id,
-        JSON.stringify(project),
-      );
+      const batch = writeBatch(database);
+      batch.set(projectRef(project.id), clean(project));
+      await commitLocally(ownerId, batch);
     },
-
     async saveProject(project: Project): Promise<void> {
-      const database = await getDatabase();
-      await database.runAsync(
-        "UPDATE projects SET data = ? WHERE owner_id = ? AND id = ?",
-        JSON.stringify(project),
-        ownerId,
-        project.id,
+      const batch = writeBatch(database);
+      batch.set(projectRef(project.id), clean(project));
+      await commitLocally(ownerId, batch);
+    },
+    async listWalkthroughs(): Promise<Walkthrough[]> {
+      return (await allWalkthroughs()).sort(
+        (a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id),
       );
     },
-
-    async deleteProject(id: string): Promise<PunchItem["photos"]> {
-      requireId(id, "Project ID");
-      const database = await getDatabase();
-      const photos: PunchItem["photos"] = [];
-      await database.withExclusiveTransactionAsync(async (transaction) => {
-        const projectRow = await transaction.getFirstAsync<{ data: string }>(
-          "SELECT data FROM projects WHERE owner_id = ? AND id = ?",
-          ownerId,
-          id,
-        );
-        if (!projectRow) throw new Error("Project not found");
-        const project = JSON.parse(projectRow.data) as Project;
-        const projectBanner = localPhotoUri(project.bannerPhotoUri);
-        if (projectBanner) photos.push({ localUri: projectBanner });
-
-        const rows = await transaction.getAllAsync<{ data: string }>(
-          "SELECT data FROM walkthroughs WHERE owner_id = ? AND json_extract(data, '$.projectId') = ?",
-          ownerId,
-          id,
-        );
-        for (const row of rows) {
-          const walkthrough = readWalkthrough(row.data);
-          if (walkthrough.bannerPhotoUri)
-            photos.push({ localUri: walkthrough.bannerPhotoUri });
-          const items = await transaction.getAllAsync<{ data: string }>(
-            "SELECT data FROM punch_items WHERE owner_id = ? AND walkthrough_id = ?",
-            ownerId,
-            walkthrough.id,
-          );
-          for (const itemRow of items) {
-            const item = readItem(itemRow.data);
-            photos.push(...item.photos);
-            if (item.bannerPhotoUri)
-              photos.push({ localUri: item.bannerPhotoUri });
-          }
-          await transaction.runAsync(
-            "DELETE FROM walkthroughs WHERE owner_id = ? AND id = ?",
-            ownerId,
-            walkthrough.id,
-          );
-        }
-        await transaction.runAsync(
-          "DELETE FROM projects WHERE owner_id = ? AND id = ?",
-          ownerId,
-          id,
-        );
-      });
-
-      return photos;
+    async getWalkthrough(id: string): Promise<Walkthrough | null> {
+      requireId(id, "Walkthrough ID");
+      const snapshot = await getDoc(walkthroughRef(id));
+      return snapshot.exists()
+        ? readWalkthrough(snapshot.data() as Walkthrough)
+        : null;
     },
+    async saveWalkthrough(walkthrough: Walkthrough): Promise<void> {
+      requireId(walkthrough.id, "Walkthrough ID");
+      const batch = writeBatch(database);
+      batch.set(walkthroughRef(walkthrough.id), clean(walkthrough));
+      await commitLocally(ownerId, batch);
+    },
+    async listItems(walkthroughId: string): Promise<PunchItem[]> {
+      requireId(walkthroughId, "Walkthrough ID");
+      const snapshot = await getDocs(
+        query(items, where("walkthroughId", "==", walkthroughId)),
+      );
 
+      return snapshot.docs
+        .map((entry) => readItem(entry.data() as PunchItem))
+        .sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
+    },
+    async saveItem(item: PunchItem): Promise<void> {
+      await saveItemBatch([item]);
+    },
+    async createItems(values: PunchItem[]): Promise<void> {
+      await saveItemBatch(values);
+    },
+    async updateItems(values: PunchItem[]): Promise<void> {
+      await saveItemBatch(values);
+    },
+    async deleteItem(id: string): Promise<void> {
+      await deleteItemBatch([id]);
+    },
+    async deleteItems(ids: string[]): Promise<void> {
+      await deleteItemBatch(ids);
+    },
     async moveWalkthroughs(
       ids: string[],
       projectId: string | null,
     ): Promise<void> {
-      const database = await getDatabase();
-      await database.withExclusiveTransactionAsync(async (transaction) => {
-        if (projectId) {
-          const project = await transaction.getFirstAsync(
-            "SELECT id FROM projects WHERE owner_id = ? AND id = ?",
-            ownerId,
-            projectId,
-          );
-          if (!project) throw new Error("Project not found");
-        }
-        for (const id of ids) {
-          const row = await transaction.getFirstAsync<{ data: string }>(
-            "SELECT data FROM walkthroughs WHERE owner_id = ? AND id = ?",
-            ownerId,
-            id,
-          );
-          if (!row) throw new Error("Walkthrough not found");
-          const walkthrough = readWalkthrough(row.data);
-          const updatedAt = Date.now();
-          await transaction.runAsync(
-            "UPDATE walkthroughs SET data = ?, updated_at = ? WHERE owner_id = ? AND id = ?",
-            JSON.stringify({
-              ...walkthrough,
-              projectId: projectId ?? undefined,
-              updatedAt,
-            }),
-            updatedAt,
-            ownerId,
-            id,
-          );
-        }
-      });
-    },
-
-    async listWalkthroughs(): Promise<Walkthrough[]> {
-      const database = await getDatabase();
-      const rows = await database.getAllAsync<{ data: string }>(
-        "SELECT data FROM walkthroughs WHERE owner_id = ? ORDER BY updated_at DESC, id ASC",
-        ownerId,
+      const selected = (await allWalkthroughs()).filter((entry) =>
+        ids.includes(entry.id),
       );
-
-      return rows.map((row) => readWalkthrough(row.data));
+      if (selected.length !== ids.length)
+        throw new Error("Walkthrough not found");
+      if (projectId && !(await getDoc(projectRef(projectId))).exists())
+        throw new Error("Project not found");
+      checkBatchSize(selected.length);
+      const batch = writeBatch(database);
+      for (const entry of selected)
+        batch.set(
+          walkthroughRef(entry.id),
+          clean({
+            ...entry,
+            projectId: projectId ?? undefined,
+            updatedAt: Date.now(),
+          }),
+        );
+      await commitLocally(ownerId, batch);
     },
-
-    async getWalkthrough(id: string): Promise<Walkthrough | null> {
-      requireId(id, "Walkthrough ID");
-      const database = await getDatabase();
-      const row = await database.getFirstAsync<{ data: string }>(
-        "SELECT data FROM walkthroughs WHERE owner_id = ? AND id = ?",
-        ownerId,
-        id,
-      );
-
-      return row ? readWalkthrough(row.data) : null;
-    },
-
-    async saveWalkthrough(walkthrough: Walkthrough): Promise<void> {
-      requireId(walkthrough.id, "Walkthrough ID");
-      const database = await getDatabase();
-      await database.runAsync(
-        `INSERT INTO walkthroughs (owner_id, id, updated_at, data)
-         VALUES (?, ?, ?, ?)
-         ON CONFLICT (owner_id, id) DO UPDATE SET
-           updated_at = excluded.updated_at, data = excluded.data`,
-        ownerId,
-        walkthrough.id,
-        walkthrough.updatedAt,
-        JSON.stringify(walkthrough),
-      );
-    },
-
     async deleteWalkthrough(id: string): Promise<void> {
-      requireId(id, "Walkthrough ID");
-      const database = await getDatabase();
-      await database.runAsync(
-        "DELETE FROM walkthroughs WHERE owner_id = ? AND id = ?",
-        ownerId,
-        id,
+      const children = (await allItems()).filter(
+        (item) => item.walkthroughId === id,
       );
+      checkBatchSize(children.length + 1);
+      const batch = writeBatch(database);
+      for (const item of children) batch.delete(itemRef(item.id));
+      batch.delete(walkthroughRef(id));
+      await commitLocally(ownerId, batch);
     },
-
-    async listItems(walkthroughId: string): Promise<PunchItem[]> {
-      requireId(walkthroughId, "Walkthrough ID");
-      const database = await getDatabase();
-      const rows = await database.getAllAsync<{ data: string }>(
-        `SELECT data FROM punch_items WHERE owner_id = ? AND walkthrough_id = ?
-         ORDER BY created_at ASC, id ASC`,
-        ownerId,
-        walkthroughId,
+    async deleteProject(id: string): Promise<PunchItem["photos"]> {
+      const [allProjectsList, allWalkthroughsList, allItemsList] =
+        await Promise.all([allProjects(), allWalkthroughs(), allItems()]);
+      const project = allProjectsList.find((entry) => entry.id === id);
+      if (!project) throw new Error("Project not found");
+      const selected = allWalkthroughsList.filter(
+        (entry) => entry.projectId === id,
       );
-
-      return rows.map((row) => readItem(row.data));
-    },
-
-    async saveItem(item: PunchItem): Promise<void> {
-      requireId(item.id, "Item ID");
-      requireId(item.walkthroughId, "Walkthrough ID");
-      const database = await getDatabase();
-      await database.runAsync(
-        `INSERT INTO punch_items (owner_id, id, walkthrough_id, created_at, data)
-         VALUES (?, ?, ?, ?, ?)
-         ON CONFLICT (owner_id, id) DO UPDATE SET
-           walkthrough_id = excluded.walkthrough_id,
-           created_at = excluded.created_at, data = excluded.data`,
-        ownerId,
-        item.id,
-        item.walkthroughId,
-        item.createdAt,
-        JSON.stringify(item),
+      const selectedIds = new Set(selected.map((entry) => entry.id));
+      const children = allItemsList.filter((entry) =>
+        selectedIds.has(entry.walkthroughId),
       );
-    },
-
-    async createItems(items: PunchItem[]): Promise<void> {
-      for (const item of items) {
-        requireId(item.id, "Item ID");
-        requireId(item.walkthroughId, "Walkthrough ID");
+      checkBatchSize(1 + selected.length + children.length);
+      const photos: PunchItem["photos"] = [];
+      if (project.bannerPhotoUri)
+        photos.push({ localUri: project.bannerPhotoUri });
+      for (const entry of selected)
+        if (entry.bannerPhotoUri)
+          photos.push({ localUri: entry.bannerPhotoUri });
+      for (const entry of children) {
+        photos.push(...entry.photos);
+        if (entry.bannerPhotoUri)
+          photos.push({ localUri: entry.bannerPhotoUri });
       }
-
-      const database = await getDatabase();
-      await database.withExclusiveTransactionAsync(async (transaction) => {
-        for (const item of items) {
-          await transaction.runAsync(
-            "INSERT INTO punch_items (owner_id, id, walkthrough_id, created_at, data) VALUES (?, ?, ?, ?, ?)",
-            ownerId,
-            item.id,
-            item.walkthroughId,
-            item.createdAt,
-            JSON.stringify(item),
-          );
-        }
-      });
-    },
-
-    async updateItems(items: PunchItem[]): Promise<void> {
-      const database = await getDatabase();
-      await database.withExclusiveTransactionAsync(async (transaction) => {
-        for (const item of items) {
-          requireId(item.id, "Item ID");
-          await transaction.runAsync(
-            "UPDATE punch_items SET data = ? WHERE owner_id = ? AND id = ?",
-            JSON.stringify(item),
-            ownerId,
-            item.id,
-          );
-        }
-      });
-    },
-
-    async deleteItems(ids: string[]): Promise<void> {
-      const database = await getDatabase();
-      await database.withExclusiveTransactionAsync(async (transaction) => {
-        for (const id of ids) {
-          requireId(id, "Item ID");
-          await transaction.runAsync(
-            "DELETE FROM punch_items WHERE owner_id = ? AND id = ?",
-            ownerId,
-            id,
-          );
-        }
-      });
-    },
-
-    async deleteItem(id: string): Promise<void> {
-      requireId(id, "Item ID");
-      const database = await getDatabase();
-      await database.runAsync(
-        "DELETE FROM punch_items WHERE owner_id = ? AND id = ?",
-        ownerId,
-        id,
-      );
+      const batch = writeBatch(database);
+      for (const entry of children) batch.delete(itemRef(entry.id));
+      for (const entry of selected) batch.delete(walkthroughRef(entry.id));
+      batch.delete(projectRef(id));
+      await commitLocally(ownerId, batch);
+      return photos;
     },
   };
 }

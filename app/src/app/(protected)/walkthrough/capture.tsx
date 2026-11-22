@@ -43,7 +43,10 @@ import {
   downloadWhisperModel,
   getWhisperModel,
 } from "../../../services/whisper/model";
-import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
+import {
+  createFirestoreId,
+  createWalkthroughStorage,
+} from "../../../services/walkthrough/storage";
 import { WhisperAudioStream } from "../../../services/whisper/audio-stream";
 import { useAuthStore } from "../../../store/auth-store";
 import { useInferenceStore } from "../../../store/inference-store";
@@ -494,7 +497,7 @@ export default function Capture() {
       const now = Date.now();
       const items = results.map((item) => ({
         ...item,
-        id: Crypto.randomUUID(),
+        id: createFirestoreId(ownerId, "items"),
         walkthroughId,
         bannerColor: randomBannerColor(),
         rawTranscript,

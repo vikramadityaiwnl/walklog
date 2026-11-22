@@ -26,6 +26,7 @@ import {
   selectItemPhoto,
 } from "../../../services/walkthrough/photos";
 import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
+import { useFirestoreStore } from "../../../store/firestore-store";
 import { useAuthStore } from "../../../store/auth-store";
 import { colors } from "../../../theme";
 
@@ -47,6 +48,7 @@ export default function ItemView() {
   }>();
 
   const auth = useAuthStore((state) => state.auth);
+  const firestoreRevision = useFirestoreStore((state) => state.revision);
 
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
 
@@ -81,7 +83,7 @@ export default function ItemView() {
       return () => {
         active = false;
       };
-    }, [ownerId, walkthroughId, id]),
+    }, [ownerId, walkthroughId, id, firestoreRevision]),
   );
 
   async function addPhoto(source: "camera" | "library") {

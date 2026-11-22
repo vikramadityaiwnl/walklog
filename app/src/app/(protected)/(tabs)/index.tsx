@@ -26,6 +26,7 @@ import type { Project, Walkthrough } from "../../../models/walkthrough";
 import { bannerColor } from "../../../utils/banner-illustrations";
 import { BannerIllustration } from "../../../components/banner-illustration";
 import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
+import { useFirestoreStore } from "../../../store/firestore-store";
 import { useAuthStore } from "../../../store/auth-store";
 import { colors } from "../../../theme";
 
@@ -41,6 +42,7 @@ type ListState =
 export default function Walkthroughs() {
   const navigation = useNavigation();
   const auth = useAuthStore((state) => state.auth);
+  const firestoreRevision = useFirestoreStore((state) => state.revision);
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
 
   const [list, setList] = useState<ListState>({ status: "loading" });
@@ -98,7 +100,7 @@ export default function Walkthroughs() {
       return () => {
         active = false;
       };
-    }, [ownerId, revision]),
+    }, [ownerId, revision, firestoreRevision]),
   );
 
   function toggle(id: string) {

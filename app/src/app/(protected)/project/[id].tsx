@@ -21,6 +21,7 @@ import { BannerIllustration } from "../../../components/banner-illustration";
 import { EmptyState } from "../../../components/empty-state";
 import type { Project, Walkthrough } from "../../../models/walkthrough";
 import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
+import { useFirestoreStore } from "../../../store/firestore-store";
 import { useAuthStore } from "../../../store/auth-store";
 import { colors } from "../../../theme";
 
@@ -36,6 +37,7 @@ type Screen =
 export default function ProjectDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const auth = useAuthStore((state) => state.auth);
+  const firestoreRevision = useFirestoreStore((state) => state.revision);
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
   const [screen, setScreen] = useState<Screen>({ status: "loading" });
 
@@ -79,7 +81,7 @@ export default function ProjectDetail() {
       return () => {
         active = false;
       };
-    }, [ownerId, id]),
+    }, [ownerId, id, firestoreRevision]),
   );
 
   return (

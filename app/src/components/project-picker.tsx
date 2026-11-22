@@ -1,5 +1,4 @@
 import { useState } from "react";
-import * as Crypto from "expo-crypto";
 import {
   Modal,
   Pressable,
@@ -12,7 +11,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText } from "./app-text";
 import { AppButton } from "./app-button";
 import { colors } from "../theme";
-import { createWalkthroughStorage } from "../services/walkthrough/storage";
+import {
+  createFirestoreId,
+  createWalkthroughStorage,
+} from "../services/walkthrough/storage";
 import type { Project } from "../models/walkthrough";
 import { randomBannerIllustration } from "../utils/banner-illustrations";
 
@@ -39,7 +41,7 @@ export function ProjectPicker(props: Props) {
       const storage = createWalkthroughStorage(props.ownerId);
       let target = projectId;
       if (name) {
-        target = Crypto.randomUUID();
+        target = createFirestoreId(props.ownerId, "projects");
         await storage.createProject({
           id: target,
           name,
