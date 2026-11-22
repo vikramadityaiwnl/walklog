@@ -43,7 +43,10 @@ type FormState =
     };
 
 export default function WalkthroughEdit() {
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id, fromProjectId } = useLocalSearchParams<{
+    id?: string;
+    fromProjectId?: string;
+  }>();
 
   const auth = useAuthStore((state) => state.auth);
 
@@ -157,6 +160,7 @@ export default function WalkthroughEdit() {
     try {
       const now = Date.now();
       const walkthrough: Walkthrough = {
+        ...existing,
         id: existing?.id ?? Crypto.randomUUID(),
         title: draft.title.trim(),
         bannerColor: existing
@@ -227,7 +231,12 @@ export default function WalkthroughEdit() {
                     ? [{ localUri: form.existing.bannerPhotoUri }]
                     : []),
                 ]).catch(() => {});
-                router.dismissTo("/(protected)/(tabs)");
+                if (fromProjectId)
+                  router.dismissTo({
+                    pathname: "/project/[id]",
+                    params: { id: fromProjectId },
+                  });
+                else router.dismissTo("/(protected)/(tabs)");
               } catch {
                 setDeleting(false);
                 showDialog("Couldn’t delete walkthrough", "Please try again.");

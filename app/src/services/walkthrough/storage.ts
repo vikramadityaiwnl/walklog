@@ -1,6 +1,6 @@
 import * as SQLite from "expo-sqlite";
 import * as FileSystem from "expo-file-system/legacy";
-import type { PunchItem, Walkthrough } from "../../models/walkthrough";
+import type { Project, PunchItem, Walkthrough } from "../../models/walkthrough";
 
 const DATABASE_NAME = "walklog.db";
 
@@ -57,7 +57,7 @@ async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
       "PRAGMA user_version",
     );
 
-    if (!version || version.user_version > 1) {
+    if (!version || version.user_version > 3) {
       throw new Error("Unsupported local database version");
     }
 
@@ -88,6 +88,35 @@ async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
       `);
     }
 
+    if (version.user_version < 2) {
+      await database.execAsync(`
+        CREATE TABLE IF NOT EXISTS projects (
+          owner_id TEXT NOT NULL,
+          id TEXT NOT NULL,
+          data TEXT NOT NULL,
+          PRIMARY KEY (owner_id, id)
+        );
+        PRAGMA user_version = 2;
+      `);
+    }
+
+    if (version.user_version < 3) {
+      await database.execAsync(`
+        BEGIN TRANSACTION;
+        CREATE TRIGGER punch_item_inserted AFTER INSERT ON punch_items BEGIN
+          UPDATE walkthroughs SET updated_at = CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER), data = json_set(data, '$.updatedAt', CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)) WHERE owner_id = NEW.owner_id AND id = NEW.walkthrough_id;
+        END;
+        CREATE TRIGGER punch_item_updated AFTER UPDATE ON punch_items BEGIN
+          UPDATE walkthroughs SET updated_at = CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER), data = json_set(data, '$.updatedAt', CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)) WHERE owner_id = NEW.owner_id AND id = NEW.walkthrough_id;
+        END;
+        CREATE TRIGGER punch_item_deleted AFTER DELETE ON punch_items BEGIN
+          UPDATE walkthroughs SET updated_at = CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER), data = json_set(data, '$.updatedAt', CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)) WHERE owner_id = OLD.owner_id AND id = OLD.walkthrough_id;
+        END;
+        PRAGMA user_version = 3;
+        COMMIT;
+      `);
+    }
+
     return database;
   } catch (error) {
     await database.closeAsync();
@@ -106,6 +135,132 @@ export function createWalkthroughStorage(ownerId: string) {
   requireId(ownerId, "Owner ID");
 
   return {
+    async listProjects(): Promise<Project[]> {
+      const database = await getDatabase();
+      const rows = await database.getAllAsync<{ data: string }>(
+        "SELECT data FROM projects WHERE owner_id = ? ORDER BY json_extract(data, '$.name') COLLATE NOCASE",
+        ownerId,
+      );
+
+      return rows.map((row) => {
+        const project = JSON.parse(row.data) as Project;
+
+        return {
+          ...project,
+          bannerPhotoUri: localPhotoUri(project.bannerPhotoUri),
+        };
+      });
+    },
+
+    async createProject(project: Project): Promise<void> {
+      const database = await getDatabase();
+      await database.runAsync(
+        "INSERT INTO projects (owner_id, id, data) VALUES (?, ?, ?)",
+        ownerId,
+        project.id,
+        JSON.stringify(project),
+      );
+    },
+
+    async saveProject(project: Project): Promise<void> {
+      const database = await getDatabase();
+      await database.runAsync(
+        "UPDATE projects SET data = ? WHERE owner_id = ? AND id = ?",
+        JSON.stringify(project),
+        ownerId,
+        project.id,
+      );
+    },
+
+    async deleteProject(id: string): Promise<PunchItem["photos"]> {
+      requireId(id, "Project ID");
+      const database = await getDatabase();
+      const photos: PunchItem["photos"] = [];
+      await database.withExclusiveTransactionAsync(async (transaction) => {
+        const projectRow = await transaction.getFirstAsync<{ data: string }>(
+          "SELECT data FROM projects WHERE owner_id = ? AND id = ?",
+          ownerId,
+          id,
+        );
+        if (!projectRow) throw new Error("Project not found");
+        const project = JSON.parse(projectRow.data) as Project;
+        const projectBanner = localPhotoUri(project.bannerPhotoUri);
+        if (projectBanner) photos.push({ localUri: projectBanner });
+
+        const rows = await transaction.getAllAsync<{ data: string }>(
+          "SELECT data FROM walkthroughs WHERE owner_id = ? AND json_extract(data, '$.projectId') = ?",
+          ownerId,
+          id,
+        );
+        for (const row of rows) {
+          const walkthrough = readWalkthrough(row.data);
+          if (walkthrough.bannerPhotoUri)
+            photos.push({ localUri: walkthrough.bannerPhotoUri });
+          const items = await transaction.getAllAsync<{ data: string }>(
+            "SELECT data FROM punch_items WHERE owner_id = ? AND walkthrough_id = ?",
+            ownerId,
+            walkthrough.id,
+          );
+          for (const itemRow of items) {
+            const item = readItem(itemRow.data);
+            photos.push(...item.photos);
+            if (item.bannerPhotoUri)
+              photos.push({ localUri: item.bannerPhotoUri });
+          }
+          await transaction.runAsync(
+            "DELETE FROM walkthroughs WHERE owner_id = ? AND id = ?",
+            ownerId,
+            walkthrough.id,
+          );
+        }
+        await transaction.runAsync(
+          "DELETE FROM projects WHERE owner_id = ? AND id = ?",
+          ownerId,
+          id,
+        );
+      });
+
+      return photos;
+    },
+
+    async moveWalkthroughs(
+      ids: string[],
+      projectId: string | null,
+    ): Promise<void> {
+      const database = await getDatabase();
+      await database.withExclusiveTransactionAsync(async (transaction) => {
+        if (projectId) {
+          const project = await transaction.getFirstAsync(
+            "SELECT id FROM projects WHERE owner_id = ? AND id = ?",
+            ownerId,
+            projectId,
+          );
+          if (!project) throw new Error("Project not found");
+        }
+        for (const id of ids) {
+          const row = await transaction.getFirstAsync<{ data: string }>(
+            "SELECT data FROM walkthroughs WHERE owner_id = ? AND id = ?",
+            ownerId,
+            id,
+          );
+          if (!row) throw new Error("Walkthrough not found");
+          const walkthrough = readWalkthrough(row.data);
+          const updatedAt = Date.now();
+          await transaction.runAsync(
+            "UPDATE walkthroughs SET data = ?, updated_at = ? WHERE owner_id = ? AND id = ?",
+            JSON.stringify({
+              ...walkthrough,
+              projectId: projectId ?? undefined,
+              updatedAt,
+            }),
+            updatedAt,
+            ownerId,
+            id,
+          );
+        }
+      });
+    },
+
     async listWalkthroughs(): Promise<Walkthrough[]> {
       const database = await getDatabase();
       const rows = await database.getAllAsync<{ data: string }>(

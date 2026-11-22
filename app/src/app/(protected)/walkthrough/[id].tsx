@@ -39,7 +39,10 @@ type Selection =
   { status: "inactive" } | { status: "selecting" | "saving"; ids: string[] };
 
 export default function WalkthroughDetail() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, fromProjectId } = useLocalSearchParams<{
+    id: string;
+    fromProjectId?: string;
+  }>();
 
   const auth = useAuthStore((state) => state.auth);
 
@@ -245,7 +248,7 @@ export default function WalkthroughDetail() {
               onAction={() =>
                 router.push({
                   pathname: "/walkthrough/settings",
-                  params: { id },
+                  params: { id, fromProjectId },
                 })
               }
             />

@@ -1,9 +1,10 @@
 import { useCallback, useState } from "react";
 import { router, useFocusEffect } from "expo-router";
 import {
-  ClipboardDocumentListIcon,
+  CheckIcon,
   ChevronRightIcon,
-  ExclamationTriangleIcon,
+  ClipboardDocumentListIcon,
+  FolderIcon,
   PlusIcon,
 } from "react-native-heroicons/outline";
 import {
@@ -19,100 +20,217 @@ import { AppHeader } from "../../../components/app-header";
 import { AppText } from "../../../components/app-text";
 import { EmptyState } from "../../../components/empty-state";
 import { Overlay } from "../../../components/overlay";
-import type { Walkthrough } from "../../../models/walkthrough";
+import { ProjectPicker } from "../../../components/project-picker";
+import type { Project, Walkthrough } from "../../../models/walkthrough";
 import { getBannerColor } from "../../../utils/banner-colors";
 import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
 import { useAuthStore } from "../../../store/auth-store";
 import { colors } from "../../../theme";
 
 type ListState =
-  | { status: "loading" }
-  | { status: "error" }
+  | { status: "loading" | "error" }
   | {
       status: "ready";
       walkthroughs: Walkthrough[];
+      projects: Project[];
       counts: Record<string, number>;
     };
 
 export default function Walkthroughs() {
   const auth = useAuthStore((state) => state.auth);
-
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
 
   const [list, setList] = useState<ListState>({ status: "loading" });
+  const [selected, setSelected] = useState<string[] | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [revision, setRevision] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
-      let active = true;
       if (!ownerId) return;
-
-      setList({ status: "loading" });
+      let active = true;
       const storage = createWalkthroughStorage(ownerId);
       void (async () => {
         try {
-          const walkthroughs = await storage.listWalkthroughs();
-          const counts = Object.fromEntries(
-            await Promise.all(
-              walkthroughs.map(
-                async (walkthrough) =>
-                  [
-                    walkthrough.id,
-                    (await storage.listItems(walkthrough.id)).length,
-                  ] as const,
-              ),
+          const [walkthroughs, projects] = await Promise.all([
+            storage.listWalkthroughs(),
+            storage.listProjects(),
+          ]);
+          const entries = await Promise.all(
+            walkthroughs.map(
+              async (walkthrough) =>
+                [
+                  walkthrough.id,
+                  await storage.listItems(walkthrough.id),
+                ] as const,
             ),
           );
-
-          if (active) setList({ status: "ready", walkthroughs, counts });
+          const counts = Object.fromEntries(
+            entries.map(([id, items]) => [id, items.length]),
+          );
+          if (active)
+            setList({
+              status: "ready",
+              walkthroughs,
+              projects,
+              counts,
+            });
         } catch {
           if (active) setList({ status: "error" });
         }
       })();
-
       return () => {
         active = false;
       };
-    }, [ownerId]),
+    }, [ownerId, revision]),
   );
+
+  function toggle(id: string) {
+    setSelected((current) =>
+      current?.includes(id)
+        ? current.filter((value) => value !== id)
+        : [...(current ?? []), id],
+    );
+  }
+
+  function card(walkthrough: Walkthrough) {
+    if (list.status !== "ready") return null;
+    const project = list.projects.find(
+      (entry) => entry.id === walkthrough.projectId,
+    );
+    const isSelected = selected?.includes(walkthrough.id) ?? false;
+    return (
+      <Pressable
+        key={walkthrough.id}
+        accessibilityRole="button"
+        accessibilityLabel={`Open ${walkthrough.title}`}
+        accessibilityState={{ selected: isSelected }}
+        onLongPress={() => toggle(walkthrough.id)}
+        onPress={() => {
+          if (selected !== null) {
+            toggle(walkthrough.id);
+            return;
+          }
+          router.push({
+            pathname: "/walkthrough/[id]",
+            params: { id: walkthrough.id },
+          });
+        }}
+        style={[
+          styles.card,
+          {
+            backgroundColor: getBannerColor(
+              walkthrough.id,
+              walkthrough.bannerColor,
+            ),
+          },
+        ]}
+      >
+        {walkthrough.bannerPhotoUri ? (
+          <Image
+            source={{ uri: walkthrough.bannerPhotoUri }}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+          />
+        ) : null}
+        <Overlay />
+        <View style={styles.cardContent}>
+          <View style={styles.cardText}>
+            <AppText variant="title" style={styles.cardTitle}>
+              {walkthrough.title}
+            </AppText>
+            {walkthrough.clientName || walkthrough.address ? (
+              <AppText style={styles.cardSubtitle}>
+                {[walkthrough.clientName, walkthrough.address]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </AppText>
+            ) : null}
+            <View style={styles.meta}>
+              {project ? (
+                <View style={styles.projectMeta}>
+                  <FolderIcon size={16} color={colors.onAccent} />
+                  <AppText
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                    style={styles.projectName}
+                  >
+                    {project.name}
+                  </AppText>
+                </View>
+              ) : null}
+              <AppText style={[styles.metaText, styles.itemCount]}>
+                {list.counts[walkthrough.id]}{" "}
+                {list.counts[walkthrough.id] === 1 ? "item" : "items"}
+              </AppText>
+            </View>
+          </View>
+
+          {selected !== null ? (
+            <View style={[styles.checkbox, isSelected && styles.checked]}>
+              {isSelected ? (
+                <CheckIcon size={16} color={colors.onAccent} />
+              ) : null}
+            </View>
+          ) : (
+            <ChevronRightIcon size={22} color={colors.onAccent} />
+          )}
+        </View>
+      </Pressable>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <AppHeader />
-
-      <View style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={[styles.content, styles.content]}>
-          <View style={styles.section}>
+      <View style={styles.main}>
+        <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.headingGroup}>
             <AppText variant="title" style={styles.heading}>
               Walkthroughs
             </AppText>
-
             <AppText style={styles.subheading}>
               A clear record of every site visit.
             </AppText>
           </View>
+          {selected !== null && list.status === "ready" ? (
+            <View style={styles.selectionHeader}>
+              <AppText weight="semibold">{selected.length} selected</AppText>
 
-          {list.status === "loading" ? (
-            <View style={styles.loading}>
-              <ActivityIndicator
-                color={colors.accent}
-                accessibilityLabel="Loading walkthroughs"
-              />
+              <Pressable
+                accessibilityRole="button"
+                onPress={() =>
+                  setSelected(
+                    selected.length === list.walkthroughs.length
+                      ? []
+                      : list.walkthroughs.map((entry) => entry.id),
+                  )
+                }
+              >
+                <AppText style={styles.selectAll} weight="semibold">
+                  {selected.length === list.walkthroughs.length
+                    ? "Deselect all"
+                    : "Select all"}
+                </AppText>
+              </Pressable>
             </View>
           ) : null}
-
+          {list.status === "loading" ? (
+            <ActivityIndicator
+              color={colors.accent}
+              accessibilityLabel="Loading walkthroughs"
+            />
+          ) : null}
           {list.status === "error" ? (
             <EmptyState
               icon={
-                <View style={styles.errorIcon}>
-                  <ExclamationTriangleIcon size={30} color={colors.danger} />
-                </View>
+                <ClipboardDocumentListIcon size={48} color={colors.muted} />
               }
               title="Couldn’t load walkthroughs"
-              description="Something went wrong. Please reopen this screen to try again."
+              description="Please reopen this screen to try again."
             />
           ) : null}
-
-          {list.status === "ready" && list.walkthroughs.length === 0 ? (
+          {list.status === "ready" && !list.walkthroughs.length ? (
             <EmptyState
               icon={
                 <ClipboardDocumentListIcon size={48} color={colors.muted} />
@@ -122,67 +240,33 @@ export default function Walkthroughs() {
               compact
             />
           ) : null}
-
-          {list.status === "ready"
-            ? list.walkthroughs.map((walkthrough) => (
-                <Pressable
-                  key={walkthrough.id}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Open ${walkthrough.title}`}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/walkthrough/[id]",
-                      params: { id: walkthrough.id },
-                    })
-                  }
-                  style={[
-                    styles.card,
-                    {
-                      backgroundColor: getBannerColor(
-                        walkthrough.id,
-                        walkthrough.bannerColor,
-                      ),
-                    },
-                  ]}
-                >
-                  {walkthrough.bannerPhotoUri ? (
-                    <Image
-                      source={{ uri: walkthrough.bannerPhotoUri }}
-                      style={StyleSheet.absoluteFill}
-                      resizeMode="cover"
-                    />
-                  ) : null}
-
-                  <Overlay />
-
-                  <View style={styles.cardContent}>
-                    <View style={styles.cardText}>
-                      <AppText variant="title" style={styles.cardTitle}>
-                        {walkthrough.title}
-                      </AppText>
-
-                      {walkthrough.clientName || walkthrough.address ? (
-                        <AppText style={styles.cardSubtitle}>
-                          {[walkthrough.clientName, walkthrough.address]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </AppText>
-                      ) : null}
-
-                      <AppText style={styles.cardCount}>
-                        {list.counts[walkthrough.id]}{" "}
-                        {list.counts[walkthrough.id] === 1 ? "item" : "items"}
-                      </AppText>
-                    </View>
-
-                    <ChevronRightIcon size={22} color={colors.onAccent} />
-                  </View>
-                </Pressable>
-              ))
-            : null}
+          {list.status === "ready" ? list.walkthroughs.map(card) : null}
         </ScrollView>
-
-        {list.status === "ready" ? (
+        {selected !== null ? (
+          <View style={styles.selectionActions}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setSelected(null)}
+              style={styles.selectionButton}
+            >
+              <AppText>Cancel</AppText>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              disabled={!selected.length}
+              onPress={() => setPickerOpen(true)}
+              style={[
+                styles.selectionButton,
+                styles.moveButton,
+                !selected.length && styles.disabled,
+              ]}
+            >
+              <AppText style={styles.white}>
+                Move to project ({selected.length})
+              </AppText>
+            </Pressable>
+          </View>
+        ) : list.status === "ready" ? (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="New walkthrough"
@@ -193,12 +277,27 @@ export default function Walkthroughs() {
           </Pressable>
         ) : null}
       </View>
+      {ownerId && list.status === "ready" ? (
+        <ProjectPicker
+          visible={pickerOpen}
+          ownerId={ownerId}
+          projects={list.projects}
+          walkthroughIds={selected ?? []}
+          onClose={() => setPickerOpen(false)}
+          onMoved={() => {
+            setPickerOpen(false);
+            setSelected(null);
+            setRevision((value) => value + 1);
+          }}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { backgroundColor: colors.background, flex: 1 },
+  main: { flex: 1 },
   content: {
     flexGrow: 1,
     paddingHorizontal: 24,
@@ -206,7 +305,13 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
     gap: 18,
   },
-  section: { gap: 8 },
+  headingGroup: { gap: 8 },
+  selectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  selectAll: { color: colors.accent },
   heading: { fontSize: 30, lineHeight: 38, letterSpacing: -0.8 },
   subheading: { color: colors.muted, lineHeight: 22 },
   card: {
@@ -224,13 +329,48 @@ const styles = StyleSheet.create({
   cardText: { flex: 1, gap: 4 },
   cardTitle: { color: colors.onAccent, fontSize: 21, lineHeight: 28 },
   cardSubtitle: { color: colors.onAccent, lineHeight: 20 },
-  cardCount: {
+  projectMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  projectName: {
     color: colors.onAccent,
-    opacity: 0.85,
     fontSize: 13,
     lineHeight: 18,
-    marginTop: 4,
+    flexShrink: 1,
   },
+  itemCount: { flexShrink: 0 },
+  meta: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 },
+  metaText: {
+    color: colors.onAccent,
+    fontSize: 13,
+    lineHeight: 18,
+    flexShrink: 1,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 1,
+    borderColor: colors.onAccent,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checked: { backgroundColor: colors.accent, borderColor: colors.accent },
+  selectionActions: { flexDirection: "row", gap: 10, padding: 16 },
+  selectionButton: {
+    flex: 1,
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 10,
+  },
+  moveButton: { backgroundColor: colors.accent },
+  disabled: { opacity: 0.5 },
+  white: { color: colors.onAccent },
   floatingAction: {
     position: "absolute",
     right: 24,
@@ -241,14 +381,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     alignItems: "center",
     justifyContent: "center",
-  },
-  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
-  errorIcon: {
-    alignItems: "center",
-    justifyContent: "center",
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.dangerSoft,
   },
 });

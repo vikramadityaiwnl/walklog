@@ -1,0 +1,214 @@
+import { useCallback, useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import {
+  ChevronRightIcon,
+  ClipboardDocumentListIcon,
+} from "react-native-heroicons/outline";
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { AppText } from "../../../components/app-text";
+import { ScreenBanner } from "../../../components/screen-banner";
+import { Overlay } from "../../../components/overlay";
+import { getBannerColor } from "../../../utils/banner-colors";
+import { EmptyState } from "../../../components/empty-state";
+import type { Project, Walkthrough } from "../../../models/walkthrough";
+import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
+import { useAuthStore } from "../../../store/auth-store";
+import { colors } from "../../../theme";
+
+type Screen =
+  | { status: "loading" | "error" }
+  | {
+      status: "ready";
+      project: Project;
+      walkthroughs: Walkthrough[];
+      counts: Record<string, number>;
+    };
+
+export default function ProjectDetail() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const auth = useAuthStore((state) => state.auth);
+  const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
+  const [screen, setScreen] = useState<Screen>({ status: "loading" });
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!ownerId || !id) return;
+      let active = true;
+      const storage = createWalkthroughStorage(ownerId);
+      void Promise.all([storage.listProjects(), storage.listWalkthroughs()])
+        .then(async ([projects, walkthroughs]) => {
+          const project = projects.find((entry) => entry.id === id);
+          const included = walkthroughs.filter(
+            (entry) => entry.projectId === id,
+          );
+          const counts = Object.fromEntries(
+            await Promise.all(
+              included.map(
+                async (entry) =>
+                  [
+                    entry.id,
+                    (await storage.listItems(entry.id)).length,
+                  ] as const,
+              ),
+            ),
+          );
+          if (active)
+            setScreen(
+              project
+                ? {
+                    status: "ready",
+                    project,
+                    walkthroughs: included,
+                    counts,
+                  }
+                : { status: "error" },
+            );
+        })
+        .catch(() => {
+          if (active) setScreen({ status: "error" });
+        });
+      return () => {
+        active = false;
+      };
+    }, [ownerId, id]),
+  );
+
+  return (
+    <SafeAreaView style={styles.container} edges={["bottom"]}>
+      <ScrollView contentContainerStyle={styles.content}>
+        {screen.status === "loading" ? (
+          <ActivityIndicator color={colors.accent} />
+        ) : null}
+        {screen.status === "error" ? (
+          <AppText>Couldn’t load this project.</AppText>
+        ) : null}
+        {screen.status === "ready" ? (
+          <>
+            <ScreenBanner
+              title={screen.project.name}
+              subtitle={`${screen.walkthroughs.length} ${screen.walkthroughs.length === 1 ? "walkthrough" : "walkthroughs"}`}
+              color={getBannerColor(
+                screen.project.id,
+                screen.project.bannerColor,
+              )}
+              imageUri={screen.project.bannerPhotoUri}
+              action="settings"
+              actionLabel="Project settings"
+              onAction={() =>
+                router.push({ pathname: "/project/edit", params: { id } })
+              }
+            />
+            <View style={styles.body}>
+              {!screen.walkthroughs.length ? (
+                <EmptyState
+                  icon={
+                    <ClipboardDocumentListIcon size={48} color={colors.muted} />
+                  }
+                  title="No walkthroughs yet"
+                  description="Select walkthroughs on the Walkthroughs tab to add them here."
+                  compact
+                />
+              ) : (
+                screen.walkthroughs.map((walkthrough) => (
+                  <Pressable
+                    key={walkthrough.id}
+                    accessibilityRole="button"
+                    onPress={() => {
+                      router.push({
+                        pathname: "/walkthrough/[id]",
+                        params: { id: walkthrough.id, fromProjectId: id },
+                      });
+                    }}
+                    style={[
+                      styles.card,
+                      {
+                        backgroundColor: getBannerColor(
+                          walkthrough.id,
+                          walkthrough.bannerColor,
+                        ),
+                      },
+                    ]}
+                  >
+                    {walkthrough.bannerPhotoUri ? (
+                      <Image
+                        source={{ uri: walkthrough.bannerPhotoUri }}
+                        style={StyleSheet.absoluteFill}
+                        resizeMode="cover"
+                      />
+                    ) : null}
+                    <Overlay />
+                    <View style={styles.cardContent}>
+                      <View style={styles.cardText}>
+                        <AppText variant="title" style={styles.cardTitle}>
+                          {walkthrough.title}
+                        </AppText>
+                        {walkthrough.clientName || walkthrough.address ? (
+                          <AppText style={styles.cardSubtitle}>
+                            {[walkthrough.clientName, walkthrough.address]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </AppText>
+                        ) : null}
+                        <AppText style={styles.cardCount}>
+                          {screen.counts[walkthrough.id]}{" "}
+                          {screen.counts[walkthrough.id] === 1
+                            ? "item"
+                            : "items"}
+                        </AppText>
+                      </View>
+                      <ChevronRightIcon size={22} color={colors.onAccent} />
+                    </View>
+                  </Pressable>
+                ))
+              )}
+            </View>
+          </>
+        ) : null}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { backgroundColor: colors.background, flex: 1 },
+  content: { flexGrow: 1 },
+  body: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 18,
+    paddingBottom: 40,
+    gap: 18,
+  },
+  heading: { gap: 6, marginBottom: 8 },
+  title: { fontSize: 30, lineHeight: 38 },
+  muted: { color: colors.muted },
+  card: {
+    minHeight: 180,
+    justifyContent: "flex-end",
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  cardContent: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 12,
+    padding: 18,
+  },
+  cardText: { flex: 1, gap: 4 },
+  cardTitle: { color: colors.onAccent, fontSize: 21, lineHeight: 28 },
+  cardSubtitle: { color: colors.onAccent, lineHeight: 20 },
+  cardCount: {
+    color: colors.onAccent,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 6,
+  },
+});

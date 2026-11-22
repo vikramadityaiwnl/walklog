@@ -79,6 +79,10 @@ export default function RootLayout() {
           >
             <Stack.Screen name="(protected)/(tabs)" />
 
+            <Stack.Screen name="(protected)/project/[id]" />
+
+            <Stack.Screen name="(protected)/project/edit" />
+
             <Stack.Screen name="(protected)/ai-playground" />
 
             <Stack.Screen

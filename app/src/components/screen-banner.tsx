@@ -22,6 +22,7 @@ interface Props {
   action: "settings" | "edit";
   onAction: () => void;
   disabled?: boolean;
+  actionLabel?: string;
 }
 
 export function ScreenBanner(props: Props) {
@@ -63,7 +64,8 @@ export function ScreenBanner(props: Props) {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={
-            props.action === "settings" ? "Walkthrough settings" : "Edit item"
+            props.actionLabel ??
+            (props.action === "settings" ? "Walkthrough settings" : "Edit item")
           }
           disabled={props.disabled}
           onPress={props.onAction}
