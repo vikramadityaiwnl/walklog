@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
-import * as Crypto from "expo-crypto";
+import { FolderIcon } from "react-native-heroicons/outline";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -14,16 +14,16 @@ import { colors } from "../../../theme";
 import { AppButton } from "../../../components/app-button";
 import { useDialogStore } from "../../../store/dialog-store";
 import { BannerPicker } from "../../../components/banner-picker";
+import { ProjectPicker } from "../../../components/project-picker";
 import { useBannerDraft } from "../../../hooks/use-banner-draft";
-import {
-  getBannerColor,
-  randomBannerColor,
-} from "../../../utils/banner-colors";
 import { AppText } from "../../../components/app-text";
-import type { Walkthrough } from "../../../models/walkthrough";
-import { deleteItemPhotos } from "../../../services/walkthrough/photos";
-import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
+import type { Project, Walkthrough } from "../../../models/walkthrough";
+import {
+  createFirestoreId,
+  createWalkthroughStorage,
+} from "../../../services/walkthrough/storage";
 import { useAuthStore } from "../../../store/auth-store";
+import { randomBannerIllustration } from "../../../utils/banner-illustrations";
 
 interface WalkthroughDraft {
   title: string;
@@ -43,13 +43,19 @@ type FormState =
     };
 
 export default function WalkthroughEdit() {
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id, fromProjectId } = useLocalSearchParams<{
+    id?: string;
+    fromProjectId?: string;
+  }>();
 
   const auth = useAuthStore((state) => state.auth);
 
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
 
   const [deleting, setDeleting] = useState(false);
+  const [move, setMove] = useState<
+    { status: "idle" | "loading" } | { status: "ready"; projects: Project[] }
+  >({ status: "idle" });
 
   const [form, setForm] = useState<FormState>({
     status: id ? "loading" : "ready",
@@ -157,11 +163,11 @@ export default function WalkthroughEdit() {
     try {
       const now = Date.now();
       const walkthrough: Walkthrough = {
-        id: existing?.id ?? Crypto.randomUUID(),
+        ...existing,
+        id: existing?.id ?? createFirestoreId(ownerId, "walkthroughs"),
         title: draft.title.trim(),
-        bannerColor: existing
-          ? getBannerColor(existing.id, existing.bannerColor)
-          : randomBannerColor(),
+        bannerIllustration:
+          existing?.bannerIllustration ?? randomBannerIllustration(),
         bannerPhotoUri: banner.uri,
         clientName: draft.clientName.trim() || undefined,
         address: draft.address.trim() || undefined,
@@ -203,7 +209,7 @@ export default function WalkthroughEdit() {
 
     showDialog(
       "Delete walkthrough?",
-      "This also deletes its items and photos from this device.",
+      "This removes the walkthrough, its items and photos. Cleanup finishes when you’re online.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -214,20 +220,13 @@ export default function WalkthroughEdit() {
               setDeleting(true);
               try {
                 const storage = createWalkthroughStorage(ownerId);
-                const items = await storage.listItems(id);
                 await storage.deleteWalkthrough(id);
-                await deleteItemPhotos([
-                  ...items.flatMap((item) => [
-                    ...item.photos,
-                    ...(item.bannerPhotoUri
-                      ? [{ localUri: item.bannerPhotoUri }]
-                      : []),
-                  ]),
-                  ...(form.existing?.bannerPhotoUri
-                    ? [{ localUri: form.existing.bannerPhotoUri }]
-                    : []),
-                ]).catch(() => {});
-                router.dismissTo("/(protected)/(tabs)");
+                if (fromProjectId)
+                  router.dismissTo({
+                    pathname: "/project/[id]",
+                    params: { id: fromProjectId },
+                  });
+                else router.dismissTo("/(protected)/(tabs)");
               } catch {
                 setDeleting(false);
                 showDialog("Couldn’t delete walkthrough", "Please try again.");
@@ -237,6 +236,34 @@ export default function WalkthroughEdit() {
         },
       ],
     );
+  }
+
+  async function chooseProject() {
+    if (!ownerId || !id || move.status !== "idle") return;
+    setMove({ status: "loading" });
+    try {
+      const projects = await createWalkthroughStorage(ownerId).listProjects();
+      setMove({ status: "ready", projects });
+    } catch {
+      setMove({ status: "idle" });
+      showDialog("Couldn’t load projects", "Please try again.");
+    }
+  }
+
+  async function finishMove() {
+    setMove({ status: "idle" });
+    if (!ownerId || !id) return;
+    try {
+      const walkthrough =
+        await createWalkthroughStorage(ownerId).getWalkthrough(id);
+      if (walkthrough)
+        setForm((current) => ({ ...current, existing: walkthrough }));
+    } catch {
+      showDialog(
+        "Couldn’t refresh walkthrough",
+        "Reopen its settings to see the updated project.",
+      );
+    }
   }
 
   return (
@@ -377,10 +404,38 @@ export default function WalkthroughEdit() {
             {id && form.existing && !hasChanges ? (
               <View style={styles.action}>
                 <AppButton
+                  title={
+                    move.status === "loading"
+                      ? "Loading"
+                      : form.existing.projectId
+                        ? "Move"
+                        : "Add to project"
+                  }
+                  accessibilityLabel={
+                    form.existing.projectId
+                      ? "Move to another project"
+                      : "Add to project"
+                  }
+                  variant="secondary"
+                  icon={<FolderIcon size={18} color={colors.foreground} />}
+                  disabled={move.status !== "idle" || deleting || banner.busy}
+                  onPress={chooseProject}
+                />
+              </View>
+            ) : null}
+
+            {id && form.existing && !hasChanges ? (
+              <View style={styles.action}>
+                <AppButton
                   variant="danger"
                   title={deleting ? "Deleting" : "Delete"}
                   accessibilityLabel="Delete walkthrough"
-                  disabled={banner.busy || deleting || form.status === "saving"}
+                  disabled={
+                    banner.busy ||
+                    deleting ||
+                    form.status === "saving" ||
+                    move.status !== "idle"
+                  }
                   onPress={confirmDelete}
                 />
               </View>
@@ -388,6 +443,22 @@ export default function WalkthroughEdit() {
           </View>
         ) : null}
       </KeyboardAvoidingView>
+
+      {ownerId && id && move.status === "ready" ? (
+        <ProjectPicker
+          visible
+          ownerId={ownerId}
+          projects={move.projects.filter(
+            (project) => project.id !== existing?.projectId,
+          )}
+          walkthroughIds={[id]}
+          canRemoveFromProject={!!existing?.projectId}
+          onClose={() => setMove({ status: "idle" })}
+          onMoved={() => {
+            void finishMove();
+          }}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }

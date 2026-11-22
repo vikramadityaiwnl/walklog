@@ -1,0 +1,73 @@
+diff --git a/node_modules/@react-native-firebase/firestore/RNFBFirestore.podspec b/node_modules/@react-native-firebase/firestore/RNFBFirestore.podspec
+index 19a1d0c..5ed071a 100644
+--- a/node_modules/@react-native-firebase/firestore/RNFBFirestore.podspec
++++ b/node_modules/@react-native-firebase/firestore/RNFBFirestore.podspec
+@@ -46,7 +46,7 @@ Pod::Spec.new do |s|
+   ]
+   # CocoaPods FileList uses FNM_PATHNAME: `ios/*UnitTests/**` does not match nested
+   # paths like `ios/RNFBFirestoreUnitTests/HostStubs/**` (those would compile into the pod).
+-  s.exclude_files       = 'ios/generated/RCTThirdPartyComponentsProvider.*', 'ios/generated/RCTAppDependencyProvider.*', 'ios/generated/RCTModuleProviders.*', 'ios/generated/RCTModulesConformingToProtocolsProvider.*', 'ios/generated/RCTUnstableModulesRequiringMainQueueSetupProvider.*', 'ios/*UnitTests/**/*'
++  s.exclude_files       = 'ios/generated/RCTThirdPartyComponentsProvider.*', 'ios/generated/RCTAppDependencyProvider.*', 'ios/generated/RCTModuleProviders.*', 'ios/generated/RCTModulesConformingToProtocolsProvider.*', 'ios/generated/RCTUnstableModulesRequiringMainQueueSetupProvider.*', 'ios/*UnitTests/**/*', 'ios/RNFBFirestore/*Pipeline*.swift'
+ 
+   # DEFINES_MODULE is required for the generated RNFBFirestore-Swift.h interface.
+   s.pod_target_xcconfig = {
+diff --git a/node_modules/@react-native-firebase/firestore/ios/RNFBFirestore/RNFBFirestoreCollectionModuleHelper.m b/node_modules/@react-native-firebase/firestore/ios/RNFBFirestore/RNFBFirestoreCollectionModuleHelper.m
+index a20b8c5..9978017 100644
+--- a/node_modules/@react-native-firebase/firestore/ios/RNFBFirestore/RNFBFirestoreCollectionModuleHelper.m
++++ b/node_modules/@react-native-firebase/firestore/ios/RNFBFirestore/RNFBFirestoreCollectionModuleHelper.m
+@@ -25,16 +25,6 @@
+ @import FirebaseFirestore;
+ #endif
+ 
+-#if __has_include(<RNFBFirestore/RNFBFirestore-Swift.h>)
+-#import <RNFBFirestore/RNFBFirestore-Swift.h>
+-#elif __has_include("RNFBFirestore-Swift.h")
+-#import "RNFBFirestore-Swift.h"
+-#elif __has_include("RNFBFirestore/RNFBFirestorePipelineCallHandlerHostStub.h")
+-#import "RNFBFirestore/RNFBFirestorePipelineCallHandlerHostStub.h"
+-#else
+-#error "RNFBFirestore Swift interface not found"
+-#endif
+-
+ #import <RNFBApp/RNFBRCTEventEmitter.h>
+ #import <RNFBApp/RNFBSharedUtils.h>
+ #import <React/RCTUtils.h>
+@@ -320,37 +310,7 @@ static NSString *const RNFB_FIRESTORE_COLLECTION_SYNC = @"firestore_collection_s
+                 options:(NSDictionary *)options
+                 resolve:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject {
+-  FIRApp *firebaseApp = [RCTConvert firAppFromString:appName];
+-
+-  FIRFirestore *firestore = [RNFBFirestoreCommon getFirestoreForApp:firebaseApp
+-                                                         databaseId:databaseId];
+-  RNFBFirestorePipelineCallHandler *handler = [[RNFBFirestorePipelineCallHandler alloc] init];
+-  [handler executeWithFirestore:firestore
+-                       pipeline:pipeline
+-                        options:options
+-                     completion:^(NSDictionary *_Nullable result, NSDictionary *_Nullable error) {
+-                       if (error != nil) {
+-                         NSError *nativeError = error[@"nativeError"];
+-                         if (nativeError != nil) {
+-                           [RNFBFirestoreCommon promiseRejectFirestoreException:reject
+-                                                                          error:nativeError];
+-                           return;
+-                         }
+-
+-                         NSString *code = error[@"code"];
+-                         NSString *message = error[@"message"];
+-                         reject(code ?: @"firestore/unknown",
+-                                message ?: @"Failed to execute pipeline.", nil);
+-                         return;
+-                       }
+-                       if (result == nil) {
+-                         reject(@"firestore/unknown",
+-                                @"Failed to execute pipeline: empty pipeline response.", nil);
+-                         return;
+-                       }
+-
+-                       resolve(result);
+-                     }];
++  reject(@"firestore/unimplemented", @"Firestore pipelines require Firebase iOS SDK 13 or later.", nil);
+ }
+ 
+ + (void)collectionGet:(NSString *)appName

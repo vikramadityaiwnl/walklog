@@ -1,214 +1,477 @@
-import * as SQLite from "expo-sqlite";
-import type { PunchItem, Walkthrough } from "../../models/walkthrough";
+import * as FileSystem from "expo-file-system/legacy";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocFromCache,
+  getDocs,
+  getFirestore,
+  onSnapshot,
+  query,
+  where,
+  writeBatch,
+  type WriteBatch,
+  type DocumentData,
+  type DocumentReference,
+} from "@react-native-firebase/firestore";
+import type { Project, PunchItem, Walkthrough } from "../../models/walkthrough";
+import { getBannerIllustration } from "../../utils/banner-illustrations";
+import {
+  localMediaId,
+  localMediaUri,
+  isRemoteMedia,
+  mediaStoragePath,
+} from "./media-refs";
+import { useDialogStore } from "../../store/dialog-store";
 
-const DATABASE_NAME = "walklog.db";
-let databasePromise: Promise<SQLite.SQLiteDatabase> | undefined;
+const database = getFirestore();
 
-async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
-  if (!databasePromise) {
-    databasePromise = initializeDatabase().catch((error: unknown) => {
-      databasePromise = undefined;
-      throw error;
-    });
-  }
-
-  return databasePromise;
+function localPhotoUri(uri?: string): string | undefined {
+  if (!uri) return uri;
+  const marker = "/walkthrough-photos/";
+  const index = uri.lastIndexOf(marker);
+  return index < 0 || !FileSystem.documentDirectory
+    ? uri
+    : `${FileSystem.documentDirectory}walkthrough-photos/${uri.slice(index + marker.length)}`;
 }
 
-async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
-  const database = await SQLite.openDatabaseAsync(DATABASE_NAME);
+type StoredBanner = { pendingBannerId?: string; deletionPending?: boolean };
 
-  try {
-    await database.execAsync("PRAGMA foreign_keys = ON;");
-    const version = await database.getFirstAsync<{ user_version: number }>(
-      "PRAGMA user_version",
-    );
+type StoredItem = Omit<PunchItem, "photos"> &
+  StoredBanner & {
+    photos?: (string | PunchItem["photos"][number])[];
+    pendingPhotoIds?: string[];
+  };
 
-    if (!version || version.user_version > 1) {
-      throw new Error("Unsupported local database version");
-    }
-
-    if (version.user_version === 0) {
-      await database.execAsync(`
-        BEGIN TRANSACTION;
-        CREATE TABLE walkthroughs (
-          owner_id TEXT NOT NULL,
-          id TEXT NOT NULL,
-          updated_at INTEGER NOT NULL,
-          data TEXT NOT NULL,
-          PRIMARY KEY (owner_id, id)
-        );
-        CREATE TABLE punch_items (
-          owner_id TEXT NOT NULL,
-          id TEXT NOT NULL,
-          walkthrough_id TEXT NOT NULL,
-          created_at INTEGER NOT NULL,
-          data TEXT NOT NULL,
-          PRIMARY KEY (owner_id, id),
-          FOREIGN KEY (owner_id, walkthrough_id)
-            REFERENCES walkthroughs (owner_id, id) ON DELETE CASCADE
-        );
-        CREATE INDEX punch_items_walkthrough_idx
-          ON punch_items (owner_id, walkthrough_id, created_at);
-        PRAGMA user_version = 1;
-        COMMIT;
-      `);
-    }
-
-    return database;
-  } catch (error) {
-    await database.closeAsync();
-    throw error;
-  }
+function readWalkthrough(value: Walkthrough & StoredBanner): Walkthrough {
+  return {
+    ...value,
+    bannerIllustration: getBannerIllustration(
+      value.id,
+      value.bannerIllustration,
+    ),
+    bannerPhotoUri: value.pendingBannerId
+      ? localMediaUri(value.pendingBannerId)
+      : localPhotoUri(value.bannerPhotoUri),
+  };
 }
 
-function requireId(value: string, name: string): void {
-  if (!value.trim()) {
-    throw new Error(`${name} is required`);
-  }
+function readProject(value: Project & StoredBanner): Project {
+  return {
+    ...value,
+    bannerIllustration: getBannerIllustration(
+      value.id,
+      value.bannerIllustration,
+    ),
+    bannerPhotoUri: value.pendingBannerId
+      ? localMediaUri(value.pendingBannerId)
+      : localPhotoUri(value.bannerPhotoUri),
+  };
 }
 
-/** All records are scoped to the signed-in user's Firebase UID. */
-export function createWalkthroughStorage(ownerId: string) {
-  requireId(ownerId, "Owner ID");
+function readItem(value: StoredItem): PunchItem {
+  const photos: PunchItem["photos"] = (value.photos ?? []).map((photo) =>
+    typeof photo === "string"
+      ? { localUri: photo, remoteUrl: photo }
+      : {
+          ...photo,
+          localUri:
+            photo.remoteUrl ?? localPhotoUri(photo.localUri) ?? photo.localUri,
+        },
+  );
+  photos.push(
+    ...(value.pendingPhotoIds ?? []).map((id) => ({
+      localUri: localMediaUri(id),
+      remoteUrl: undefined,
+    })),
+  );
 
   return {
-    async listWalkthroughs(): Promise<Walkthrough[]> {
-      const database = await getDatabase();
-      const rows = await database.getAllAsync<{ data: string }>(
-        "SELECT data FROM walkthroughs WHERE owner_id = ? ORDER BY updated_at DESC, id ASC",
-        ownerId,
-      );
+    ...value,
+    bannerPhotoUri: value.pendingBannerId
+      ? localMediaUri(value.pendingBannerId)
+      : localPhotoUri(value.bannerPhotoUri),
+    photos,
+  };
+}
 
-      return rows.map((row) => JSON.parse(row.data) as Walkthrough);
-    },
+function serializeBanner<T extends { bannerPhotoUri?: string }>(value: T) {
+  const id = localMediaId(value.bannerPhotoUri);
+  return {
+    ...value,
+    bannerPhotoUri: isRemoteMedia(value.bannerPhotoUri)
+      ? value.bannerPhotoUri
+      : undefined,
+    pendingBannerId: id,
+  };
+}
 
-    async getWalkthrough(id: string): Promise<Walkthrough | null> {
-      requireId(id, "Walkthrough ID");
-      const database = await getDatabase();
-      const row = await database.getFirstAsync<{ data: string }>(
-        "SELECT data FROM walkthroughs WHERE owner_id = ? AND id = ?",
-        ownerId,
-        id,
-      );
+function serializeItem(item: PunchItem) {
+  const remote: string[] = [];
+  const pending: string[] = [];
+  for (const photo of item.photos) {
+    const url =
+      photo.remoteUrl ??
+      (isRemoteMedia(photo.localUri) ? photo.localUri : undefined);
+    const id = localMediaId(photo.localUri);
+    if (url) remote.push(url);
+    else if (id) pending.push(id);
+    else throw new Error("This image is unavailable on this device.");
+  }
 
-      return row ? (JSON.parse(row.data) as Walkthrough) : null;
-    },
+  return { ...serializeBanner(item), photos: remote, pendingPhotoIds: pending };
+}
 
-    async saveWalkthrough(walkthrough: Walkthrough): Promise<void> {
-      requireId(walkthrough.id, "Walkthrough ID");
-      const database = await getDatabase();
-      await database.runAsync(
-        `INSERT INTO walkthroughs (owner_id, id, updated_at, data)
-         VALUES (?, ?, ?, ?)
-         ON CONFLICT (owner_id, id) DO UPDATE SET
-           updated_at = excluded.updated_at, data = excluded.data`,
-        ownerId,
-        walkthrough.id,
-        walkthrough.updatedAt,
-        JSON.stringify(walkthrough),
-      );
-    },
+export function mediaUrls(value: unknown): string[] {
+  if (!value || typeof value !== "object") return [];
+  const data = value as { bannerPhotoUri?: unknown; photos?: unknown };
+  const result: string[] = [];
+  if (
+    typeof data.bannerPhotoUri === "string" &&
+    isRemoteMedia(data.bannerPhotoUri)
+  )
+    result.push(data.bannerPhotoUri);
+  if (Array.isArray(data.photos)) {
+    for (const photo of data.photos) {
+      if (typeof photo === "string" && isRemoteMedia(photo)) result.push(photo);
+      else if (
+        photo &&
+        typeof photo === "object" &&
+        typeof photo.remoteUrl === "string" &&
+        isRemoteMedia(photo.remoteUrl)
+      )
+        result.push(photo.remoteUrl);
+    }
+  }
 
-    async deleteWalkthrough(id: string): Promise<void> {
-      requireId(id, "Walkthrough ID");
-      const database = await getDatabase();
-      await database.runAsync(
-        "DELETE FROM walkthroughs WHERE owner_id = ? AND id = ?",
-        ownerId,
-        id,
-      );
-    },
+  return result;
+}
 
-    async listItems(walkthroughId: string): Promise<PunchItem[]> {
-      requireId(walkthroughId, "Walkthrough ID");
-      const database = await getDatabase();
-      const rows = await database.getAllAsync<{ data: string }>(
-        `SELECT data FROM punch_items WHERE owner_id = ? AND walkthrough_id = ?
-         ORDER BY created_at ASC, id ASC`,
-        ownerId,
-        walkthroughId,
-      );
+function clean<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
 
-      return rows.map((row) => JSON.parse(row.data) as PunchItem);
-    },
+function requireId(value: string, label: string) {
+  if (!value.trim() || value.includes("/"))
+    throw new Error(`${label} is invalid`);
+}
 
-    async saveItem(item: PunchItem): Promise<void> {
+/** Resolve when the atomic batch is visible in Firestore's persistent local cache. */
+function commitLocally(ownerId: string, batch: WriteBatch): Promise<void> {
+  const marker = doc(collection(database, "users", ownerId, "mutations"));
+  batch.set(marker, { createdAt: Date.now() });
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let unsubscribe = () => {};
+    unsubscribe = onSnapshot(
+      marker,
+      (snapshot) => {
+        if (snapshot.exists() && !settled) {
+          settled = true;
+          unsubscribe();
+          resolve();
+        }
+      },
+      (error) => {
+        if (!settled) {
+          settled = true;
+          unsubscribe();
+          reject(error);
+        }
+      },
+    );
+    void batch.commit().catch((error: unknown) => {
+      if (!settled) {
+        settled = true;
+        unsubscribe();
+        reject(error);
+      } else
+        useDialogStore
+          .getState()
+          .showDialog(
+            "Couldn’t sync changes",
+            "Some changes were rejected. Check your connection and try again.",
+          );
+    });
+  });
+}
+
+export function createFirestoreId(
+  ownerId: string,
+  kind: "projects" | "walkthroughs" | "items",
+): string {
+  requireId(ownerId, "Owner ID");
+
+  return doc(collection(database, "users", ownerId, kind)).id;
+}
+
+/** Documents are scoped to the signed-in user's Firebase UID. */
+export function createWalkthroughStorage(ownerId: string) {
+  requireId(ownerId, "Owner ID");
+  const projects = collection(database, "users", ownerId, "projects");
+  const walkthroughs = collection(database, "users", ownerId, "walkthroughs");
+  const items = collection(database, "users", ownerId, "items");
+  const mediaDeletions = collection(
+    database,
+    "users",
+    ownerId,
+    "media-deletions",
+  );
+  const deletionJobs = collection(database, "users", ownerId, "deletion-jobs");
+  const projectRef = (id: string) => doc(projects, id);
+  const walkthroughRef = (id: string) => doc(walkthroughs, id);
+  const itemRef = (id: string) => doc(items, id);
+
+  async function allProjects() {
+    return (await getDocs(projects)).docs
+      .filter((entry) => entry.data().deletionPending !== true)
+      .map((entry) => readProject(entry.data() as Project));
+  }
+
+  async function allWalkthroughs() {
+    return (await getDocs(walkthroughs)).docs
+      .filter((entry) => entry.data().deletionPending !== true)
+      .map((entry) => readWalkthrough(entry.data() as Walkthrough));
+  }
+
+  async function allItems() {
+    return (await getDocs(items)).docs.map((entry) =>
+      readItem(entry.data() as StoredItem),
+    );
+  }
+
+  function checkBatchSize(count: number) {
+    if (count > 499)
+      throw new Error("Too many changes at once. Try a smaller selection.");
+  }
+
+  async function cachedData(
+    reference: DocumentReference<DocumentData>,
+  ): Promise<DocumentData | undefined> {
+    const snapshot = await getDocFromCache(reference).catch(() => null);
+
+    return snapshot?.exists() ? snapshot.data() : undefined;
+  }
+
+  function queueRemovedMedia(
+    batch: WriteBatch,
+    before: unknown,
+    after?: unknown,
+  ): number {
+    const retained = new Set(
+      mediaUrls(after)
+        .map((url) => mediaStoragePath(url, ownerId))
+        .filter(Boolean),
+    );
+    const removed = new Set(
+      mediaUrls(before)
+        .map((url) => mediaStoragePath(url, ownerId))
+        .filter((path): path is string => !!path && !retained.has(path)),
+    );
+    for (const path of removed)
+      batch.set(doc(mediaDeletions), { path, createdAt: Date.now() });
+
+    return removed.size;
+  }
+
+  async function saveItemBatch(changed: PunchItem[]) {
+    const affected = [...new Set(changed.map((item) => item.walkthroughId))];
+    const batch = writeBatch(database);
+    let count = changed.length + affected.length;
+    for (const item of changed) {
       requireId(item.id, "Item ID");
       requireId(item.walkthroughId, "Walkthrough ID");
-      const database = await getDatabase();
-      await database.runAsync(
-        `INSERT INTO punch_items (owner_id, id, walkthrough_id, created_at, data)
-         VALUES (?, ?, ?, ?, ?)
-         ON CONFLICT (owner_id, id) DO UPDATE SET
-           walkthrough_id = excluded.walkthrough_id,
-           created_at = excluded.created_at, data = excluded.data`,
-        ownerId,
-        item.id,
-        item.walkthroughId,
-        item.createdAt,
-        JSON.stringify(item),
+      const parent = await cachedData(walkthroughRef(item.walkthroughId));
+      if (parent?.deletionPending === true)
+        throw new Error("This walkthrough is being deleted.");
+      const updated = clean(serializeItem(item));
+      count += queueRemovedMedia(
+        batch,
+        await cachedData(itemRef(item.id)),
+        updated,
+      );
+      batch.set(itemRef(item.id), updated);
+    }
+    checkBatchSize(count);
+    for (const id of affected)
+      batch.update(walkthroughRef(id), { updatedAt: Date.now() });
+    await commitLocally(ownerId, batch);
+  }
+
+  async function deleteItemBatch(ids: string[]) {
+    const current = (await allItems()).filter((item) => ids.includes(item.id));
+    const affected = [...new Set(current.map((item) => item.walkthroughId))];
+    const batch = writeBatch(database);
+    let count = current.length + affected.length;
+    for (const item of current) {
+      count += queueRemovedMedia(batch, await cachedData(itemRef(item.id)));
+      batch.delete(itemRef(item.id));
+    }
+    checkBatchSize(count);
+    for (const id of affected)
+      batch.update(walkthroughRef(id), { updatedAt: Date.now() });
+    await commitLocally(ownerId, batch);
+  }
+
+  return {
+    async listProjects(): Promise<Project[]> {
+      return (await allProjects()).sort((a, b) => a.name.localeCompare(b.name));
+    },
+    async createProject(project: Project): Promise<void> {
+      const batch = writeBatch(database);
+      batch.set(projectRef(project.id), clean(serializeBanner(project)));
+      await commitLocally(ownerId, batch);
+    },
+    async createProjectAndMove(project: Project, ids: string[]): Promise<void> {
+      const selected = (await allWalkthroughs()).filter((entry) =>
+        ids.includes(entry.id),
+      );
+      if (selected.length !== ids.length)
+        throw new Error("Walkthrough not found");
+      checkBatchSize(selected.length + 1);
+      const batch = writeBatch(database);
+      batch.set(projectRef(project.id), clean(serializeBanner(project)));
+      for (const entry of selected)
+        batch.set(
+          walkthroughRef(entry.id),
+          clean(
+            serializeBanner({
+              ...entry,
+              projectId: project.id,
+              updatedAt: Date.now(),
+            }),
+          ),
+        );
+      await commitLocally(ownerId, batch);
+    },
+    async saveProject(project: Project): Promise<void> {
+      if ((await cachedData(projectRef(project.id)))?.deletionPending === true)
+        throw new Error("This project is being deleted.");
+      const batch = writeBatch(database);
+      const updated = clean(serializeBanner(project));
+      checkBatchSize(
+        1 +
+          queueRemovedMedia(
+            batch,
+            await cachedData(projectRef(project.id)),
+            updated,
+          ),
+      );
+      batch.set(projectRef(project.id), updated);
+      await commitLocally(ownerId, batch);
+    },
+    async listWalkthroughs(): Promise<Walkthrough[]> {
+      return (await allWalkthroughs()).sort(
+        (a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id),
       );
     },
-
-    async createItems(items: PunchItem[]): Promise<void> {
-      for (const item of items) {
-        requireId(item.id, "Item ID");
-        requireId(item.walkthroughId, "Walkthrough ID");
-      }
-
-      const database = await getDatabase();
-      await database.withExclusiveTransactionAsync(async (transaction) => {
-        for (const item of items) {
-          await transaction.runAsync(
-            "INSERT INTO punch_items (owner_id, id, walkthrough_id, created_at, data) VALUES (?, ?, ?, ?, ?)",
-            ownerId,
-            item.id,
-            item.walkthroughId,
-            item.createdAt,
-            JSON.stringify(item),
-          );
-        }
-      });
+    async getWalkthrough(id: string): Promise<Walkthrough | null> {
+      requireId(id, "Walkthrough ID");
+      const snapshot = await getDoc(walkthroughRef(id));
+      return snapshot.exists() && snapshot.data().deletionPending !== true
+        ? readWalkthrough(snapshot.data() as Walkthrough)
+        : null;
     },
-
-    async updateItems(items: PunchItem[]): Promise<void> {
-      const database = await getDatabase();
-      await database.withExclusiveTransactionAsync(async (transaction) => {
-        for (const item of items) {
-          requireId(item.id, "Item ID");
-          await transaction.runAsync(
-            "UPDATE punch_items SET data = ? WHERE owner_id = ? AND id = ?",
-            JSON.stringify(item),
-            ownerId,
-            item.id,
-          );
-        }
-      });
+    async saveWalkthrough(walkthrough: Walkthrough): Promise<void> {
+      requireId(walkthrough.id, "Walkthrough ID");
+      if (
+        (await cachedData(walkthroughRef(walkthrough.id)))?.deletionPending ===
+        true
+      )
+        throw new Error("This walkthrough is being deleted.");
+      const batch = writeBatch(database);
+      const updated = clean(serializeBanner(walkthrough));
+      checkBatchSize(
+        1 +
+          queueRemovedMedia(
+            batch,
+            await cachedData(walkthroughRef(walkthrough.id)),
+            updated,
+          ),
+      );
+      batch.set(walkthroughRef(walkthrough.id), updated);
+      await commitLocally(ownerId, batch);
     },
+    async listItems(walkthroughId: string): Promise<PunchItem[]> {
+      requireId(walkthroughId, "Walkthrough ID");
+      if (
+        (await getDoc(walkthroughRef(walkthroughId))).data()
+          ?.deletionPending === true
+      )
+        throw new Error("This walkthrough is being deleted.");
+      const snapshot = await getDocs(
+        query(items, where("walkthroughId", "==", walkthroughId)),
+      );
 
-    async deleteItems(ids: string[]): Promise<void> {
-      const database = await getDatabase();
-      await database.withExclusiveTransactionAsync(async (transaction) => {
-        for (const id of ids) {
-          requireId(id, "Item ID");
-          await transaction.runAsync(
-            "DELETE FROM punch_items WHERE owner_id = ? AND id = ?",
-            ownerId,
-            id,
-          );
-        }
-      });
+      return snapshot.docs
+        .map((entry) => readItem(entry.data() as StoredItem))
+        .sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
     },
-
+    async saveItem(item: PunchItem): Promise<void> {
+      await saveItemBatch([item]);
+    },
+    async createItems(values: PunchItem[]): Promise<void> {
+      await saveItemBatch(values);
+    },
+    async updateItems(values: PunchItem[]): Promise<void> {
+      await saveItemBatch(values);
+    },
     async deleteItem(id: string): Promise<void> {
-      requireId(id, "Item ID");
-      const database = await getDatabase();
-      await database.runAsync(
-        "DELETE FROM punch_items WHERE owner_id = ? AND id = ?",
-        ownerId,
-        id,
+      await deleteItemBatch([id]);
+    },
+    async deleteItems(ids: string[]): Promise<void> {
+      await deleteItemBatch(ids);
+    },
+    async moveWalkthroughs(
+      ids: string[],
+      projectId: string | null,
+    ): Promise<void> {
+      const selected = (await allWalkthroughs()).filter((entry) =>
+        ids.includes(entry.id),
       );
+      if (selected.length !== ids.length)
+        throw new Error("Walkthrough not found");
+      if (projectId && !(await getDoc(projectRef(projectId))).exists())
+        throw new Error("Project not found");
+      checkBatchSize(selected.length);
+      const batch = writeBatch(database);
+      for (const entry of selected)
+        batch.set(
+          walkthroughRef(entry.id),
+          clean(
+            serializeBanner({
+              ...entry,
+              projectId: projectId ?? undefined,
+              updatedAt: Date.now(),
+            }),
+          ),
+        );
+      await commitLocally(ownerId, batch);
+    },
+    async deleteWalkthrough(id: string): Promise<void> {
+      requireId(id, "Walkthrough ID");
+      const batch = writeBatch(database);
+      batch.update(walkthroughRef(id), { deletionPending: true });
+      batch.set(doc(deletionJobs), {
+        kind: "walkthrough",
+        targetId: id,
+        createdAt: Date.now(),
+      });
+      await commitLocally(ownerId, batch);
+    },
+    async deleteProject(id: string): Promise<void> {
+      const allProjectsList = await allProjects();
+      const project = allProjectsList.find((entry) => entry.id === id);
+      if (!project) throw new Error("Project not found");
+      const batch = writeBatch(database);
+      batch.update(projectRef(id), { deletionPending: true });
+      batch.set(doc(deletionJobs), {
+        kind: "project",
+        targetId: id,
+        createdAt: Date.now(),
+      });
+      await commitLocally(ownerId, batch);
     },
   };
 }

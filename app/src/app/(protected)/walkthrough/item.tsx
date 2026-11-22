@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
-import * as Crypto from "expo-crypto";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -32,7 +31,10 @@ import {
   deleteItemPhotos,
   selectItemPhoto,
 } from "../../../services/walkthrough/photos";
-import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
+import {
+  createFirestoreId,
+  createWalkthroughStorage,
+} from "../../../services/walkthrough/storage";
 import { useAuthStore } from "../../../store/auth-store";
 import { extractItems } from "../../../services/walkthrough/extract-items";
 
@@ -295,7 +297,7 @@ export default function ItemEdit() {
       const now = Date.now();
       const item: PunchItem = {
         ...existing,
-        id: existing?.id ?? Crypto.randomUUID(),
+        id: existing?.id ?? createFirestoreId(ownerId, "items"),
         walkthroughId,
         bannerColor: existing
           ? getBannerColor(existing.id, existing.bannerColor)

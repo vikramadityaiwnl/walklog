@@ -1,16 +1,12 @@
-import {
-  Image,
-  Pressable,
-  StyleSheet,
-  useWindowDimensions,
-  View,
-} from "react-native";
+import { Image } from "expo-image";
+import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import {
   Cog6ToothIcon,
   PencilSquareIcon,
 } from "react-native-heroicons/outline";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "./app-text";
+import { BannerIllustration } from "./banner-illustration";
 import { Overlay } from "./overlay";
 import { colors } from "../theme";
 
@@ -19,9 +15,11 @@ interface Props {
   subtitle?: string;
   color: string;
   imageUri?: string;
+  bannerIllustration?: number;
   action: "settings" | "edit";
   onAction: () => void;
   disabled?: boolean;
+  actionLabel?: string;
 }
 
 export function ScreenBanner(props: Props) {
@@ -43,8 +41,12 @@ export function ScreenBanner(props: Props) {
         <Image
           source={{ uri: props.imageUri }}
           style={StyleSheet.absoluteFill}
-          resizeMode="cover"
+          contentFit="cover"
         />
+      ) : null}
+
+      {!props.imageUri && props.bannerIllustration !== undefined ? (
+        <BannerIllustration illustration={props.bannerIllustration} />
       ) : null}
 
       <Overlay />
@@ -63,7 +65,8 @@ export function ScreenBanner(props: Props) {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={
-            props.action === "settings" ? "Walkthrough settings" : "Edit item"
+            props.actionLabel ??
+            (props.action === "settings" ? "Walkthrough settings" : "Edit item")
           }
           disabled={props.disabled}
           onPress={props.onAction}

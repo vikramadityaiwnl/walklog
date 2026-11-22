@@ -1,3 +1,4 @@
+import { Image } from "expo-image";
 import { useCallback, useState } from "react";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import {
@@ -10,7 +11,6 @@ import {
 } from "react-native-heroicons/outline";
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,7 +18,7 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { ScreenBanner } from "../../../components/screen-banner";
-import { getBannerColor } from "../../../utils/banner-colors";
+import { bannerColor } from "../../../utils/banner-illustrations";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Badge } from "../../../components/badge";
 import { EmptyState } from "../../../components/empty-state";
@@ -27,6 +27,7 @@ import type { PunchItem, Walkthrough } from "../../../models/walkthrough";
 import { deleteItemPhotos } from "../../../services/walkthrough/photos";
 import { useDialogStore } from "../../../store/dialog-store";
 import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
+import { useFirestoreStore } from "../../../store/firestore-store";
 import { useAuthStore } from "../../../store/auth-store";
 import { colors } from "../../../theme";
 
@@ -39,9 +40,13 @@ type Selection =
   { status: "inactive" } | { status: "selecting" | "saving"; ids: string[] };
 
 export default function WalkthroughDetail() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, fromProjectId } = useLocalSearchParams<{
+    id: string;
+    fromProjectId?: string;
+  }>();
 
   const auth = useAuthStore((state) => state.auth);
+  const firestoreRevision = useFirestoreStore((state) => state.revision);
 
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
 
@@ -79,7 +84,7 @@ export default function WalkthroughDetail() {
       return () => {
         active = false;
       };
-    }, [ownerId, id]),
+    }, [ownerId, id, firestoreRevision]),
   );
 
   function toggleSelection(itemId: string) {
@@ -211,7 +216,7 @@ export default function WalkthroughDetail() {
     <SafeAreaView style={styles.container} edges={["bottom"]}>
       <StatusBar style={screen.status === "ready" ? "light" : "dark"} />
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         {screen.status === "loading" ? (
           <View style={styles.loading}>
             <ActivityIndicator
@@ -236,16 +241,14 @@ export default function WalkthroughDetail() {
                   .filter(Boolean)
                   .join(" · ") || undefined
               }
-              color={getBannerColor(
-                screen.walkthrough.id,
-                screen.walkthrough.bannerColor,
-              )}
+              color={bannerColor}
               imageUri={screen.walkthrough.bannerPhotoUri}
+              bannerIllustration={screen.walkthrough.bannerIllustration}
               action="settings"
               onAction={() =>
                 router.push({
                   pathname: "/walkthrough/settings",
-                  params: { id },
+                  params: { id, fromProjectId },
                 })
               }
             />
@@ -474,6 +477,7 @@ export default function WalkthroughDetail() {
 
 const styles = StyleSheet.create({
   container: { backgroundColor: colors.background, flex: 1 },
+  scrollContent: { flexGrow: 1 },
   content: {
     flexGrow: 1,
     paddingHorizontal: 24,

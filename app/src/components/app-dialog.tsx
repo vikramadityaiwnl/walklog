@@ -7,7 +7,7 @@ import { AppButton } from "./app-button";
 import { AppText } from "./app-text";
 
 interface Props {
-  surface?: "root" | "photo-viewer";
+  surface?: "root" | "photo-viewer" | "project-picker";
 }
 
 export function AppDialog(props: Props) {

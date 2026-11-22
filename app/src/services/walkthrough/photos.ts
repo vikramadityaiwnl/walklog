@@ -1,4 +1,8 @@
-import * as Crypto from "expo-crypto";
+import {
+  collection,
+  doc,
+  getFirestore,
+} from "@react-native-firebase/firestore";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
@@ -29,11 +33,23 @@ export async function selectItemPhoto(source: "camera" | "library") {
   const asset = result.assets[0];
   const image = await ImageManipulator.manipulateAsync(
     asset.uri,
-    asset.width > 1024 ? [{ resize: { width: 1024 } }] : [],
-    { compress: 0.75, format: ImageManipulator.SaveFormat.JPEG },
+    Math.max(asset.width, asset.height) > 1600
+      ? [
+          {
+            resize:
+              asset.width >= asset.height ? { width: 1600 } : { height: 1600 },
+          },
+        ]
+      : [],
+    { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
   );
+  const info = await FileSystem.getInfoAsync(image.uri);
+  if (!info.exists || info.size > 3 * 1024 * 1024)
+    throw new Error(
+      "This image is too large after compression. Choose a smaller image.",
+    );
   await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
-  const uri = `${directory}${Crypto.randomUUID()}.jpg`;
+  const uri = `${directory}${doc(collection(getFirestore(), "media-ids")).id}.jpg`;
   await FileSystem.copyAsync({ from: image.uri, to: uri });
 
   return { localUri: uri };

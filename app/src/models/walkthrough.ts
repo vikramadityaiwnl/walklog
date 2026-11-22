@@ -6,10 +6,19 @@ export type Priority = "High" | "Medium" | "Low";
 
 export type ItemStatus = "Open" | "Done";
 
+export interface Project {
+  id: string;
+  name: string;
+  createdAt: number;
+  bannerIllustration: number;
+  bannerPhotoUri?: string;
+}
+
 export interface Walkthrough {
   id: string;
   title: string;
-  bannerColor?: string;
+  bannerIllustration: number;
+  projectId?: string;
   bannerPhotoUri?: string;
   clientName?: string;
   address?: string;
