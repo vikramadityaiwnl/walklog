@@ -22,6 +22,8 @@
 
 ## Code style
 
+- Use kebab-case for fixed Firestore collection and document path segments. Opaque IDs such as Firebase UIDs and generated document IDs retain their original values. Use Firestore-generated document IDs for new records and when creating identifiers for future Storage objects.
+
 - Keep screen-specific styles in the screen that uses them. Match shared visual patterns through theme tokens and existing components rather than a cross-screen style sheet.
 
 - Use kebab-case for all filenames, including component files. Use PascalCase for React component names, with the first letter of each word capitalized. For example, define `SignInForm` in `sign-in-form.tsx`.
