@@ -1,6 +1,6 @@
 import { getApp } from "@react-native-firebase/app";
 import { Platform, TurboModuleRegistry, type TurboModule } from "react-native";
-import { useAppCheckStore } from "../store/app-check-store";
+import { useAppCheckStore } from "../../store/app-check-store";
 
 interface AppCheckNativeModule extends TurboModule {
   configureProvider(

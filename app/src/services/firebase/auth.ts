@@ -1,5 +1,5 @@
 import { getAuth, onAuthStateChanged } from "@react-native-firebase/auth";
-import { useAuthStore } from "../store/auth-store";
+import { useAuthStore } from "../../store/auth-store";
 
 let listening = false;
 

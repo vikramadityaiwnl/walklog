@@ -7,6 +7,9 @@ import com.google.firebase.ai.InferenceSource
 import com.google.firebase.ai.OnDeviceConfig
 import com.google.firebase.ai.OnDeviceModelStatus
 import com.google.firebase.ai.type.PublicPreviewAPI
+import com.google.firebase.ai.type.content
+import android.net.Uri
+import java.io.ByteArrayOutputStream
 import expo.modules.kotlin.functions.Coroutine
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -50,15 +53,37 @@ class FirebaseAiHybridModule : Module() {
       }
     }
 
-    AsyncFunction("generateText") Coroutine { prompt: String, mode: String ->
+    AsyncFunction("generateText") Coroutine { prompt: String, mode: String, audioUri: String?, mimeType: String? ->
       require(prompt.isNotBlank()) { "Enter a prompt first." }
+      require(audioUri == null || (mode == "cloud" && mimeType != null)) { "Audio input requires cloud processing and a MIME type." }
       val inferenceMode = when (mode) {
         "auto" -> InferenceMode.PREFER_ON_DEVICE
         "device" -> InferenceMode.ONLY_ON_DEVICE
         "cloud" -> InferenceMode.ONLY_IN_CLOUD
         else -> throw IllegalArgumentException("Unknown inference mode: $mode")
       }
-      val response = model(inferenceMode).generateContent(prompt)
+      val response = if (audioUri != null && mimeType != null) {
+        val context = appContext.reactContext ?: throw IllegalStateException("Application unavailable.")
+        val parsed = Uri.parse(audioUri)
+        require(parsed.scheme == "file" || parsed.scheme == "content") { "Invalid audio file." }
+        val bytes = context.contentResolver.openInputStream(parsed)?.use { stream ->
+          val output = ByteArrayOutputStream()
+          val buffer = ByteArray(8192)
+          var count = stream.read(buffer)
+          while (count != -1) {
+            require(output.size() + count <= 14_000_000) { "This recording is too large to process. Try a shorter recording." }
+            output.write(buffer, 0, count)
+            count = stream.read(buffer)
+          }
+          output.toByteArray()
+        } ?: throw IllegalStateException("Couldn’t open the audio file.")
+        model(inferenceMode).generateContent(content {
+          inlineData(bytes, mimeType)
+          text(prompt)
+        })
+      } else {
+        model(inferenceMode).generateContent(prompt)
+      }
       val source = when (response.inferenceSource) {
         InferenceSource.ON_DEVICE -> "on-device"
         InferenceSource.IN_CLOUD -> "cloud"

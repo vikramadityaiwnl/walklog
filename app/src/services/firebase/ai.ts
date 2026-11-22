@@ -16,7 +16,12 @@ export type Generation = {
 interface FirebaseAiNativeModule {
   checkAvailability(): Promise<ModelAvailability>;
   downloadModel(): Promise<void>;
-  generateText(prompt: string, mode: InferenceMode): Promise<Generation>;
+  generateText(
+    prompt: string,
+    mode: InferenceMode,
+    audioUri: string | null,
+    mimeType: string | null,
+  ): Promise<Generation>;
 }
 
 const native =
@@ -48,10 +53,18 @@ export function downloadModel(): Promise<void> {
 export async function generateText(
   prompt: string,
   mode: InferenceMode,
+  audio?: { uri: string; mimeType: string },
 ): Promise<Generation> {
   if (!prompt.trim()) throw new Error("Enter a prompt first.");
+  if (audio && mode !== "cloud")
+    throw new Error("Audio input requires cloud processing.");
 
-  const result = await getNativeModule().generateText(prompt, mode);
+  const result = await getNativeModule().generateText(
+    prompt,
+    mode,
+    audio?.uri ?? null,
+    audio?.mimeType ?? null,
+  );
   if (!result.text.trim())
     throw new Error("The model returned an empty response.");
 

@@ -31,7 +31,7 @@ export function BannerPicker(props: Props) {
         >
           <AppText style={styles.link}>
             {props.busy
-              ? "Adding image…"
+              ? "Adding image"
               : props.uri
                 ? "Change image"
                 : "Add image"}

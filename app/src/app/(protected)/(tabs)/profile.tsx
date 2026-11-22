@@ -11,7 +11,7 @@ import { useDialogStore } from "../../../store/dialog-store";
 import { AppHeader } from "../../../components/app-header";
 import { AppText } from "../../../components/app-text";
 import { Avatar } from "../../../components/avatar";
-import { signOutUser } from "../../../services/google-sign-in";
+import { signOutUser } from "../../../services/firebase/google-sign-in";
 import { useAuthStore } from "../../../store/auth-store";
 import { colors } from "../../../theme";
 
@@ -23,7 +23,7 @@ type SignOutState =
 const preferences = [
   {
     title: "Notifications",
-    description: "Updates and reminders",
+    description: "Manage updates",
     icon: BellIcon,
   },
   {

@@ -1,7 +1,6 @@
 export type WalkthroughStatus = "in_progress" | "verified" | "shared";
 
-export type Trade =
-  "Plumbing" | "Electrical" | "Paint/Finish" | "Carpentry" | "HVAC" | "General";
+export type Trade = string;
 
 export type Priority = "High" | "Medium" | "Low";
 
@@ -26,10 +25,11 @@ export interface PunchItem {
   bannerColor?: string;
   bannerPhotoUri?: string;
   rawTranscript: string;
+  processingMode: "device" | "cloud" | "manual";
   location: string;
-  trade: Trade;
+  trade?: Trade;
   issueSummary: string;
-  priority: Priority;
+  priority?: Priority;
   status: ItemStatus;
   missingInfoHint?: string | null;
   onDeviceMeta?: {

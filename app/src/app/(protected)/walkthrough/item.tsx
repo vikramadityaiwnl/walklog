@@ -5,10 +5,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
   TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { colors } from "../../../theme";
 import { AppButton } from "../../../components/app-button";
 import { useDialogStore } from "../../../store/dialog-store";
 import { ChipGroup } from "../../../components/chip-group";
@@ -17,10 +19,9 @@ import { useBannerDraft } from "../../../hooks/use-banner-draft";
 import {
   getBannerColor,
   randomBannerColor,
-} from "../../../services/banner-colors";
+} from "../../../utils/banner-colors";
 import { AppText } from "../../../components/app-text";
 import { PhotoGallery } from "../../../components/photo-gallery";
-import { walkthroughStyles as styles } from "../../../components/walkthrough-styles";
 import type {
   ItemStatus,
   Priority,
@@ -30,26 +31,19 @@ import type {
 import {
   deleteItemPhotos,
   selectItemPhoto,
-} from "../../../services/walkthrough-photos";
-import { createWalkthroughStorage } from "../../../services/walkthrough-storage";
+} from "../../../services/walkthrough/photos";
+import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
 import { useAuthStore } from "../../../store/auth-store";
+import { extractItems } from "../../../services/walkthrough/extract-items";
 
-const trades: Trade[] = [
-  "General",
-  "Plumbing",
-  "Electrical",
-  "Paint/Finish",
-  "Carpentry",
-  "HVAC",
-];
 const priorities: Priority[] = ["Low", "Medium", "High"];
 const statuses: ItemStatus[] = ["Open", "Done"];
 
 interface ItemDraft {
   description: string;
   location: string;
-  trade: Trade;
-  priority: Priority;
+  trade?: Trade;
+  priority?: Priority;
   status: ItemStatus;
   photos: PunchItem["photos"];
 }
@@ -80,14 +74,16 @@ export default function ItemEdit() {
     draft: {
       description: "",
       location: "",
-      trade: "General",
-      priority: "Medium",
+      trade: undefined,
+      priority: undefined,
       status: "Open",
       photos: [],
     },
   });
 
   const [photoBusy, setPhotoBusy] = useState(false);
+
+  const [suggesting, setSuggesting] = useState(false);
 
   const [deleting, setDeleting] = useState(false);
 
@@ -216,6 +212,38 @@ export default function ItemEdit() {
     ]);
   }
 
+  async function suggestDetails() {
+    if (!draft.description.trim() || suggesting) return;
+
+    const description = draft.description;
+    setSuggesting(true);
+    try {
+      const [suggestion] = await extractItems(description);
+      setForm((current) => {
+        if (current.draft.description !== description) return current;
+
+        return {
+          ...current,
+          draft: {
+            ...current.draft,
+            location: current.draft.location || suggestion.location,
+            trade: current.draft.trade || suggestion.trade,
+            priority: current.draft.priority || suggestion.priority,
+          },
+        };
+      });
+    } catch (error) {
+      showDialog(
+        "Couldn’t suggest details",
+        error instanceof Error
+          ? error.message
+          : "On-device AI is unavailable. You can enter the details yourself.",
+      );
+    } finally {
+      setSuggesting(false);
+    }
+  }
+
   function cancelChanges() {
     if (!existing) return;
 
@@ -274,8 +302,9 @@ export default function ItemEdit() {
           : randomBannerColor(),
         bannerPhotoUri: banner.uri,
         rawTranscript: existing?.rawTranscript ?? "",
+        processingMode: existing ? existing.processingMode : "manual",
         issueSummary: draft.description.trim(),
-        location: draft.location.trim() || "Unspecified Area",
+        location: draft.location.trim(),
         trade: draft.trade,
         priority: draft.priority,
         status: draft.status,
@@ -388,7 +417,7 @@ export default function ItemEdit() {
           </View>
 
           {form.status === "loading" ? (
-            <AppText>Loading…</AppText>
+            <AppText>Loading item</AppText>
           ) : (
             <>
               <View style={styles.section}>
@@ -410,6 +439,19 @@ export default function ItemEdit() {
                   style={[styles.input, styles.multiline]}
                 />
               </View>
+
+              <AppButton
+                title={
+                  suggesting ? "Suggesting details" : "Suggest details with AI"
+                }
+                variant="secondary"
+                disabled={
+                  !draft.description.trim() ||
+                  suggesting ||
+                  form.status === "saving"
+                }
+                onPress={suggestDetails}
+              />
 
               <View style={styles.section}>
                 <AppText weight="semibold" style={styles.label}>
@@ -435,18 +477,17 @@ export default function ItemEdit() {
                   Trade
                 </AppText>
 
-                <ChipGroup
-                  label="Trade"
-                  options={trades}
-                  selection={{
-                    mode: "single",
-                    value: draft.trade,
-                    onChange: (trade) =>
-                      setForm((current) => ({
-                        ...current,
-                        draft: { ...current.draft, trade },
-                      })),
-                  }}
+                <TextInput
+                  accessibilityLabel="Trade"
+                  value={draft.trade ?? ""}
+                  onChangeText={(trade) =>
+                    setForm((current) => ({
+                      ...current,
+                      draft: { ...current.draft, trade: trade || undefined },
+                    }))
+                  }
+                  placeholder="e.g. Plumbing"
+                  style={styles.input}
                 />
               </View>
 
@@ -470,25 +511,27 @@ export default function ItemEdit() {
                 />
               </View>
 
-              <View style={styles.section}>
-                <AppText weight="semibold" style={styles.label}>
-                  Status
-                </AppText>
+              {id ? (
+                <View style={styles.section}>
+                  <AppText weight="semibold" style={styles.label}>
+                    Status
+                  </AppText>
 
-                <ChipGroup
-                  label="Status"
-                  options={statuses}
-                  selection={{
-                    mode: "single",
-                    value: draft.status,
-                    onChange: (status) =>
-                      setForm((current) => ({
-                        ...current,
-                        draft: { ...current.draft, status },
-                      })),
-                  }}
-                />
-              </View>
+                  <ChipGroup
+                    label="Status"
+                    options={statuses}
+                    selection={{
+                      mode: "single",
+                      value: draft.status,
+                      onChange: (status) =>
+                        setForm((current) => ({
+                          ...current,
+                          draft: { ...current.draft, status },
+                        })),
+                    }}
+                  />
+                </View>
+              ) : null}
 
               {!id ? (
                 <View style={styles.section}>
@@ -563,7 +606,7 @@ export default function ItemEdit() {
                 <AppButton
                   title={
                     form.status === "saving"
-                      ? "Saving…"
+                      ? "Saving"
                       : id
                         ? "Save changes"
                         : "Add item"
@@ -583,7 +626,7 @@ export default function ItemEdit() {
             {id && form.existing && !hasChanges ? (
               <View style={styles.action}>
                 <AppButton
-                  title={deleting ? "Deleting…" : "Delete"}
+                  title={deleting ? "Deleting" : "Delete"}
                   accessibilityLabel="Delete item"
                   variant="danger"
                   disabled={
@@ -602,3 +645,56 @@ export default function ItemEdit() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { backgroundColor: colors.background, flex: 1 },
+  content: {
+    paddingHorizontal: 24,
+    paddingTop: 18,
+    paddingBottom: 40,
+    gap: 18,
+  },
+  actions: {
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 16,
+  },
+  action: { flex: 1 },
+  row: { flexDirection: "row", alignItems: "center", gap: 12 },
+  between: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  heading: { fontSize: 30, lineHeight: 38, letterSpacing: -0.8 },
+  subheading: { color: colors.muted, lineHeight: 22 },
+  section: { gap: 8 },
+  label: { fontSize: 14 },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: colors.foreground,
+    fontFamily: "DMSans_400Regular",
+    fontSize: 16,
+  },
+  multiline: { minHeight: 100, textAlignVertical: "top" },
+  card: {
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 16,
+    gap: 8,
+  },
+  cardTitle: { fontSize: 18 },
+  link: { color: colors.accent },
+  danger: { color: colors.danger },
+  photo: { width: 96, height: 96, borderRadius: 10 },
+  error: { color: colors.danger },
+  back: { paddingVertical: 10, alignSelf: "flex-start" },
+});

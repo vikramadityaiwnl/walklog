@@ -15,13 +15,13 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Avatar } from "../../../components/avatar";
 import { AppHeader } from "../../../components/app-header";
 import { AppText } from "../../../components/app-text";
 import { EmptyState } from "../../../components/empty-state";
-import { walkthroughStyles as styles } from "../../../components/walkthrough-styles";
+import { Overlay } from "../../../components/overlay";
 import type { Walkthrough } from "../../../models/walkthrough";
-import { createWalkthroughStorage } from "../../../services/walkthrough-storage";
+import { getBannerColor } from "../../../utils/banner-colors";
+import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
 import { useAuthStore } from "../../../store/auth-store";
 import { colors } from "../../../theme";
 
@@ -80,9 +80,7 @@ export default function Walkthroughs() {
       <AppHeader />
 
       <View style={{ flex: 1 }}>
-        <ScrollView
-          contentContainerStyle={[styles.content, screenStyles.content]}
-        >
+        <ScrollView contentContainerStyle={[styles.content, styles.content]}>
           <View style={styles.section}>
             <AppText variant="title" style={styles.heading}>
               Walkthroughs
@@ -94,7 +92,7 @@ export default function Walkthroughs() {
           </View>
 
           {list.status === "loading" ? (
-            <View style={screenStyles.loading}>
+            <View style={styles.loading}>
               <ActivityIndicator
                 color={colors.accent}
                 accessibilityLabel="Loading walkthroughs"
@@ -105,7 +103,7 @@ export default function Walkthroughs() {
           {list.status === "error" ? (
             <EmptyState
               icon={
-                <View style={screenStyles.errorIcon}>
+                <View style={styles.errorIcon}>
                   <ExclamationTriangleIcon size={30} color={colors.danger} />
                 </View>
               }
@@ -137,38 +135,47 @@ export default function Walkthroughs() {
                       params: { id: walkthrough.id },
                     })
                   }
-                  style={styles.card}
+                  style={[
+                    styles.card,
+                    {
+                      backgroundColor: getBannerColor(
+                        walkthrough.id,
+                        walkthrough.bannerColor,
+                      ),
+                    },
+                  ]}
                 >
-                  <View style={styles.row}>
-                    {walkthrough.bannerPhotoUri ? (
-                      <Image
-                        source={{ uri: walkthrough.bannerPhotoUri }}
-                        style={screenStyles.bannerThumbnail}
-                      />
-                    ) : (
-                      <Avatar name={walkthrough.title} size="small" />
-                    )}
+                  {walkthrough.bannerPhotoUri ? (
+                    <Image
+                      source={{ uri: walkthrough.bannerPhotoUri }}
+                      style={StyleSheet.absoluteFill}
+                      resizeMode="cover"
+                    />
+                  ) : null}
 
-                    <View style={{ flex: 1, gap: 5 }}>
-                      <AppText weight="bold" style={styles.cardTitle}>
+                  <Overlay />
+
+                  <View style={styles.cardContent}>
+                    <View style={styles.cardText}>
+                      <AppText variant="title" style={styles.cardTitle}>
                         {walkthrough.title}
                       </AppText>
 
                       {walkthrough.clientName || walkthrough.address ? (
-                        <AppText style={styles.subheading}>
+                        <AppText style={styles.cardSubtitle}>
                           {[walkthrough.clientName, walkthrough.address]
                             .filter(Boolean)
                             .join(" · ")}
                         </AppText>
                       ) : null}
 
-                      <AppText style={styles.subheading}>
+                      <AppText style={styles.cardCount}>
                         {list.counts[walkthrough.id]}{" "}
                         {list.counts[walkthrough.id] === 1 ? "item" : "items"}
                       </AppText>
                     </View>
 
-                    <ChevronRightIcon size={20} color={colors.muted} />
+                    <ChevronRightIcon size={22} color={colors.onAccent} />
                   </View>
                 </Pressable>
               ))
@@ -180,7 +187,7 @@ export default function Walkthroughs() {
             accessibilityRole="button"
             accessibilityLabel="New walkthrough"
             onPress={() => router.push("/walkthrough/edit")}
-            style={screenStyles.floatingAction}
+            style={styles.floatingAction}
           >
             <PlusIcon size={28} color={colors.onAccent} />
           </Pressable>
@@ -190,9 +197,40 @@ export default function Walkthroughs() {
   );
 }
 
-const screenStyles = StyleSheet.create({
-  content: { flexGrow: 1, paddingBottom: 100 },
-  bannerThumbnail: { width: 48, height: 48, borderRadius: 12 },
+const styles = StyleSheet.create({
+  container: { backgroundColor: colors.background, flex: 1 },
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 18,
+    paddingBottom: 100,
+    gap: 18,
+  },
+  section: { gap: 8 },
+  heading: { fontSize: 30, lineHeight: 38, letterSpacing: -0.8 },
+  subheading: { color: colors.muted, lineHeight: 22 },
+  card: {
+    minHeight: 180,
+    justifyContent: "flex-end",
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  cardContent: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 12,
+    padding: 18,
+  },
+  cardText: { flex: 1, gap: 4 },
+  cardTitle: { color: colors.onAccent, fontSize: 21, lineHeight: 28 },
+  cardSubtitle: { color: colors.onAccent, lineHeight: 20 },
+  cardCount: {
+    color: colors.onAccent,
+    opacity: 0.85,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 4,
+  },
   floatingAction: {
     position: "absolute",
     right: 24,

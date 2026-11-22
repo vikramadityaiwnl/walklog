@@ -3,7 +3,7 @@ import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { AppButton } from "../components/app-button";
 import { AppText } from "../components/app-text";
-import { signInWithGoogle } from "../services/google-sign-in";
+import { signInWithGoogle } from "../services/firebase/google-sign-in";
 import { useAuthStore } from "../store/auth-store";
 import { colors } from "../theme";
 

@@ -5,7 +5,7 @@ interface Props<T extends string> {
   label: string;
   options: readonly T[];
   selection:
-    | { mode: "single"; value: T; onChange: (value: T) => void }
+    | { mode: "single"; value: T | undefined; onChange: (value: T) => void }
     | { mode: "multiple"; value: readonly T[]; onChange: (value: T[]) => void };
 }
 

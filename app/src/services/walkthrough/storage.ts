@@ -1,5 +1,5 @@
 import * as SQLite from "expo-sqlite";
-import type { PunchItem, Walkthrough } from "../models/walkthrough";
+import type { PunchItem, Walkthrough } from "../../models/walkthrough";
 
 const DATABASE_NAME = "walklog.db";
 let databasePromise: Promise<SQLite.SQLiteDatabase> | undefined;
@@ -149,6 +149,56 @@ export function createWalkthroughStorage(ownerId: string) {
         item.createdAt,
         JSON.stringify(item),
       );
+    },
+
+    async createItems(items: PunchItem[]): Promise<void> {
+      for (const item of items) {
+        requireId(item.id, "Item ID");
+        requireId(item.walkthroughId, "Walkthrough ID");
+      }
+
+      const database = await getDatabase();
+      await database.withExclusiveTransactionAsync(async (transaction) => {
+        for (const item of items) {
+          await transaction.runAsync(
+            "INSERT INTO punch_items (owner_id, id, walkthrough_id, created_at, data) VALUES (?, ?, ?, ?, ?)",
+            ownerId,
+            item.id,
+            item.walkthroughId,
+            item.createdAt,
+            JSON.stringify(item),
+          );
+        }
+      });
+    },
+
+    async updateItems(items: PunchItem[]): Promise<void> {
+      const database = await getDatabase();
+      await database.withExclusiveTransactionAsync(async (transaction) => {
+        for (const item of items) {
+          requireId(item.id, "Item ID");
+          await transaction.runAsync(
+            "UPDATE punch_items SET data = ? WHERE owner_id = ? AND id = ?",
+            JSON.stringify(item),
+            ownerId,
+            item.id,
+          );
+        }
+      });
+    },
+
+    async deleteItems(ids: string[]): Promise<void> {
+      const database = await getDatabase();
+      await database.withExclusiveTransactionAsync(async (transaction) => {
+        for (const id of ids) {
+          requireId(id, "Item ID");
+          await transaction.runAsync(
+            "DELETE FROM punch_items WHERE owner_id = ? AND id = ?",
+            ownerId,
+            id,
+          );
+        }
+      });
     },
 
     async deleteItem(id: string): Promise<void> {
