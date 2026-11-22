@@ -39,13 +39,15 @@ export async function extractItems(
     items.push(...(await extractChunk(chunk, mode)));
   if (!items.length)
     throw new Error(
-      "No issues were identified. Edit the note or add an item manually.",
+      "We couldn’t find any actionable issues in your notes. Try describing what needs attention.",
     );
 
   return items;
 }
 
-const prompt = `Extract every distinct site issue as a JSON array of objects with issueSummary, location, trade, priority, missingInfoHint. Trade can be any appropriate short name. Priority must be High, Medium, Low, or null. Use null for unknown fields; never invent details. Return JSON only.`;
+const prompt = `Identify only distinct, actionable property or site issues explicitly described in the input. An issue must describe a real defect, damage, unfinished work, or a specific repair or inspection that is needed. Ignore greetings, names, introductions, general conversation, and statements that do not describe an issue. Do not invent problems, access errors, tasks, locations, or other details. Do not split one issue into multiple items. If there are no actionable issues, return [].
+
+Return only a JSON array. Each object must contain issueSummary, location, trade, priority, missingInfoHint, and sourceExcerpt. sourceExcerpt must be an exact short quote from the input that explicitly describes the issue. Trade can be any appropriate short name. Priority must be High, Medium, Low, or null. Use null for unknown fields.`;
 
 export async function extractAudio(
   uri: string,
@@ -68,10 +70,27 @@ async function extractChunk(
     mode,
   );
 
-  return parseItems(result.text);
+  return parseItems(result.text, note);
 }
 
-function parseItems(text: string): ExtractedItem[] {
+function normalizeEvidence(text: string): string {
+  return text
+    .toLocaleLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+function capitalizeWords(text: string): string {
+  return text
+    .trim()
+    .replace(
+      /(^|[\s-])(\p{L})/gu,
+      (_, separator: string, letter: string) =>
+        `${separator}${letter.toLocaleUpperCase()}`,
+    );
+}
+
+function parseItems(text: string, note?: string): ExtractedItem[] {
   const json = text
     .replace(/^```(?:json)?\s*/i, "")
     .replace(/\s*```$/, "")
@@ -95,13 +114,24 @@ function parseItems(text: string): ExtractedItem[] {
     if (typeof item.issueSummary !== "string" || !item.issueSummary.trim())
       return [];
 
+    if (note !== undefined) {
+      const excerpt =
+        typeof item.sourceExcerpt === "string"
+          ? normalizeEvidence(item.sourceExcerpt)
+          : "";
+      if (!excerpt || !normalizeEvidence(note).includes(excerpt)) return [];
+    }
+
     return [
       {
         issueSummary: item.issueSummary.trim(),
-        location: typeof item.location === "string" ? item.location.trim() : "",
+        location:
+          typeof item.location === "string"
+            ? capitalizeWords(item.location)
+            : "",
         trade:
           typeof item.trade === "string" && item.trade.trim()
-            ? item.trade.trim()
+            ? capitalizeWords(item.trade)
             : undefined,
         priority: priorities.find((priority) => priority === item.priority),
         missingInfoHint:

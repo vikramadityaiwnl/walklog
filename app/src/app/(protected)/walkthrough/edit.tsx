@@ -261,7 +261,7 @@ export default function WalkthroughEdit() {
           </View>
 
           {form.status === "loading" ? (
-            <AppText>Loading…</AppText>
+            <AppText>Loading walkthrough</AppText>
           ) : (
             <>
               <View style={styles.section}>
@@ -357,7 +357,7 @@ export default function WalkthroughEdit() {
                 <AppButton
                   title={
                     form.status === "saving"
-                      ? "Saving…"
+                      ? "Saving"
                       : id
                         ? "Save changes"
                         : "Create walkthrough"
@@ -377,7 +377,7 @@ export default function WalkthroughEdit() {
               <View style={styles.action}>
                 <AppButton
                   variant="danger"
-                  title={deleting ? "Deleting…" : "Delete"}
+                  title={deleting ? "Deleting" : "Delete"}
                   accessibilityLabel="Delete walkthrough"
                   disabled={banner.busy || deleting || form.status === "saving"}
                   onPress={confirmDelete}

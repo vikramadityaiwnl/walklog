@@ -85,6 +85,7 @@ export function InferenceSelector(props: Props) {
 
 const styles = StyleSheet.create({
   group: {
+    alignSelf: "flex-start",
     flexDirection: "row",
     padding: 3,
     borderRadius: 12,

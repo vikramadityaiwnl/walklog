@@ -117,7 +117,7 @@ export default function AiPlayground() {
 
       <AppText>
         {availability.status === "checking"
-          ? "Checking…"
+          ? "Checking"
           : availability.status === "error"
             ? availability.message
             : availability.value.message}
@@ -135,7 +135,7 @@ export default function AiPlayground() {
         <AppButton
           title={
             operation.status === "downloading"
-              ? "Downloading…"
+              ? "Downloading"
               : "Download model"
           }
           disabled={busy}
@@ -186,7 +186,7 @@ export default function AiPlayground() {
       />
 
       <AppButton
-        title={operation.status === "generating" ? "Generating…" : "Generate"}
+        title={operation.status === "generating" ? "Generating" : "Generate"}
         disabled={busy || !request.prompt.trim()}
         onPress={() => void handleGenerate()}
       />

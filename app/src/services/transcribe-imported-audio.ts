@@ -1,4 +1,5 @@
 import type { WhisperContext } from "whisper.rn";
+import { cleanTranscript } from "./transcript";
 
 export async function transcribeImportedAudio(
   context: WhisperContext,
@@ -36,13 +37,14 @@ export async function transcribeImportedAudio(
       pcm[index] = Math.round(sample < 0 ? sample * 32768 : sample * 32767);
     }
     const result = await context.transcribeData(pcm.buffer, {
-      language: "auto",
+      language: "en",
       prompt: parts.join(" ").slice(-300),
     }).promise;
     if (result.isAborted)
       throw new Error("Transcription stopped. Please try again.");
-    if (result.result.trim()) parts.push(result.result.trim());
+    const text = cleanTranscript(result.result);
+    if (text) parts.push(text);
   }
 
-  return parts.join(" ");
+  return cleanTranscript(parts.join(" "));
 }

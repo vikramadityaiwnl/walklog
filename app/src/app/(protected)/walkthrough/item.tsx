@@ -415,7 +415,7 @@ export default function ItemEdit() {
           </View>
 
           {form.status === "loading" ? (
-            <AppText>Loading…</AppText>
+            <AppText>Loading item</AppText>
           ) : (
             <>
               <View style={styles.section}>
@@ -439,7 +439,9 @@ export default function ItemEdit() {
               </View>
 
               <AppButton
-                title={suggesting ? "Suggesting…" : "Suggest details with AI"}
+                title={
+                  suggesting ? "Suggesting details" : "Suggest details with AI"
+                }
                 variant="secondary"
                 disabled={
                   !draft.description.trim() ||
@@ -602,7 +604,7 @@ export default function ItemEdit() {
                 <AppButton
                   title={
                     form.status === "saving"
-                      ? "Saving…"
+                      ? "Saving"
                       : id
                         ? "Save changes"
                         : "Add item"
@@ -622,7 +624,7 @@ export default function ItemEdit() {
             {id && form.existing && !hasChanges ? (
               <View style={styles.action}>
                 <AppButton
-                  title={deleting ? "Deleting…" : "Delete"}
+                  title={deleting ? "Deleting" : "Delete"}
                   accessibilityLabel="Delete item"
                   variant="danger"
                   disabled={
