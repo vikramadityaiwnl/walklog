@@ -2,9 +2,10 @@ import { useState } from "react";
 import {
   BellIcon,
   CloudIcon,
+  CloudArrowUpIcon,
   PaintBrushIcon,
 } from "react-native-heroicons/outline";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppButton } from "../../../components/app-button";
 import { useDialogStore } from "../../../store/dialog-store";
@@ -13,6 +14,8 @@ import { AppText } from "../../../components/app-text";
 import { Avatar } from "../../../components/avatar";
 import { signOutUser } from "../../../services/firebase/google-sign-in";
 import { useAuthStore } from "../../../store/auth-store";
+import { useFirestoreStore } from "../../../store/firestore-store";
+import { useMediaSyncStore } from "../../../store/media-sync-store";
 import { colors } from "../../../theme";
 
 type SignOutState =
@@ -40,12 +43,28 @@ const preferences = [
 
 export default function Profile() {
   const auth = useAuthStore((state) => state.auth);
+  const pendingChanges = useFirestoreStore((state) => state.pending);
+  const mediaStatus = useMediaSyncStore((state) => state.status);
 
   const [signingOut, setSigningOut] = useState<SignOutState>({
     status: "idle",
   });
 
   const showDialog = useDialogStore((state) => state.showDialog);
+
+  const showSync = pendingChanges || mediaStatus !== "idle";
+  const syncError = mediaStatus === "error";
+  const syncWaiting = mediaStatus === "waiting";
+  const syncTitle = syncError
+    ? "Sync paused"
+    : syncWaiting
+      ? "Waiting to sync"
+      : "Syncing to cloud";
+  const syncDescription = syncError
+    ? "Some photos couldn’t sync. We’ll retry automatically."
+    : syncWaiting
+      ? "Photos will sync when the device that captured them is online."
+      : "Your local changes are waiting to reach the cloud.";
 
   function confirmSignOut() {
     showDialog("Sign out?", "You can sign back in to access your account.", [
@@ -102,6 +121,26 @@ export default function Profile() {
           </View>
         </View>
 
+        {showSync ? (
+          <View accessibilityRole="summary" style={styles.syncCard}>
+            <View style={styles.syncIcon}>
+              <CloudArrowUpIcon size={22} color={colors.accent} />
+            </View>
+
+            <View style={styles.syncText}>
+              <AppText weight="semibold">{syncTitle}</AppText>
+
+              <AppText style={styles.syncDescription}>
+                {syncDescription}
+              </AppText>
+            </View>
+
+            {!syncError && !syncWaiting ? (
+              <ActivityIndicator color={colors.accent} size="small" />
+            ) : null}
+          </View>
+        ) : null}
+
         <View style={styles.sectionHeading}>
           <AppText weight="bold" style={styles.sectionTitle}>
             Preferences
@@ -156,6 +195,25 @@ const styles = StyleSheet.create({
   identityText: { flex: 1, gap: 4 },
   name: { fontSize: 20, lineHeight: 27 },
   email: { color: colors.muted, fontSize: 14 },
+  syncCard: {
+    alignItems: "center",
+    backgroundColor: colors.accentFaint,
+    borderRadius: 14,
+    flexDirection: "row",
+    gap: 14,
+    marginTop: 24,
+    padding: 16,
+  },
+  syncIcon: {
+    alignItems: "center",
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    height: 42,
+    justifyContent: "center",
+    width: 42,
+  },
+  syncText: { flex: 1, gap: 4 },
+  syncDescription: { color: colors.muted, fontSize: 13, lineHeight: 19 },
   sectionHeading: {
     alignItems: "center",
     flexDirection: "row",

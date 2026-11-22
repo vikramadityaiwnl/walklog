@@ -10,11 +10,18 @@ import { useFirestoreStore } from "../../store/firestore-store";
 
 export function observeFirestore(ownerId: string): () => void {
   const database = getFirestore();
+  const pendingCollections = new Map<string, boolean>();
   const unsubscribers = ["projects", "walkthroughs", "items"].map((name) =>
     onSnapshot(
       collection(database, "users", ownerId, name),
-      () => {
-        useFirestoreStore.getState().notifyChange();
+      { includeMetadataChanges: true },
+      (snapshot) => {
+        pendingCollections.set(name, snapshot.metadata.hasPendingWrites);
+        useFirestoreStore
+          .getState()
+          .setPending([...pendingCollections.values()].some(Boolean));
+        if (snapshot.docChanges().length)
+          useFirestoreStore.getState().notifyChange();
       },
       () => {
         useDialogStore
@@ -65,5 +72,6 @@ export function observeFirestore(ownerId: string): () => void {
   return () => {
     clearInterval(timer);
     for (const unsubscribe of unsubscribers) unsubscribe();
+    useFirestoreStore.getState().setPending(false);
   };
 }
