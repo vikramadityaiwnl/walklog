@@ -10,6 +10,7 @@
 - Use short, lowercase, hyphenated feature branch names. Follow existing names such as `setup` and `firebase-ai`.
 - Use Conventional Commits with concise, imperative subjects. An optional scope goes in parentheses after the type, as in `feat(ai): add Firebase hybrid AI generation`. An unscoped subject such as `fix: pin Firebase BoM for Expo Kotlin compatibility` is also valid. Make focused commits that can be reviewed independently. Preserve unrelated working-tree and staged changes.
 - When asked to create a pull request, include the complete set of changes made for the branch. Review the full diff and commit history against the target branch so the PR title, summary, and verification cover the full scope. Target `main` by default and use the target branch the user names when they specify one.
+- Write pull request titles as concise, descriptive summaries of the change. Do not use Conventional Commit prefixes or copy a commit subject as the PR title.
 - After required checks and reviews pass, merge the PR into its target unless the user asks to leave it open or requests a draft. Follow branch protection and report any check or approval that prevents the merge.
 
 ## Interface design
