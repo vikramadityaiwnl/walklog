@@ -21,7 +21,8 @@ import { Overlay } from "../../../components/overlay";
 import type { Project, Walkthrough } from "../../../models/walkthrough";
 import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
 import { useAuthStore } from "../../../store/auth-store";
-import { getBannerColor } from "../../../utils/banner-colors";
+import { bannerColor } from "../../../utils/banner-illustrations";
+import { BannerIllustration } from "../../../components/banner-illustration";
 import { colors } from "../../../theme";
 
 type Screen =
@@ -99,10 +100,7 @@ export default function Projects() {
                     style={[
                       styles.card,
                       {
-                        backgroundColor: getBannerColor(
-                          project.id,
-                          project.bannerColor,
-                        ),
+                        backgroundColor: bannerColor,
                       },
                     ]}
                   >
@@ -111,6 +109,11 @@ export default function Projects() {
                         source={{ uri: project.bannerPhotoUri }}
                         style={StyleSheet.absoluteFill}
                         resizeMode="cover"
+                      />
+                    ) : null}
+                    {!project.bannerPhotoUri ? (
+                      <BannerIllustration
+                        illustration={project.bannerIllustration}
                       />
                     ) : null}
                     <Overlay />

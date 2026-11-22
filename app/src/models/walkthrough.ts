@@ -10,16 +10,15 @@ export interface Project {
   id: string;
   name: string;
   createdAt: number;
-  bannerColor?: string;
+  bannerIllustration: number;
   bannerPhotoUri?: string;
 }
 
 export interface Walkthrough {
   id: string;
   title: string;
+  bannerIllustration: number;
   projectId?: string;
-  lastViewedAt?: number;
-  bannerColor?: string;
   bannerPhotoUri?: string;
   clientName?: string;
   address?: string;

@@ -18,7 +18,7 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { ScreenBanner } from "../../../components/screen-banner";
-import { getBannerColor } from "../../../utils/banner-colors";
+import { bannerColor } from "../../../utils/banner-illustrations";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Badge } from "../../../components/badge";
 import { EmptyState } from "../../../components/empty-state";
@@ -239,11 +239,9 @@ export default function WalkthroughDetail() {
                   .filter(Boolean)
                   .join(" · ") || undefined
               }
-              color={getBannerColor(
-                screen.walkthrough.id,
-                screen.walkthrough.bannerColor,
-              )}
+              color={bannerColor}
               imageUri={screen.walkthrough.bannerPhotoUri}
+              bannerIllustration={screen.walkthrough.bannerIllustration}
               action="settings"
               onAction={() =>
                 router.push({

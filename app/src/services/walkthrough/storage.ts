@@ -1,6 +1,7 @@
 import * as SQLite from "expo-sqlite";
 import * as FileSystem from "expo-file-system/legacy";
 import type { Project, PunchItem, Walkthrough } from "../../models/walkthrough";
+import { getBannerIllustration } from "../../utils/banner-illustrations";
 
 const DATABASE_NAME = "walklog.db";
 
@@ -19,6 +20,10 @@ function readWalkthrough(data: string): Walkthrough {
 
   return {
     ...walkthrough,
+    bannerIllustration: getBannerIllustration(
+      walkthrough.id,
+      walkthrough.bannerIllustration,
+    ),
     bannerPhotoUri: localPhotoUri(walkthrough.bannerPhotoUri),
   };
 }
@@ -147,6 +152,10 @@ export function createWalkthroughStorage(ownerId: string) {
 
         return {
           ...project,
+          bannerIllustration: getBannerIllustration(
+            project.id,
+            project.bannerIllustration,
+          ),
           bannerPhotoUri: localPhotoUri(project.bannerPhotoUri),
         };
       });

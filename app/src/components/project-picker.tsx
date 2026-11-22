@@ -14,6 +14,7 @@ import { AppButton } from "./app-button";
 import { colors } from "../theme";
 import { createWalkthroughStorage } from "../services/walkthrough/storage";
 import type { Project } from "../models/walkthrough";
+import { randomBannerIllustration } from "../utils/banner-illustrations";
 
 interface Props {
   visible: boolean;
@@ -22,6 +23,7 @@ interface Props {
   onClose: () => void;
   onMoved: () => void;
   walkthroughIds: string[];
+  canRemoveFromProject: boolean;
 }
 
 export function ProjectPicker(props: Props) {
@@ -42,6 +44,7 @@ export function ProjectPicker(props: Props) {
           id: target,
           name,
           createdAt: Date.now(),
+          bannerIllustration: randomBannerIllustration(),
         });
       }
       await storage.moveWalkthroughs(props.walkthroughIds, target);
@@ -117,14 +120,16 @@ export function ProjectPicker(props: Props) {
               </AppText>
             </Pressable>
           )}
-          <Pressable
-            accessibilityRole="button"
-            disabled={state.status === "saving"}
-            onPress={() => void move(null)}
-            style={styles.option}
-          >
-            <AppText>Remove from project</AppText>
-          </Pressable>
+          {props.canRemoveFromProject ? (
+            <Pressable
+              accessibilityRole="button"
+              disabled={state.status === "saving"}
+              onPress={() => void move(null)}
+              style={styles.option}
+            >
+              <AppText>Remove from project</AppText>
+            </Pressable>
+          ) : null}
           {state.message ? (
             <AppText style={styles.error}>{state.message}</AppText>
           ) : null}

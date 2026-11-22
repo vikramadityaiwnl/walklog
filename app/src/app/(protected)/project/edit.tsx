@@ -19,8 +19,8 @@ import { createWalkthroughStorage } from "../../../services/walkthrough/storage"
 import { deleteItemPhotos } from "../../../services/walkthrough/photos";
 import { useAuthStore } from "../../../store/auth-store";
 import { useDialogStore } from "../../../store/dialog-store";
-import { randomBannerColor } from "../../../utils/banner-colors";
 import { colors } from "../../../theme";
+import { randomBannerIllustration } from "../../../utils/banner-illustrations";
 
 type Form = {
   status: "loading" | "ready" | "saving" | "error";
@@ -97,8 +97,9 @@ export default function ProjectEdit() {
         ...form.project,
         id: form.project?.id ?? Crypto.randomUUID(),
         name: form.name.trim(),
+        bannerIllustration:
+          form.project?.bannerIllustration ?? randomBannerIllustration(),
         createdAt: form.project?.createdAt ?? Date.now(),
-        bannerColor: form.project?.bannerColor ?? randomBannerColor(),
         bannerPhotoUri: banner.uri,
       };
       const storage = createWalkthroughStorage(ownerId);
@@ -203,7 +204,7 @@ export default function ProjectEdit() {
                   style={styles.input}
                 />
               </View>
-              {!id || form.project ? (
+              {id && form.project ? (
                 <BannerPicker
                   uri={banner.uri}
                   busy={banner.busy || deleting || form.status === "saving"}

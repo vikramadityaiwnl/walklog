@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react";
-import { router, useFocusEffect } from "expo-router";
+import { useCallback, useLayoutEffect, useState } from "react";
+import { router, useFocusEffect, useNavigation } from "expo-router";
 import {
   CheckIcon,
   ChevronRightIcon,
@@ -10,6 +10,7 @@ import {
 import {
   ActivityIndicator,
   Image,
+  LayoutAnimation,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -22,7 +23,8 @@ import { EmptyState } from "../../../components/empty-state";
 import { Overlay } from "../../../components/overlay";
 import { ProjectPicker } from "../../../components/project-picker";
 import type { Project, Walkthrough } from "../../../models/walkthrough";
-import { getBannerColor } from "../../../utils/banner-colors";
+import { bannerColor } from "../../../utils/banner-illustrations";
+import { BannerIllustration } from "../../../components/banner-illustration";
 import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
 import { useAuthStore } from "../../../store/auth-store";
 import { colors } from "../../../theme";
@@ -37,6 +39,7 @@ type ListState =
     };
 
 export default function Walkthroughs() {
+  const navigation = useNavigation();
   const auth = useAuthStore((state) => state.auth);
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
 
@@ -44,6 +47,19 @@ export default function Walkthroughs() {
   const [selected, setSelected] = useState<string[] | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [revision, setRevision] = useState(0);
+
+  useLayoutEffect(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    navigation.setOptions({
+      tabBarStyle:
+        selected !== null
+          ? { display: "none" }
+          : {
+              backgroundColor: colors.background,
+              borderTopColor: colors.border,
+            },
+    });
+  }, [navigation, selected !== null]);
 
   useFocusEffect(
     useCallback(() => {
@@ -119,10 +135,7 @@ export default function Walkthroughs() {
         style={[
           styles.card,
           {
-            backgroundColor: getBannerColor(
-              walkthrough.id,
-              walkthrough.bannerColor,
-            ),
+            backgroundColor: bannerColor,
           },
         ]}
       >
@@ -132,6 +145,9 @@ export default function Walkthroughs() {
             style={StyleSheet.absoluteFill}
             resizeMode="cover"
           />
+        ) : null}
+        {!walkthrough.bannerPhotoUri ? (
+          <BannerIllustration illustration={walkthrough.bannerIllustration} />
         ) : null}
         <Overlay />
         <View style={styles.cardContent}>
@@ -181,7 +197,10 @@ export default function Walkthroughs() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView
+      style={styles.container}
+      edges={selected !== null ? ["top", "bottom"] : ["top"]}
+    >
       <AppHeader />
       <View style={styles.main}>
         <ScrollView contentContainerStyle={styles.content}>
@@ -283,6 +302,9 @@ export default function Walkthroughs() {
           ownerId={ownerId}
           projects={list.projects}
           walkthroughIds={selected ?? []}
+          canRemoveFromProject={list.walkthroughs.some(
+            (entry) => selected?.includes(entry.id) && !!entry.projectId,
+          )}
           onClose={() => setPickerOpen(false)}
           onMoved={() => {
             setPickerOpen(false);

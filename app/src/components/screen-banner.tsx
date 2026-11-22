@@ -11,6 +11,7 @@ import {
 } from "react-native-heroicons/outline";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "./app-text";
+import { BannerIllustration } from "./banner-illustration";
 import { Overlay } from "./overlay";
 import { colors } from "../theme";
 
@@ -19,6 +20,7 @@ interface Props {
   subtitle?: string;
   color: string;
   imageUri?: string;
+  bannerIllustration?: number;
   action: "settings" | "edit";
   onAction: () => void;
   disabled?: boolean;
@@ -46,6 +48,10 @@ export function ScreenBanner(props: Props) {
           style={StyleSheet.absoluteFill}
           resizeMode="cover"
         />
+      ) : null}
+
+      {!props.imageUri && props.bannerIllustration !== undefined ? (
+        <BannerIllustration illustration={props.bannerIllustration} />
       ) : null}
 
       <Overlay />

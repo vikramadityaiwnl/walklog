@@ -16,7 +16,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText } from "../../../components/app-text";
 import { ScreenBanner } from "../../../components/screen-banner";
 import { Overlay } from "../../../components/overlay";
-import { getBannerColor } from "../../../utils/banner-colors";
+import { bannerColor } from "../../../utils/banner-illustrations";
+import { BannerIllustration } from "../../../components/banner-illustration";
 import { EmptyState } from "../../../components/empty-state";
 import type { Project, Walkthrough } from "../../../models/walkthrough";
 import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
@@ -95,11 +96,9 @@ export default function ProjectDetail() {
             <ScreenBanner
               title={screen.project.name}
               subtitle={`${screen.walkthroughs.length} ${screen.walkthroughs.length === 1 ? "walkthrough" : "walkthroughs"}`}
-              color={getBannerColor(
-                screen.project.id,
-                screen.project.bannerColor,
-              )}
+              color={bannerColor}
               imageUri={screen.project.bannerPhotoUri}
+              bannerIllustration={screen.project.bannerIllustration}
               action="settings"
               actionLabel="Project settings"
               onAction={() =>
@@ -130,10 +129,7 @@ export default function ProjectDetail() {
                     style={[
                       styles.card,
                       {
-                        backgroundColor: getBannerColor(
-                          walkthrough.id,
-                          walkthrough.bannerColor,
-                        ),
+                        backgroundColor: bannerColor,
                       },
                     ]}
                   >
@@ -142,6 +138,11 @@ export default function ProjectDetail() {
                         source={{ uri: walkthrough.bannerPhotoUri }}
                         style={StyleSheet.absoluteFill}
                         resizeMode="cover"
+                      />
+                    ) : null}
+                    {!walkthrough.bannerPhotoUri ? (
+                      <BannerIllustration
+                        illustration={walkthrough.bannerIllustration}
                       />
                     ) : null}
                     <Overlay />

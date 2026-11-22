@@ -15,15 +15,12 @@ import { AppButton } from "../../../components/app-button";
 import { useDialogStore } from "../../../store/dialog-store";
 import { BannerPicker } from "../../../components/banner-picker";
 import { useBannerDraft } from "../../../hooks/use-banner-draft";
-import {
-  getBannerColor,
-  randomBannerColor,
-} from "../../../utils/banner-colors";
 import { AppText } from "../../../components/app-text";
 import type { Walkthrough } from "../../../models/walkthrough";
 import { deleteItemPhotos } from "../../../services/walkthrough/photos";
 import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
 import { useAuthStore } from "../../../store/auth-store";
+import { randomBannerIllustration } from "../../../utils/banner-illustrations";
 
 interface WalkthroughDraft {
   title: string;
@@ -163,9 +160,8 @@ export default function WalkthroughEdit() {
         ...existing,
         id: existing?.id ?? Crypto.randomUUID(),
         title: draft.title.trim(),
-        bannerColor: existing
-          ? getBannerColor(existing.id, existing.bannerColor)
-          : randomBannerColor(),
+        bannerIllustration:
+          existing?.bannerIllustration ?? randomBannerIllustration(),
         bannerPhotoUri: banner.uri,
         clientName: draft.clientName.trim() || undefined,
         address: draft.address.trim() || undefined,
