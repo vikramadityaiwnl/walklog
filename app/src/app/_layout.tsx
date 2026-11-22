@@ -81,8 +81,6 @@ export default function RootLayout() {
 
             <Stack.Screen name="(protected)/ai-playground" />
 
-            <Stack.Screen name="(protected)/reminders" />
-
             <Stack.Screen
               name="(protected)/walkthrough/[id]"
               options={{ statusBarStyle: "light" }}

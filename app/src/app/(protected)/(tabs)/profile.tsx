@@ -23,7 +23,7 @@ type SignOutState =
 const preferences = [
   {
     title: "Notifications",
-    description: "Updates and reminders",
+    description: "Manage updates",
     icon: BellIcon,
   },
   {

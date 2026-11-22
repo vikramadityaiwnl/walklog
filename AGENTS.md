@@ -14,6 +14,8 @@
 
 ## Interface design
 
+- Keep interfaces minimal and contextual: show only the information and actions needed for the current state, and reveal additional controls as they become relevant.
+
 - Group related titles and descriptions closely, and separate them from subsequent fields or sections. Use clear text and spacing hierarchy to communicate which elements belong together.
 - Keep Back buttons out of nested screens; use the platform’s back navigation. Place bottom actions in one row, with equal widths when there are two.
 

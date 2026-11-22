@@ -1,9 +1,6 @@
 import { Image } from "expo-image";
-import { router } from "expo-router";
-import { BellIcon } from "react-native-heroicons/outline";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { InferenceSelector } from "./inference-selector";
-import { colors } from "../theme";
 
 export function AppHeader() {
   return (
@@ -15,19 +12,7 @@ export function AppHeader() {
         accessibilityLabel="walklog"
       />
 
-      <View style={styles.controls}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Reminders"
-          hitSlop={8}
-          onPress={() => router.push("/(protected)/reminders")}
-          style={styles.action}
-        >
-          <BellIcon size={24} color={colors.foreground} />
-        </Pressable>
-
-        <InferenceSelector />
-      </View>
+      <InferenceSelector />
     </View>
   );
 }
@@ -41,11 +26,4 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   logo: { height: 44, width: 44 },
-  controls: { flexDirection: "row", alignItems: "center", gap: 8 },
-  action: {
-    alignItems: "center",
-    height: 44,
-    justifyContent: "center",
-    width: 44,
-  },
 });
