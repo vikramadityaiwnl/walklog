@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
 import { ScrollView, StyleSheet, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { File } from "expo-file-system";
 import * as Sharing from "expo-sharing";
@@ -17,6 +18,7 @@ import { createWalkthroughStorage } from "../../../services/walkthrough/storage"
 import { generateReport } from "../../../services/report/generate-report";
 import type { PunchItem, Walkthrough } from "../../../models/walkthrough";
 import { colors } from "../../../theme";
+import { formFadeIn, formFadeOut } from "../../../utils/form-motion";
 
 type Screen =
   | { status: "loading" }
@@ -155,7 +157,7 @@ export default function WalkthroughReport() {
           </AppText>
         </View>
 
-        <View style={styles.report}>
+        <Animated.View entering={formFadeIn} style={styles.report}>
           <View style={styles.reportIcon}>
             <DocumentTextIcon size={24} color={colors.accent} />
           </View>
@@ -171,7 +173,7 @@ export default function WalkthroughReport() {
                 .join(" · ") || "Walkthrough report"}
             </AppText>
           </View>
-        </View>
+        </Animated.View>
 
         <View style={styles.stats}>
           <View style={styles.stat}>
@@ -200,9 +202,11 @@ export default function WalkthroughReport() {
         </AppText>
 
         {screen.message ? (
-          <AppText accessibilityRole="alert" style={styles.error}>
-            {screen.message}
-          </AppText>
+          <Animated.View entering={formFadeIn} exiting={formFadeOut}>
+            <AppText accessibilityRole="alert" style={styles.error}>
+              {screen.message}
+            </AppText>
+          </Animated.View>
         ) : null}
       </ScrollView>
 

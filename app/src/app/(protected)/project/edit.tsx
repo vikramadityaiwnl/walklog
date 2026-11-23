@@ -10,9 +10,11 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Animated from "react-native-reanimated";
 import { AppButton } from "../../../components/app-button";
 import { AppText } from "../../../components/app-text";
 import { LoadingState } from "../../../components/loading-state";
+import { ErrorState } from "../../../components/error-state";
 import { BannerPicker } from "../../../components/banner-picker";
 import { ProjectPicker } from "../../../components/project-picker";
 import { useBannerDraft } from "../../../hooks/use-banner-draft";
@@ -25,6 +27,11 @@ import { useAuthStore } from "../../../store/auth-store";
 import { useDialogStore } from "../../../store/dialog-store";
 import { colors } from "../../../theme";
 import { randomBannerIllustration } from "../../../utils/banner-illustrations";
+import {
+  formFadeIn,
+  formFadeOut,
+  formLayout,
+} from "../../../utils/form-motion";
 
 type Form = {
   status: "loading" | "ready" | "saving" | "error";
@@ -42,6 +49,7 @@ export default function ProjectEdit() {
     name: "",
   });
   const [deleting, setDeleting] = useState(false);
+  const [loadRevision, setLoadRevision] = useState(0);
   const [move, setMove] = useState<
     | { status: "idle" | "loading" }
     | { status: "ready"; projects: Project[]; ids: string[] }
@@ -84,7 +92,7 @@ export default function ProjectEdit() {
     return () => {
       active = false;
     };
-  }, [id, ownerId]);
+  }, [id, ownerId, loadRevision]);
 
   async function save() {
     if (
@@ -207,6 +215,33 @@ export default function ProjectEdit() {
     }
   }
 
+  if (form.status === "error") {
+    return (
+      <ErrorState
+        title="Couldn’t complete action"
+        description={form.message ?? "Please try again."}
+        actions={[
+          {
+            title: "Go home",
+            variant: "secondary",
+            onPress: () => router.replace("/(protected)/(tabs)"),
+          },
+          {
+            title: "Try again",
+            onPress: () => {
+              if (id && !form.project) {
+                setForm({ ...form, status: "loading", message: undefined });
+                setLoadRevision((current) => current + 1);
+              } else {
+                setForm({ ...form, status: "ready", message: undefined });
+              }
+            },
+          },
+        ]}
+      />
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -249,17 +284,17 @@ export default function ProjectEdit() {
                   onRemove={banner.remove}
                 />
               ) : null}
-
-              {form.message ? (
-                <AppText accessibilityRole="alert" style={styles.error}>
-                  {form.message}
-                </AppText>
-              ) : null}
             </>
           )}
         </ScrollView>
         {form.status !== "loading" && changed ? (
-          <View style={styles.actions}>
+          <Animated.View
+            key="save-actions"
+            entering={formFadeIn}
+            exiting={formFadeOut}
+            layout={formLayout}
+            style={styles.actions}
+          >
             {id && form.project ? (
               <View style={styles.action}>
                 <AppButton
@@ -288,9 +323,15 @@ export default function ProjectEdit() {
                 onPress={save}
               />
             </View>
-          </View>
+          </Animated.View>
         ) : id && form.project && form.status !== "loading" ? (
-          <View style={styles.actions}>
+          <Animated.View
+            key="manage-actions"
+            entering={formFadeIn}
+            exiting={formFadeOut}
+            layout={formLayout}
+            style={styles.actions}
+          >
             <View style={styles.action}>
               <AppButton
                 title={move.status === "loading" ? "Loading" : "Move all"}
@@ -316,7 +357,7 @@ export default function ProjectEdit() {
                 onPress={confirmDelete}
               />
             </View>
-          </View>
+          </Animated.View>
         ) : null}
       </KeyboardAvoidingView>
 
@@ -357,7 +398,6 @@ const styles = StyleSheet.create({
     fontFamily: "DMSans_400Regular",
     fontSize: 16,
   },
-  error: { color: colors.danger },
   actions: {
     flexDirection: "row",
     gap: 10,

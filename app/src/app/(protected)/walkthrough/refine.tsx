@@ -2,11 +2,7 @@ import { useEffect, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
-import {
-  SparklesIcon,
-  ShieldCheckIcon,
-  ExclamationTriangleIcon,
-} from "react-native-heroicons/outline";
+import { SparklesIcon, ShieldCheckIcon } from "react-native-heroicons/outline";
 import { Badge } from "../../../components/badge";
 import {
   SafeAreaView,
@@ -15,7 +11,7 @@ import {
 import { AppText } from "../../../components/app-text";
 import { AppButton } from "../../../components/app-button";
 import { LoadingState } from "../../../components/loading-state";
-import { EmptyState } from "../../../components/empty-state";
+import { ErrorState } from "../../../components/error-state";
 import { InferenceSelector } from "../../../components/inference-selector";
 import { useAuthStore } from "../../../store/auth-store";
 import { useInferenceStore } from "../../../store/inference-store";
@@ -185,32 +181,31 @@ export default function RefineItem() {
         : (screen.message ?? "Please try again.");
 
     return (
-      <SafeAreaView style={styles.container}>
-        <EmptyState
-          icon={<ExclamationTriangleIcon size={40} color={colors.accent} />}
-          title="Couldn’t refine item"
-          description={message}
-        />
-
-        <View style={styles.errorActions}>
-          <View style={styles.action}>
-            <AppButton
-              title="Back"
-              variant="secondary"
-              onPress={() => router.back()}
-            />
-          </View>
-
-          {screen.status === "ready" ? (
-            <View style={styles.action}>
-              <AppButton
-                title="Try again"
-                onPress={() => setScreen({ ...screen, message: undefined })}
-              />
-            </View>
-          ) : null}
-        </View>
-      </SafeAreaView>
+      <ErrorState
+        title="Couldn’t refine item"
+        description={message}
+        actions={
+          screen.status === "ready"
+            ? [
+                {
+                  title: "Back",
+                  variant: "secondary",
+                  onPress: () => router.back(),
+                },
+                {
+                  title: "Try again",
+                  onPress: () => setScreen({ ...screen, message: undefined }),
+                },
+              ]
+            : [
+                {
+                  title: "Back",
+                  variant: "secondary",
+                  onPress: () => router.back(),
+                },
+              ]
+        }
+      />
     );
   }
 
@@ -452,12 +447,6 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: 12,
     paddingVertical: 8,
-  },
-  errorActions: {
-    flexDirection: "row",
-    gap: 10,
-    paddingHorizontal: 24,
-    paddingVertical: 16,
   },
   content: {
     paddingHorizontal: 24,

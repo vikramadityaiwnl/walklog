@@ -1,8 +1,10 @@
 import { Image } from "expo-image";
 import { Pressable, StyleSheet, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { CameraIcon } from "react-native-heroicons/outline";
 import { AppText } from "./app-text";
 import { colors } from "../theme";
+import { formFadeIn, formFadeOut, formLayout } from "../utils/form-motion";
 
 interface Props {
   uri?: string;
@@ -13,37 +15,60 @@ interface Props {
 
 export function BannerPicker(props: Props) {
   return (
-    <View style={styles.section}>
+    <Animated.View layout={formLayout} style={styles.section}>
       <AppText weight="semibold">Banner image</AppText>
 
       {props.uri ? (
-        <Image source={{ uri: props.uri }} style={styles.preview} />
-      ) : (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Add banner image"
-          disabled={props.busy}
-          onPress={props.onChoose}
-          style={styles.addPhoto}
+        <Animated.View
+          key="preview"
+          entering={formFadeIn}
+          exiting={formFadeOut}
+          layout={formLayout}
         >
-          <View style={styles.photoIcon}>
-            <CameraIcon size={22} color={colors.accent} />
-          </View>
+          <Image
+            source={{ uri: props.uri }}
+            style={styles.preview}
+            transition={150}
+          />
+        </Animated.View>
+      ) : (
+        <Animated.View
+          key="placeholder"
+          entering={formFadeIn}
+          exiting={formFadeOut}
+          layout={formLayout}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Add banner image"
+            disabled={props.busy}
+            onPress={props.onChoose}
+            style={styles.addPhoto}
+          >
+            <View style={styles.photoIcon}>
+              <CameraIcon size={22} color={colors.accent} />
+            </View>
 
-          <View style={styles.photoCopy}>
-            <AppText weight="semibold">
-              {props.busy ? "Adding image" : "Add banner image"}
-            </AppText>
+            <View style={styles.photoCopy}>
+              <AppText weight="semibold">
+                {props.busy ? "Adding image" : "Add banner image"}
+              </AppText>
 
-            <AppText style={styles.description}>
-              Capture or choose a photo for the banner
-            </AppText>
-          </View>
-        </Pressable>
+              <AppText style={styles.description}>
+                Capture or choose a photo for the banner
+              </AppText>
+            </View>
+          </Pressable>
+        </Animated.View>
       )}
 
       {props.uri ? (
-        <View style={styles.actions}>
+        <Animated.View
+          entering={formFadeIn}
+          exiting={formFadeOut}
+          layout={formLayout}
+          style={styles.actions}
+        >
           <Pressable
             accessibilityRole="button"
             disabled={props.busy}
@@ -69,9 +94,9 @@ export function BannerPicker(props: Props) {
               <AppText style={styles.danger}>Remove image</AppText>
             </Pressable>
           ) : null}
-        </View>
+        </Animated.View>
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
 

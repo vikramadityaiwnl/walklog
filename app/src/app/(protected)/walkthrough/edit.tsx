@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Animated from "react-native-reanimated";
 import { colors } from "../../../theme";
 import { AppButton } from "../../../components/app-button";
 import { useDialogStore } from "../../../store/dialog-store";
@@ -18,6 +19,7 @@ import { ProjectPicker } from "../../../components/project-picker";
 import { useBannerDraft } from "../../../hooks/use-banner-draft";
 import { AppText } from "../../../components/app-text";
 import { LoadingState } from "../../../components/loading-state";
+import { ErrorState } from "../../../components/error-state";
 import type { Project, Walkthrough } from "../../../models/walkthrough";
 import {
   createFirestoreId,
@@ -25,6 +27,11 @@ import {
 } from "../../../services/walkthrough/storage";
 import { useAuthStore } from "../../../store/auth-store";
 import { randomBannerIllustration } from "../../../utils/banner-illustrations";
+import {
+  formFadeIn,
+  formFadeOut,
+  formLayout,
+} from "../../../utils/form-motion";
 
 interface WalkthroughDraft {
   title: string;
@@ -54,6 +61,7 @@ export default function WalkthroughEdit() {
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
 
   const [deleting, setDeleting] = useState(false);
+  const [loadRevision, setLoadRevision] = useState(0);
   const [move, setMove] = useState<
     { status: "idle" | "loading" } | { status: "ready"; projects: Project[] }
   >({ status: "idle" });
@@ -119,7 +127,7 @@ export default function WalkthroughEdit() {
     return () => {
       active = false;
     };
-  }, [id, ownerId]);
+  }, [id, ownerId, loadRevision]);
 
   function cancelChanges() {
     if (!existing) return;
@@ -267,6 +275,37 @@ export default function WalkthroughEdit() {
     }
   }
 
+  if (form.status === "error") {
+    return (
+      <ErrorState
+        title="Couldn’t complete action"
+        description={form.message}
+        actions={[
+          {
+            title: "Go home",
+            variant: "secondary",
+            onPress: () => router.replace("/(protected)/(tabs)"),
+          },
+          {
+            title: "Try again",
+            onPress: () => {
+              if (id && !form.existing) {
+                setForm({ status: "loading", draft: form.draft });
+                setLoadRevision((current) => current + 1);
+              } else {
+                setForm({
+                  status: "ready",
+                  draft: form.draft,
+                  existing: form.existing,
+                });
+              }
+            },
+          },
+        ]}
+      />
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -358,31 +397,37 @@ export default function WalkthroughEdit() {
                   onRemove={banner.remove}
                 />
               ) : null}
-
-              {form.status === "error" ? (
-                <AppText accessibilityRole="alert" style={styles.error}>
-                  {form.message}
-                </AppText>
-              ) : null}
             </>
           )}
         </ScrollView>
 
         {form.status !== "loading" ? (
-          <View style={styles.actions}>
+          <Animated.View layout={formLayout} style={styles.actions}>
             {id && hasChanges ? (
-              <View style={styles.action}>
+              <Animated.View
+                key="cancel"
+                entering={formFadeIn}
+                exiting={formFadeOut}
+                layout={formLayout}
+                style={styles.action}
+              >
                 <AppButton
                   title="Cancel"
                   variant="secondary"
                   disabled={banner.busy || deleting || form.status === "saving"}
                   onPress={cancelChanges}
                 />
-              </View>
+              </Animated.View>
             ) : null}
 
             {showSave ? (
-              <View style={styles.action}>
+              <Animated.View
+                key="save"
+                entering={formFadeIn}
+                exiting={formFadeOut}
+                layout={formLayout}
+                style={styles.action}
+              >
                 <AppButton
                   title={
                     form.status === "saving"
@@ -399,11 +444,17 @@ export default function WalkthroughEdit() {
                   }
                   onPress={save}
                 />
-              </View>
+              </Animated.View>
             ) : null}
 
             {id && form.existing && !hasChanges ? (
-              <View style={styles.action}>
+              <Animated.View
+                key="move"
+                entering={formFadeIn}
+                exiting={formFadeOut}
+                layout={formLayout}
+                style={styles.action}
+              >
                 <AppButton
                   title={
                     move.status === "loading"
@@ -422,11 +473,17 @@ export default function WalkthroughEdit() {
                   disabled={move.status !== "idle" || deleting || banner.busy}
                   onPress={chooseProject}
                 />
-              </View>
+              </Animated.View>
             ) : null}
 
             {id && form.existing && !hasChanges ? (
-              <View style={styles.action}>
+              <Animated.View
+                key="delete"
+                entering={formFadeIn}
+                exiting={formFadeOut}
+                layout={formLayout}
+                style={styles.action}
+              >
                 <AppButton
                   variant="danger"
                   title={deleting ? "Deleting" : "Delete"}
@@ -439,9 +496,9 @@ export default function WalkthroughEdit() {
                   }
                   onPress={confirmDelete}
                 />
-              </View>
+              </Animated.View>
             ) : null}
-          </View>
+          </Animated.View>
         ) : null}
       </KeyboardAvoidingView>
 
@@ -513,6 +570,5 @@ const styles = StyleSheet.create({
   link: { color: colors.accent },
   danger: { color: colors.danger },
   photo: { width: 96, height: 96, borderRadius: 10 },
-  error: { color: colors.danger },
   back: { paddingVertical: 10, alignSelf: "flex-start" },
 });

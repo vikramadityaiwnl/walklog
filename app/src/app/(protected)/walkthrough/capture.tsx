@@ -20,7 +20,6 @@ import {
   ArrowUpTrayIcon,
   ArrowDownTrayIcon,
   PencilSquareIcon,
-  ExclamationTriangleIcon,
 } from "react-native-heroicons/outline";
 import Svg, { Circle } from "react-native-svg";
 import {
@@ -43,7 +42,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { AppButton } from "../../../components/app-button";
 import { AppText } from "../../../components/app-text";
-import { EmptyState } from "../../../components/empty-state";
+import { ErrorState } from "../../../components/error-state";
 import { InferenceSelector } from "../../../components/inference-selector";
 import { LoadingState } from "../../../components/loading-state";
 import { SegmentedControl } from "../../../components/segmented-control";
@@ -633,33 +632,24 @@ export default function Capture() {
 
   if (operation.status === "failed") {
     return (
-      <SafeAreaView style={styles.container}>
-        <EmptyState
-          icon={<ExclamationTriangleIcon size={40} color={colors.accent} />}
-          title="Couldn’t create items"
-          description={operation.message}
-        />
-
-        <View style={styles.actions}>
-          <View style={styles.action}>
-            <AppButton
-              title="Go home"
-              variant="secondary"
-              onPress={() => router.replace("/(protected)/(tabs)")}
-            />
-          </View>
-
-          <View style={styles.action}>
-            <AppButton
-              title="Try again"
-              onPress={() => {
-                clearCapture();
-                setOperation({ status: "idle" });
-              }}
-            />
-          </View>
-        </View>
-      </SafeAreaView>
+      <ErrorState
+        title="Couldn’t create items"
+        description={operation.message}
+        actions={[
+          {
+            title: "Go home",
+            variant: "secondary",
+            onPress: () => router.replace("/(protected)/(tabs)"),
+          },
+          {
+            title: "Try again",
+            onPress: () => {
+              clearCapture();
+              setOperation({ status: "idle" });
+            },
+          },
+        ]}
+      />
     );
   }
 
