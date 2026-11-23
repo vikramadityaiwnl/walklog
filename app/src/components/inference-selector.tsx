@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { Platform } from "react-native";
 import { useNetworkState } from "expo-network";
 import { useShallow } from "zustand/react/shallow";
-import { checkModelAvailability } from "../services/firebase/ai";
+import { useDeviceModelStatus } from "./device-model-status";
 import { saveInferencePreference } from "../services/firebase/user-preferences";
 import { useAuthStore } from "../store/auth-store";
 import { useDialogStore } from "../store/dialog-store";
@@ -23,37 +24,25 @@ export function InferenceSelector(props: Props) {
     })),
   );
 
+  const mode = useInferenceStore((state) => state.mode);
+
   const auth = useAuthStore((state) => state.auth);
 
   const network = useNetworkState();
-  const [deviceReady, setDeviceReady] = useState<boolean | null>(null);
+  const model = useDeviceModelStatus();
+  const deviceReady =
+    model.status === "checking" ? null : model.status === "available";
   const cloudReady =
     network.isConnected === true && network.isInternetReachable !== false;
   const localReady = deviceReady;
 
   useEffect(() => {
-    let active = true;
-
-    void checkModelAvailability()
-      .then((result) => {
-        if (active) setDeviceReady(result.status === "available");
-      })
-      .catch(() => {
-        if (active) setDeviceReady(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
     if (preference === "device") {
-      if (localReady === true) setMode("device");
+      if (localReady === true || Platform.OS === "android") setMode("device");
       else if (localReady === false && cloudReady) setMode("cloud");
     } else if (cloudReady) setMode("cloud");
     else if (localReady === true) setMode("device");
-  }, [preference, localReady, cloudReady, setMode]);
+  }, [preference, localReady, cloudReady, model.status, setMode]);
 
   function choose(option: "device" | "cloud") {
     const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
@@ -72,7 +61,7 @@ export function InferenceSelector(props: Props) {
   return (
     <SegmentedControl
       label="AI processing mode"
-      value={preference}
+      value={mode}
       onChange={choose}
       align={props.align}
       compact
@@ -83,7 +72,15 @@ export function InferenceSelector(props: Props) {
         return {
           value: option,
           label: option === "device" ? "On device" : "Cloud",
-          disabled: !available && !props.allowUnavailable,
+          disabled:
+            !available &&
+            !props.allowUnavailable &&
+            !(
+              option === "device" &&
+              Platform.OS === "android" &&
+              (model.status === "downloadable" ||
+                model.status === "downloading")
+            ),
           muted: !available,
           indicatorColor: available ? colors.success : colors.muted,
         };

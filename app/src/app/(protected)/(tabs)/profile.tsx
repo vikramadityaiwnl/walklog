@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -32,6 +33,8 @@ import { AppHeader } from "../../../components/app-header";
 import { AppText } from "../../../components/app-text";
 import { Avatar } from "../../../components/avatar";
 import { Badge } from "../../../components/badge";
+import { useDeviceModelStatus } from "../../../components/device-model-status";
+import { useDeviceModelStore } from "../../../store/device-model-store";
 import { InferenceSelector } from "../../../components/inference-selector";
 import { ErrorState } from "../../../components/error-state";
 import {
@@ -86,6 +89,10 @@ export default function Profile() {
       deletionError: state.deletionError,
     })),
   );
+
+  const deviceModel = useDeviceModelStatus();
+  const downloadDeviceModel = useDeviceModelStore((state) => state.download);
+  const refreshDeviceModel = useDeviceModelStore((state) => state.refresh);
 
   const mediaStatus = useMediaSyncStore((state) => state.status);
 
@@ -399,14 +406,87 @@ export default function Profile() {
               <AppText weight="semibold">Choose a default</AppText>
 
               <AppText style={styles.settingDescription}>
-                Walklog will use your choice when it’s available and switch to
-                the other option when needed.
+                Choose where walklog processes your notes. Availability depends
+                on your device and connection.
               </AppText>
             </View>
           </View>
 
           <InferenceSelector allowUnavailable />
         </View>
+
+        {Platform.OS === "android" ? (
+          <>
+            <View style={styles.sectionHeading}>
+              <AppText weight="bold" style={styles.sectionTitle}>
+                On-device AI
+              </AppText>
+            </View>
+
+            <View style={styles.settingSection}>
+              <View style={styles.settingTitleRow}>
+                <View style={styles.settingIcon}>
+                  <CpuChipIcon size={20} color={colors.accent} />
+                </View>
+
+                <View style={styles.settingText}>
+                  <AppText weight="semibold">Gemini Nano</AppText>
+
+                  <AppText style={styles.settingDescription}>
+                    {deviceModel.status === "available"
+                      ? "Ready on this device. Android manages this shared model."
+                      : deviceModel.status === "checking"
+                        ? "Checking model availability…"
+                        : deviceModel.message}
+                  </AppText>
+                </View>
+
+                {deviceModel.status === "downloadable" ||
+                deviceModel.status === "error" ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      deviceModel.status === "error"
+                        ? "Check AI model"
+                        : "Download AI model"
+                    }
+                    onPress={() =>
+                      deviceModel.status === "error"
+                        ? void refreshDeviceModel()
+                        : void downloadDeviceModel()
+                    }
+                    style={styles.iconAction}
+                  >
+                    <ArrowDownTrayIcon size={19} color={colors.foreground} />
+                  </Pressable>
+                ) : null}
+              </View>
+
+              {deviceModel.status === "downloading" ? (
+                <View style={styles.progressSection}>
+                  {deviceModel.progress?.total ? (
+                    <View style={styles.progressTrack}>
+                      <View
+                        style={[
+                          styles.progressFill,
+                          {
+                            width: `${Math.min(100, (deviceModel.progress.bytes / deviceModel.progress.total) * 100)}%`,
+                          },
+                        ]}
+                      />
+                    </View>
+                  ) : null}
+
+                  <AppText style={styles.settingDescription}>
+                    {deviceModel.progress?.total
+                      ? `Downloading ${Math.min(100, Math.round((deviceModel.progress.bytes / deviceModel.progress.total) * 100))}%`
+                      : "Preparing download…"}
+                  </AppText>
+                </View>
+              ) : null}
+            </View>
+          </>
+        ) : null}
 
         <View style={styles.sectionHeading}>
           <AppText weight="bold" style={styles.sectionTitle}>

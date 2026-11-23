@@ -2,6 +2,7 @@ package expo.modules.firebaseaihybrid
 
 import com.google.firebase.FirebaseApp
 import com.google.firebase.ai.FirebaseAI
+import com.google.firebase.ai.DownloadStatus
 import com.google.firebase.ai.InferenceMode
 import com.google.firebase.ai.InferenceSource
 import com.google.firebase.ai.OnDeviceConfig
@@ -25,6 +26,7 @@ class FirebaseAiHybridModule : Module() {
 
   override fun definition() = ModuleDefinition {
     Name("FirebaseAiHybrid")
+    Events("onModelDownloadProgress")
 
     AsyncFunction("generateTextWithImages") Coroutine { prompt: String, uris: List<String> ->
       val context = appContext.reactContext ?: throw IllegalStateException("Application unavailable.")
@@ -74,7 +76,21 @@ class FirebaseAiHybridModule : Module() {
     AsyncFunction("downloadModel") Coroutine { ->
       val extension = model().onDeviceExtension
         ?: throw IllegalStateException("On-device AI is unavailable.")
-      extension.download().collect { }
+      var total = 0L
+      extension.download().collect { status ->
+        when (status) {
+          is DownloadStatus.DownloadStarted -> {
+            total = status.bytesToDownload
+            sendEvent("onModelDownloadProgress", mapOf("bytes" to 0.0, "total" to total.toDouble()))
+          }
+          is DownloadStatus.DownloadInProgress -> sendEvent(
+            "onModelDownloadProgress",
+            mapOf("bytes" to status.totalBytesDownloaded.toDouble(), "total" to total.toDouble()),
+          )
+          is DownloadStatus.DownloadFailed -> throw status.exception
+          else -> Unit
+        }
+      }
       if (extension.checkStatus() != OnDeviceModelStatus.AVAILABLE) {
         throw IllegalStateException("The on-device model is not ready. Check availability and try again.")
       }

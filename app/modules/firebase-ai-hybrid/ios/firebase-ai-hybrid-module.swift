@@ -94,11 +94,18 @@ public class FirebaseAiHybridModule: Module {
 
         if #available(iOS 26.0, *) {
           if mode == "device" {
-            let response = try await ai.generativeModelSession(
-              model: FirebaseAI.SystemLanguageModel.default
-            ).respond(to: prompt)
-
-            return ["text": response.content, "source": "on-device"]
+            for attempt in 0...2 {
+              do {
+                let response = try await ai.generativeModelSession(
+                  model: FirebaseAI.SystemLanguageModel.default
+                ).respond(to: prompt)
+                return ["text": response.content, "source": "on-device"]
+              } catch {
+                guard attempt < 2 && Self.isTransientSafetyAssetError(error) else { throw error }
+                try await Task.sleep(nanoseconds: UInt64(attempt + 1) * 1_000_000_000)
+              }
+            }
+            throw NSError(domain: "FirebaseAiHybrid", code: 2)
           }
 
           let cloud = ai.geminiModel(name: "gemini-3.1-flash-lite")
@@ -133,6 +140,21 @@ public class FirebaseAiHybridModule: Module {
           userInfo: [NSLocalizedDescriptionKey: Self.describe(error)])
       }
     }
+  }
+
+  private static func isTransientSafetyAssetError(_ error: Error) -> Bool {
+    if let generation = error as? GenerateContentError {
+      switch generation {
+      case .internalError(let underlying): return isTransientSafetyAssetError(underlying)
+      default: break
+      }
+    }
+    let details = error as NSError
+    if details.domain == "com.apple.SensitiveContentAnalysisML" && details.code == 15 { return true }
+    if let underlying = details.userInfo[NSUnderlyingErrorKey] as? Error,
+      isTransientSafetyAssetError(underlying) { return true }
+    let description = details.localizedDescription
+    return description.contains("com.apple.SensitiveContentAnalysisML error 15")
   }
 
   private static func describe(_ error: Error) -> String {

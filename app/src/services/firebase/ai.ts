@@ -8,6 +8,8 @@ export type ModelAvailability = {
   message: string;
 };
 
+export type ModelDownloadProgress = { bytes: number; total: number };
+
 export type Generation = {
   text: string;
   source: "on-device" | "cloud" | "unknown";
@@ -16,6 +18,10 @@ export type Generation = {
 interface FirebaseAiNativeModule {
   checkAvailability(): Promise<ModelAvailability>;
   downloadModel(): Promise<void>;
+  addListener(
+    event: "onModelDownloadProgress",
+    listener: (progress: ModelDownloadProgress) => void,
+  ): { remove(): void };
   generateText(
     prompt: string,
     mode: InferenceMode,
@@ -54,14 +60,25 @@ export function checkModelAvailability(): Promise<ModelAvailability> {
   return getNativeModule().checkAvailability();
 }
 
-export function downloadModel(): Promise<void> {
+export async function downloadModel(
+  onProgress: (progress: ModelDownloadProgress) => void,
+): Promise<void> {
   if (Platform.OS !== "android") {
     throw new Error(
       "Apple Intelligence manages its model download in Settings.",
     );
   }
 
-  return getNativeModule().downloadModel();
+  const module = getNativeModule();
+  const subscription = module.addListener(
+    "onModelDownloadProgress",
+    onProgress,
+  );
+  try {
+    await module.downloadModel();
+  } finally {
+    subscription.remove();
+  }
 }
 
 export async function generateText(
@@ -78,12 +95,22 @@ export async function generateText(
   )
     throw new Error("This input requires cloud processing.");
 
-  const result = await getNativeModule().generateText(
-    prompt,
-    mode,
-    audio?.uri ?? null,
-    audio?.mimeType ?? null,
-  );
+  let result: Generation;
+  try {
+    result = await getNativeModule().generateText(
+      prompt,
+      mode,
+      audio?.uri ?? null,
+      audio?.mimeType ?? null,
+    );
+  } catch (error) {
+    if (__DEV__) console.warn("AI generation failed", error);
+    throw new Error(
+      mode === "device"
+        ? "On-device AI couldn’t process this right now. Try again or choose cloud processing."
+        : "Cloud AI couldn’t process this right now. Check your connection and try again.",
+    );
+  }
   if (!result.text.trim())
     throw new Error("The model returned an empty response.");
 

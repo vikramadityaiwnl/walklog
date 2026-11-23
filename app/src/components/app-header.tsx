@@ -1,19 +1,24 @@
 import { Image } from "expo-image";
 import { StyleSheet, View } from "react-native";
+import { DeviceModelBanner } from "./device-model-status";
 import { InferenceSelector } from "./inference-selector";
 
 export function AppHeader() {
   return (
-    <View style={styles.container}>
-      <Image
-        source={require("../../assets/images/splash-icon.png")}
-        style={styles.logo}
-        contentFit="contain"
-        accessibilityLabel="walklog"
-      />
+    <>
+      <View style={styles.container}>
+        <Image
+          source={require("../../assets/images/splash-icon.png")}
+          style={styles.logo}
+          contentFit="contain"
+          accessibilityLabel="walklog"
+        />
 
-      <InferenceSelector align="center" />
-    </View>
+        <InferenceSelector align="center" />
+      </View>
+
+      <DeviceModelBanner />
+    </>
   );
 }
 

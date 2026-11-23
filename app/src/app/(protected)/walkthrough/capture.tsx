@@ -22,6 +22,7 @@ import {
 import Svg, { Circle } from "react-native-svg";
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -42,6 +43,8 @@ import { AppButton } from "../../../components/app-button";
 import { AppText } from "../../../components/app-text";
 import { ErrorState } from "../../../components/error-state";
 import { EmptyState } from "../../../components/empty-state";
+import { useDeviceModelStatus } from "../../../components/device-model-status";
+import { useDeviceModelStore } from "../../../store/device-model-store";
 import { InferenceSelector } from "../../../components/inference-selector";
 import { LoadingState } from "../../../components/loading-state";
 import { SegmentedControl } from "../../../components/segmented-control";
@@ -132,6 +135,10 @@ export default function Capture() {
   const auth = useAuthStore((state) => state.auth);
 
   const mode = useInferenceStore((state) => state.mode);
+
+  const deviceModel = useDeviceModelStatus();
+  const downloadDeviceModel = useDeviceModelStore((state) => state.download);
+  const refreshDeviceModel = useDeviceModelStore((state) => state.refresh);
 
   const [captureMode, setCaptureMode] = useState<CaptureMode>("voice");
   const [operation, setOperation] = useState<Operation>({ status: "idle" });
@@ -459,17 +466,12 @@ export default function Capture() {
     setError("");
 
     try {
-      let modelPath = getWhisperModel();
+      const modelPath = getWhisperModel();
       if (!modelPath) {
-        setOperation({
-          status: "downloading",
-          progress: { bytes: 0, total: whisperModelSize },
-        });
-        modelPath = await downloadWhisperModel((bytes, total) => {
-          if (mounted.current)
-            setOperation({ status: "downloading", progress: { bytes, total } });
-        });
-        if (mounted.current) setModelAvailable(true);
+        setModelAvailable(false);
+        throw new Error(
+          "Download the transcription model before importing audio.",
+        );
       }
 
       setOperation({ status: "transcribing" });
@@ -555,6 +557,8 @@ export default function Capture() {
   async function complete() {
     if (!ownerId || !walkthroughId || operation.status !== "idle") return;
 
+    if (needsDeviceModel) return;
+
     setError("");
     setOperation({ status: "processing", phase: "identifying" });
 
@@ -606,6 +610,22 @@ export default function Capture() {
 
   const busy = operation.status !== "idle" && operation.status !== "recording";
   const hasDraft = captureMode === "type" ? !!note : !!audio || !!transcript;
+  const needsDeviceModel =
+    Platform.OS === "android" &&
+    mode === "device" &&
+    (deviceModel.status === "downloadable" ||
+      deviceModel.status === "downloading" ||
+      deviceModel.status === "checking" ||
+      deviceModel.status === "error" ||
+      deviceModel.status === "unavailable");
+  const deviceProgress =
+    deviceModel.status === "downloading" ? deviceModel.progress : undefined;
+  const devicePercentage = deviceProgress?.total
+    ? Math.min(
+        100,
+        Math.round((deviceProgress.bytes / deviceProgress.total) * 100),
+      )
+    : null;
 
   const createButtonStyle = useAnimatedStyle(() => {
     const availableWidth = Math.max(0, actionsWidth - 48);
@@ -874,22 +894,6 @@ export default function Capture() {
               </Animated.View>
             ) : null}
 
-            {operation.status === "downloading" && progress && !!audio ? (
-              <Animated.View
-                entering={fadeIn}
-                layout={layoutTransition}
-                style={styles.downloadStatus}
-              >
-                <ActivityIndicator color={colors.accent} />
-
-                <AppText style={styles.subheading}>
-                  {progress.total > 0
-                    ? `Downloading model · ${downloadPercentage}%`
-                    : "Downloading model"}
-                </AppText>
-              </Animated.View>
-            ) : null}
-
             {operation.status === "transcribing" ? (
               <LoadingState description="Transcribing audio" />
             ) : null}
@@ -902,7 +906,7 @@ export default function Capture() {
               />
             ) : null}
 
-            {!audio && operation.status === "idle" ? (
+            {modelAvailable && !audio && operation.status === "idle" ? (
               <View style={styles.importSection}>
                 <View style={styles.divider}>
                   <View style={styles.dividerLine} />
@@ -957,6 +961,15 @@ export default function Capture() {
             <AppText weight="semibold">Process with</AppText>
 
             <InferenceSelector requiresAudio={captureMode === "voice"} />
+
+            {Platform.OS === "android" &&
+            mode === "device" &&
+            (deviceModel.status === "error" ||
+              deviceModel.status === "unavailable") ? (
+              <AppText style={styles.subheading}>
+                {deviceModel.message} Choose cloud processing if it’s available.
+              </AppText>
+            ) : null}
           </Animated.View>
         ) : null}
 
@@ -1077,16 +1090,56 @@ export default function Capture() {
               actionsWidth > 0 ? createButtonStyle : styles.action,
             ]}
           >
-            <AppButton
-              title="Create items"
-              disabled={
-                operation.status !== "idle" ||
-                (captureMode === "voice"
-                  ? !audio || !transcript.trim() || !transcriptFinalized
-                  : !note.trim())
-              }
-              onPress={complete}
-            />
+            {needsDeviceModel ? (
+              <View style={styles.deviceDownloadButton}>
+                <AppButton
+                  title={
+                    deviceModel.status === "downloading"
+                      ? devicePercentage === null
+                        ? "Downloading…"
+                        : `Downloading ${devicePercentage}%`
+                      : deviceModel.status === "checking"
+                        ? "Checking model…"
+                        : deviceModel.status === "error"
+                          ? "Check model"
+                          : deviceModel.status === "unavailable"
+                            ? "On-device AI unavailable"
+                            : "Download model"
+                  }
+                  disabled={
+                    deviceModel.status === "downloading" ||
+                    deviceModel.status === "checking" ||
+                    deviceModel.status === "unavailable"
+                  }
+                  onPress={() =>
+                    deviceModel.status === "error"
+                      ? void refreshDeviceModel()
+                      : void downloadDeviceModel()
+                  }
+                />
+
+                {devicePercentage !== null ? (
+                  <View
+                    pointerEvents="none"
+                    style={[
+                      styles.deviceDownloadProgress,
+                      { width: `${devicePercentage}%` },
+                    ]}
+                  />
+                ) : null}
+              </View>
+            ) : (
+              <AppButton
+                title="Create items"
+                disabled={
+                  operation.status !== "idle" ||
+                  (captureMode === "voice"
+                    ? !audio || !transcript.trim() || !transcriptFinalized
+                    : !note.trim())
+                }
+                onPress={complete}
+              />
+            )}
           </Animated.View>
         </Animated.View>
       ) : null}
@@ -1112,6 +1165,14 @@ const styles = StyleSheet.create({
   },
   action: { flex: 1 },
   createAction: { marginLeft: "auto" },
+  deviceDownloadButton: { overflow: "hidden", borderRadius: 8 },
+  deviceDownloadProgress: {
+    position: "absolute",
+    left: 0,
+    bottom: 0,
+    height: 3,
+    backgroundColor: colors.onAccent,
+  },
   row: { flexDirection: "row", alignItems: "center", gap: 12 },
   between: {
     flexDirection: "row",
@@ -1222,12 +1283,6 @@ const styles = StyleSheet.create({
   },
   modelDownloadCopy: { alignItems: "center", gap: 4, maxWidth: 320 },
   voiceStatus: { alignItems: "center" },
-  downloadStatus: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    paddingVertical: 24,
-  },
   modelDownloadDescription: {
     color: colors.muted,
     lineHeight: 22,
