@@ -39,7 +39,6 @@ import {
   createWalkthroughStorage,
 } from "../../../services/walkthrough/storage";
 import { useAuthStore } from "../../../store/auth-store";
-import { extractItems } from "../../../services/walkthrough/extract-items";
 import {
   formFadeIn,
   formFadeOut,
@@ -93,8 +92,6 @@ export default function ItemEdit() {
 
   const [photoBusy, setPhotoBusy] = useState(false);
   const [loadRevision, setLoadRevision] = useState(0);
-
-  const [suggesting, setSuggesting] = useState(false);
 
   const [deleting, setDeleting] = useState(false);
 
@@ -222,38 +219,6 @@ export default function ItemEdit() {
       },
       { text: "Cancel", style: "cancel" },
     ]);
-  }
-
-  async function suggestDetails() {
-    if (!draft.description.trim() || suggesting) return;
-
-    const description = draft.description;
-    setSuggesting(true);
-    try {
-      const [suggestion] = await extractItems(description);
-      setForm((current) => {
-        if (current.draft.description !== description) return current;
-
-        return {
-          ...current,
-          draft: {
-            ...current.draft,
-            location: current.draft.location || suggestion.location,
-            trade: current.draft.trade || suggestion.trade,
-            priority: current.draft.priority || suggestion.priority,
-          },
-        };
-      });
-    } catch (error) {
-      showDialog(
-        "Couldn’t suggest details",
-        error instanceof Error
-          ? error.message
-          : "On-device AI is unavailable. You can enter the details yourself.",
-      );
-    } finally {
-      setSuggesting(false);
-    }
   }
 
   function cancelChanges() {
@@ -482,19 +447,6 @@ export default function ItemEdit() {
                   style={[styles.input, styles.multiline]}
                 />
               </View>
-
-              <AppButton
-                title={
-                  suggesting ? "Suggesting details" : "Suggest details with AI"
-                }
-                variant="secondary"
-                disabled={
-                  !draft.description.trim() ||
-                  suggesting ||
-                  form.status === "saving"
-                }
-                onPress={suggestDetails}
-              />
 
               <View style={styles.section}>
                 <AppText weight="semibold" style={styles.label}>

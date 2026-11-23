@@ -8,4 +8,5 @@ android { namespace "expo.modules.firebaseaihybrid" }
 dependencies {
   implementation 'com.google.firebase:firebase-ai:18.1.0'
   implementation 'com.google.firebase:firebase-ai-ondevice:16.0.0-beta07'
+  implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0'
 }
