@@ -6,17 +6,12 @@ import {
   FolderIcon,
   PlusIcon,
 } from "react-native-heroicons/outline";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText } from "../../../components/app-text";
 import { AppHeader } from "../../../components/app-header";
 import { EmptyState } from "../../../components/empty-state";
+import { LoadingState } from "../../../components/loading-state";
 import { Overlay } from "../../../components/overlay";
 import type { Project, Walkthrough } from "../../../models/walkthrough";
 import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
@@ -67,9 +62,7 @@ export default function Projects() {
               Keep related site visits together.
             </AppText>
           </View>
-          {screen.status === "loading" ? (
-            <ActivityIndicator color={colors.accent} />
-          ) : null}
+          {screen.status === "loading" ? <LoadingState /> : null}
           {screen.status === "error" ? (
             <AppText>
               Couldn’t load projects. Please reopen this screen.

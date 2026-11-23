@@ -8,6 +8,7 @@ import { colors } from "../theme";
 import { AppText } from "./app-text";
 
 interface Props {
+  align?: "start" | "center";
   requiresAudio?: boolean;
 }
 
@@ -44,7 +45,13 @@ export function InferenceSelector(props: Props) {
   }, [mode, localReady, cloudReady, setMode]);
 
   return (
-    <View accessibilityLabel="AI processing mode" style={styles.group}>
+    <View
+      accessibilityLabel="AI processing mode"
+      style={[
+        styles.group,
+        props.align === "center" ? styles.centered : styles.startAligned,
+      ]}
+    >
       {(["device", "cloud"] as const).map((option) => {
         const available =
           option === "device" ? localReady === true : cloudReady;
@@ -85,12 +92,13 @@ export function InferenceSelector(props: Props) {
 
 const styles = StyleSheet.create({
   group: {
-    alignSelf: "flex-start",
     flexDirection: "row",
     padding: 3,
     borderRadius: 12,
     backgroundColor: colors.accentFaint,
   },
+  startAligned: { alignSelf: "flex-start" },
+  centered: { alignSelf: "center" },
   option: {
     flexDirection: "row",
     alignItems: "center",

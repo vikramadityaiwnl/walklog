@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppButton } from "../../../components/app-button";
 import { AppText } from "../../../components/app-text";
+import { LoadingState } from "../../../components/loading-state";
 import { BannerPicker } from "../../../components/banner-picker";
 import { ProjectPicker } from "../../../components/project-picker";
 import { useBannerDraft } from "../../../hooks/use-banner-draft";
@@ -227,7 +228,7 @@ export default function ProjectEdit() {
             </AppText>
           </View>
           {form.status === "loading" ? (
-            <AppText>Loading project</AppText>
+            <LoadingState />
           ) : (
             <>
               <View style={styles.section}>

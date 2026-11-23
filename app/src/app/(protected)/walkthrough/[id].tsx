@@ -14,15 +14,10 @@ import {
   CheckIcon,
   DocumentTextIcon,
 } from "react-native-heroicons/outline";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { ScreenBanner } from "../../../components/screen-banner";
+import { LoadingState } from "../../../components/loading-state";
 import { bannerColor } from "../../../utils/banner-illustrations";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Badge } from "../../../components/badge";
@@ -222,14 +217,7 @@ export default function WalkthroughDetail() {
       <StatusBar style={screen.status === "ready" ? "light" : "dark"} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {screen.status === "loading" ? (
-          <View style={styles.loading}>
-            <ActivityIndicator
-              color={colors.accent}
-              accessibilityLabel="Loading walkthrough"
-            />
-          </View>
-        ) : null}
+        {screen.status === "loading" ? <LoadingState /> : null}
 
         {screen.status === "error" ? (
           <AppText accessibilityRole="alert" style={styles.error}>
@@ -560,7 +548,6 @@ const styles = StyleSheet.create({
   photo: { width: 96, height: 96, borderRadius: 10 },
   error: { color: colors.danger },
   back: { paddingVertical: 10, alignSelf: "flex-start" },
-  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
   emptyContent: { flexGrow: 1 },
   selectionHeader: {
     flexDirection: "row",

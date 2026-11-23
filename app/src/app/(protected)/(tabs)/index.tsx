@@ -9,7 +9,6 @@ import {
   PlusIcon,
 } from "react-native-heroicons/outline";
 import {
-  ActivityIndicator,
   LayoutAnimation,
   Pressable,
   ScrollView,
@@ -20,6 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppHeader } from "../../../components/app-header";
 import { AppText } from "../../../components/app-text";
 import { EmptyState } from "../../../components/empty-state";
+import { LoadingState } from "../../../components/loading-state";
 import { Overlay } from "../../../components/overlay";
 import { ProjectPicker } from "../../../components/project-picker";
 import type { Project, Walkthrough } from "../../../models/walkthrough";
@@ -236,12 +236,7 @@ export default function Walkthroughs() {
               </Pressable>
             </View>
           ) : null}
-          {list.status === "loading" ? (
-            <ActivityIndicator
-              color={colors.accent}
-              accessibilityLabel="Loading walkthroughs"
-            />
-          ) : null}
+          {list.status === "loading" ? <LoadingState /> : null}
           {list.status === "error" ? (
             <EmptyState
               icon={
