@@ -133,6 +133,7 @@ export default function ItemEdit() {
     if (!id || !ownerId || !walkthroughId) return;
 
     let active = true;
+
     void createWalkthroughStorage(ownerId)
       .listItems(walkthroughId)
       .then((items) => {

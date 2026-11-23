@@ -47,6 +47,7 @@ export default function WalkthroughReport() {
     if (!ownerId || !id) return;
 
     let active = true;
+
     const storage = createWalkthroughStorage(ownerId);
     void Promise.all([storage.getWalkthrough(id), storage.listItems(id)])
       .then(([walkthrough, items]) => {
@@ -86,6 +87,7 @@ export default function WalkthroughReport() {
         storage.listItems(id),
       ]);
       if (!walkthrough) throw new Error("This walkthrough could not be found.");
+
       if (operation === "share" && !(await Sharing.isAvailableAsync()))
         throw new Error("Sharing is unavailable on this device.");
 
@@ -192,18 +194,23 @@ export default function WalkthroughReport() {
             <AppText weight="bold" style={styles.statValue}>
               {screen.items.length}
             </AppText>
+
             <AppText style={styles.statLabel}>Items</AppText>
           </View>
+
           <View style={styles.stat}>
             <AppText weight="bold" style={styles.statValue}>
               {openCount}
             </AppText>
+
             <AppText style={styles.statLabel}>Open</AppText>
           </View>
+
           <View style={styles.stat}>
             <AppText weight="bold" style={styles.statValue}>
               {doneCount}
             </AppText>
+
             <AppText style={styles.statLabel}>Done</AppText>
           </View>
         </View>
@@ -236,6 +243,7 @@ export default function WalkthroughReport() {
             onPress={() => void openReport("view")}
           />
         </View>
+
         <View style={styles.action}>
           <AppButton
             title={screen.operation === "share" ? "Preparing" : "Share PDF"}

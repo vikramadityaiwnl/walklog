@@ -4,6 +4,7 @@ const directory = `${FileSystem.documentDirectory}walkthrough-photos/`;
 
 export function localMediaId(uri?: string): string | undefined {
   if (!uri || !uri.startsWith("file://")) return undefined;
+
   const match = uri.match(/\/walkthrough-photos\/([a-zA-Z0-9-]+)\.jpg$/);
 
   return match?.[1];
@@ -26,6 +27,7 @@ export function mediaStoragePath(
   try {
     const encoded = url.split("/o/")[1]?.split("?")[0];
     if (!encoded) return undefined;
+
     const path = decodeURIComponent(encoded);
     const prefix = `users/${ownerId}/media/`;
 

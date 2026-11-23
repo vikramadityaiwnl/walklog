@@ -39,6 +39,7 @@ import {
   getTemporaryCacheSize,
 } from "../../../services/device-cache";
 import { signOutUser } from "../../../services/firebase/google-sign-in";
+import { useShallow } from "zustand/react/shallow";
 import {
   deleteWhisperModel,
   downloadWhisperModel,
@@ -75,10 +76,17 @@ function formatBytes(bytes: number): string {
 
 export default function Profile() {
   const reducedMotion = useReducedMotion();
+
   const auth = useAuthStore((state) => state.auth);
-  const pendingChanges = useFirestoreStore((state) => state.pending);
-  const deletionsPending = useFirestoreStore((state) => state.deletionsPending);
-  const deletionError = useFirestoreStore((state) => state.deletionError);
+
+  const { pendingChanges, deletionsPending, deletionError } = useFirestoreStore(
+    useShallow((state) => ({
+      pendingChanges: state.pending,
+      deletionsPending: state.deletionsPending,
+      deletionError: state.deletionError,
+    })),
+  );
+
   const mediaStatus = useMediaSyncStore((state) => state.status);
 
   const [signingOut, setSigningOut] = useState<SignOutState>({
@@ -92,10 +100,12 @@ export default function Profile() {
   const [howItWorksVisible, setHowItWorksVisible] = useState(false);
 
   const showDialog = useDialogStore((state) => state.showDialog);
+
   const downloadProgress =
     model.status === "downloading" && model.total > 0
       ? Math.min(model.bytes / model.total, 1)
       : 0;
+
   const progressStyle = useAnimatedStyle(
     () => ({
       width: withTiming(`${downloadProgress * 100}%`, {
@@ -330,6 +340,7 @@ export default function Profile() {
 
                 <View style={styles.syncText}>
                   <AppText weight="semibold">{changeSyncTitle}</AppText>
+
                   <AppText style={styles.syncDescription}>
                     {changeSyncDescription}
                   </AppText>
@@ -356,6 +367,7 @@ export default function Profile() {
                       ? "Deletion sync paused"
                       : "Finishing deletions"}
                   </AppText>
+
                   <AppText style={styles.syncDescription}>
                     {deletionError
                       ? "Deletion cleanup paused. We’ll retry automatically."
@@ -385,6 +397,7 @@ export default function Profile() {
 
             <View style={styles.settingText}>
               <AppText weight="semibold">Choose a default</AppText>
+
               <AppText style={styles.settingDescription}>
                 Walklog will use your choice when it’s available and switch to
                 the other option when needed.
@@ -409,6 +422,7 @@ export default function Profile() {
 
             <View style={styles.settingText}>
               <AppText weight="semibold">Whisper tiny multilingual</AppText>
+
               <View style={styles.badges}>
                 <Badge label={formatBytes(whisperModelSize)} />
                 <Badge
@@ -492,6 +506,7 @@ export default function Profile() {
 
             <View style={styles.settingText}>
               <AppText weight="semibold">Temporary files</AppText>
+
               <View style={styles.cacheSizeBadge}>
                 <Badge label={formatBytes(cache.bytes)} />
               </View>
@@ -538,6 +553,7 @@ export default function Profile() {
 
           <View style={styles.settingText}>
             <AppText weight="semibold">How walklog works</AppText>
+
             <AppText style={styles.settingDescription}>
               Learn where processing happens and what syncs.
             </AppText>
@@ -565,6 +581,7 @@ export default function Profile() {
             <AppText variant="title" style={styles.modalTitle}>
               How walklog works
             </AppText>
+
             <AppText style={styles.settingDescription}>
               Choose how AI runs; walklog keeps your saved records available
               offline.
@@ -574,6 +591,7 @@ export default function Profile() {
           <ScrollView contentContainerStyle={styles.modalContent}>
             <View style={styles.infoCard}>
               <AppText weight="semibold">1. Transcribe on your device</AppText>
+
               <AppText style={styles.infoDescription}>
                 Whisper converts recordings to text locally. The audio is not
                 sent to the transcription model in the cloud.
@@ -584,6 +602,7 @@ export default function Profile() {
               <AppText weight="semibold">
                 2. Choose where AI inference runs
               </AppText>
+
               <AppText style={styles.infoDescription}>
                 On-device inference keeps the AI prompt on this device. Cloud
                 inference sends the prompt and any selected media to Firebase AI
@@ -593,6 +612,7 @@ export default function Profile() {
 
             <View style={styles.infoCard}>
               <AppText weight="semibold">3. Sync your walklog data</AppText>
+
               <AppText style={styles.infoDescription}>
                 Saved walkthroughs sync to your Firestore account. Attached
                 photos sync separately to Firebase Storage. Offline edits are
@@ -602,6 +622,7 @@ export default function Profile() {
 
             <View style={styles.infoCard}>
               <AppText weight="semibold">4. Clear only temporary files</AppText>
+
               <AppText style={styles.infoDescription}>
                 Clearing the app cache removes temporary files, while keeping
                 saved records and Firestore’s offline cache intact.

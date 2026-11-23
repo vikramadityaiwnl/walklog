@@ -22,7 +22,9 @@ export function InferenceSelector(props: Props) {
       setMode: state.setMode,
     })),
   );
+
   const auth = useAuthStore((state) => state.auth);
+
   const network = useNetworkState();
   const [deviceReady, setDeviceReady] = useState<boolean | null>(null);
   const cloudReady =
@@ -31,6 +33,7 @@ export function InferenceSelector(props: Props) {
 
   useEffect(() => {
     let active = true;
+
     void checkModelAvailability()
       .then((result) => {
         if (active) setDeviceReady(result.status === "available");

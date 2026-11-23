@@ -16,6 +16,7 @@ export function observeUserPreferences(ownerId: string): () => void {
 
   return onSnapshot(inferencePreference(ownerId), (snapshot) => {
     if (!snapshot.exists()) return;
+
     const preference = snapshot.data().preferredInference;
     if (preference === "device" || preference === "cloud")
       useInferenceStore.getState().setPreference(preference);
@@ -27,6 +28,7 @@ export function saveInferencePreference(
   preference: InferenceChoice,
 ): Promise<void> {
   useInferenceStore.getState().setPreference(preference);
+
   return setDoc(
     inferencePreference(ownerId),
     { preferredInference: preference, updatedAt: Date.now() },

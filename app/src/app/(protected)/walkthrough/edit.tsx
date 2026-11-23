@@ -89,6 +89,7 @@ export default function WalkthroughEdit() {
     if (!id || !ownerId) return;
 
     let active = true;
+
     void createWalkthroughStorage(ownerId)
       .getWalkthrough(id)
       .then((walkthrough) => {
@@ -249,6 +250,7 @@ export default function WalkthroughEdit() {
 
   async function chooseProject() {
     if (!ownerId || !id || move.status !== "idle") return;
+
     setMove({ status: "loading" });
     try {
       const projects = await createWalkthroughStorage(ownerId).listProjects();
@@ -262,6 +264,7 @@ export default function WalkthroughEdit() {
   async function finishMove() {
     setMove({ status: "idle" });
     if (!ownerId || !id) return;
+
     try {
       const walkthrough =
         await createWalkthroughStorage(ownerId).getWalkthrough(id);

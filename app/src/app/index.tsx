@@ -11,7 +11,9 @@ import { colors } from "../theme";
 
 export default function Index() {
   const auth = useAuthStore((state) => state.auth);
+
   const appCheck = useAppCheckStore((state) => state.appCheck);
+
   const updateStatus = useUpdateStore((state) => state.status);
 
   useEffect(() => {

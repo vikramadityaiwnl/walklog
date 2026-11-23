@@ -157,14 +157,18 @@ function WalkthroughArtwork(props: ArtworkProps) {
 
 export default function Walkthroughs() {
   const navigation = useNavigation();
+
   const auth = useAuthStore((state) => state.auth);
+
   const firestoreRevision = useFirestoreStore((state) => state.revision);
+
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
 
   const [list, setList] = useState<ListState>({ status: "loading" });
   const [selected, setSelected] = useState<string[] | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [revision, setRevision] = useState(0);
+
   const selectionHeaderStyle = useAnimatedStyle(
     () => ({
       height: withTiming(selected !== null ? 24 : 0, {
@@ -198,7 +202,9 @@ export default function Walkthroughs() {
   useFocusEffect(
     useCallback(() => {
       if (!ownerId) return;
+
       let active = true;
+
       const storage = createWalkthroughStorage(ownerId);
       void (async () => {
         try {
@@ -229,6 +235,7 @@ export default function Walkthroughs() {
           if (active) setList({ status: "error" });
         }
       })();
+
       return () => {
         active = false;
       };
@@ -245,10 +252,12 @@ export default function Walkthroughs() {
 
   function card(walkthrough: Walkthrough) {
     if (list.status !== "ready") return null;
+
     const project = list.projects.find(
       (entry) => entry.id === walkthrough.projectId,
     );
     const isSelected = selected?.includes(walkthrough.id) ?? false;
+
     return (
       <Animated.View
         key={walkthrough.id}
@@ -265,6 +274,7 @@ export default function Walkthroughs() {
           onPress={() => {
             if (selected !== null) {
               toggle(walkthrough.id);
+
               return;
             }
             router.push({
@@ -289,6 +299,7 @@ export default function Walkthroughs() {
               <AppText variant="title" style={styles.cardTitle}>
                 {walkthrough.title}
               </AppText>
+
               {walkthrough.clientName || walkthrough.address ? (
                 <AppText style={styles.cardSubtitle}>
                   {[walkthrough.clientName, walkthrough.address]
@@ -296,6 +307,7 @@ export default function Walkthroughs() {
                     .join(" · ")}
                 </AppText>
               ) : null}
+
               <View style={styles.meta}>
                 {project ? (
                   <View style={styles.projectMeta}>
@@ -309,6 +321,7 @@ export default function Walkthroughs() {
                     </AppText>
                   </View>
                 ) : null}
+
                 <AppText style={[styles.metaText, styles.itemCount]}>
                   {list.counts[walkthrough.id]}{" "}
                   {list.counts[walkthrough.id] === 1 ? "item" : "items"}
@@ -342,10 +355,12 @@ export default function Walkthroughs() {
               <AppText variant="title" style={styles.heading}>
                 Walkthroughs
               </AppText>
+
               <AppText style={styles.subheading}>
                 A clear record of every site visit.
               </AppText>
             </View>
+
             <Animated.View
               style={[styles.selectionHeaderContainer, selectionHeaderStyle]}
               pointerEvents={selected !== null ? "auto" : "none"}
@@ -380,7 +395,9 @@ export default function Walkthroughs() {
               ) : null}
             </Animated.View>
           </View>
+
           {list.status === "loading" ? <LoadingState /> : null}
+
           {list.status === "error" ? (
             <EmptyState
               icon={
@@ -390,6 +407,7 @@ export default function Walkthroughs() {
               description="Please reopen this screen to try again."
             />
           ) : null}
+
           {list.status === "ready" ? (
             <View
               style={[
@@ -412,6 +430,7 @@ export default function Walkthroughs() {
             </View>
           ) : null}
         </ScrollView>
+
         {selected !== null ? (
           <Animated.View
             entering={FadeInDown.duration(220).reduceMotion(
@@ -428,6 +447,7 @@ export default function Walkthroughs() {
             >
               <AppText>Cancel</AppText>
             </Pressable>
+
             <Pressable
               accessibilityRole="button"
               disabled={!selected.length}
@@ -460,6 +480,7 @@ export default function Walkthroughs() {
           </Animated.View>
         ) : null}
       </View>
+
       {ownerId && list.status === "ready" ? (
         <ProjectPicker
           visible={pickerOpen}

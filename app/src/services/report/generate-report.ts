@@ -125,6 +125,7 @@ export async function generateReport(
     );
     await logoAsset.downloadAsync();
     if (!logoAsset.localUri) throw new Error("Couldn’t load the walklog logo.");
+
     const logo = await FileSystem.readAsStringAsync(logoAsset.localUri, {
       encoding: FileSystem.EncodingType.Base64,
     });
@@ -146,6 +147,7 @@ export async function generateReport(
         .slice(0, 60) || "walkthrough";
     const output = `${FileSystem.cacheDirectory}${safeName}-${Date.now()}.pdf`;
     await FileSystem.moveAsync({ from: result.uri, to: output });
+
     return output;
   } finally {
     await Promise.all(

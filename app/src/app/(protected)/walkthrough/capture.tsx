@@ -130,6 +130,7 @@ export default function Capture() {
   const { walkthroughId } = useLocalSearchParams<{ walkthroughId: string }>();
 
   const auth = useAuthStore((state) => state.auth);
+
   const mode = useInferenceStore((state) => state.mode);
 
   const [captureMode, setCaptureMode] = useState<CaptureMode>("voice");
@@ -171,6 +172,7 @@ export default function Capture() {
           Math.max(0, Math.round((progress.bytes / progress.total) * 100)),
         )
       : 0;
+
   const downloadRingProps = useAnimatedProps(
     () => ({
       strokeDashoffset: withTiming(
@@ -604,6 +606,7 @@ export default function Capture() {
 
   const busy = operation.status !== "idle" && operation.status !== "recording";
   const hasDraft = captureMode === "type" ? !!note : !!audio || !!transcript;
+
   const createButtonStyle = useAnimatedStyle(() => {
     const availableWidth = Math.max(0, actionsWidth - 48);
 
@@ -617,6 +620,7 @@ export default function Capture() {
       ),
     };
   }, [actionsWidth, hasDraft]);
+
   const initialVoice =
     captureMode === "voice" &&
     !hasDraft &&
@@ -803,6 +807,7 @@ export default function Capture() {
                   ) : operation.status === "downloading" && progress ? (
                     <View style={styles.modelDownloadCopy}>
                       <AppText weight="semibold">Downloading model</AppText>
+
                       <AppText style={styles.modelDownloadDescription}>
                         The transcription model is being downloaded for
                         long-running sessions.
@@ -815,6 +820,7 @@ export default function Capture() {
                       <AppText weight="semibold">
                         Download transcription model
                       </AppText>
+
                       <AppText style={styles.modelDownloadDescription}>
                         Needed for transcription during long-running sessions.
                       </AppText>

@@ -97,6 +97,7 @@ export default function WalkthroughDetail() {
   }>();
 
   const auth = useAuthStore((state) => state.auth);
+
   const firestoreRevision = useFirestoreStore((state) => state.revision);
 
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
@@ -112,6 +113,7 @@ export default function WalkthroughDetail() {
       if (!ownerId || !id) return;
 
       let active = true;
+
       const storage = createWalkthroughStorage(ownerId);
       void Promise.all([storage.getWalkthrough(id), storage.listItems(id)])
         .then(([walkthrough, items]) => {
@@ -142,6 +144,7 @@ export default function WalkthroughDetail() {
   function toggleSelection(itemId: string) {
     setSelection((current) => {
       if (current.status === "saving") return current;
+
       if (current.status === "inactive")
         return { status: "selecting", ids: [itemId] };
 

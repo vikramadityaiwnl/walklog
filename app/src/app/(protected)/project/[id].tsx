@@ -38,16 +38,22 @@ type Screen =
 
 export default function ProjectDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
+
   const auth = useAuthStore((state) => state.auth);
+
   const firestoreRevision = useFirestoreStore((state) => state.revision);
+
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
+
   const [screen, setScreen] = useState<Screen>({ status: "loading" });
   const [loadRevision, setLoadRevision] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
       if (!ownerId || !id) return;
+
       let active = true;
+
       const storage = createWalkthroughStorage(ownerId);
       void Promise.all([storage.listProjects(), storage.listWalkthroughs()])
         .then(async ([projects, walkthroughs]) => {
@@ -81,6 +87,7 @@ export default function ProjectDetail() {
         .catch(() => {
           if (active) setScreen({ status: "error" });
         });
+
       return () => {
         active = false;
       };
@@ -110,6 +117,7 @@ export default function ProjectDetail() {
     <SafeAreaView style={styles.container} edges={["bottom"]}>
       <ScrollView contentContainerStyle={styles.content}>
         {screen.status === "loading" ? <LoadingState /> : null}
+
         {screen.status === "ready" ? (
           <>
             <ScreenBanner
@@ -164,6 +172,7 @@ export default function ProjectDetail() {
                           contentFit="cover"
                         />
                       ) : null}
+
                       {!walkthrough.bannerPhotoUri ? (
                         <BannerIllustration
                           illustration={walkthrough.bannerIllustration}
@@ -175,6 +184,7 @@ export default function ProjectDetail() {
                           <AppText variant="title" style={styles.cardTitle}>
                             {walkthrough.title}
                           </AppText>
+
                           {walkthrough.clientName || walkthrough.address ? (
                             <AppText style={styles.cardSubtitle}>
                               {[walkthrough.clientName, walkthrough.address]
@@ -182,6 +192,7 @@ export default function ProjectDetail() {
                                 .join(" · ")}
                             </AppText>
                           ) : null}
+
                           <AppText style={styles.cardCount}>
                             {screen.counts[walkthrough.id]}{" "}
                             {screen.counts[walkthrough.id] === 1
