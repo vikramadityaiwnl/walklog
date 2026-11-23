@@ -57,9 +57,6 @@ type CacheState =
   | { status: "clearing"; bytes: number }
   | { status: "error"; bytes: number; message: string };
 
-// Temporary UI preview: show both sync cards while reviewing the profile.
-const showSyncPreview = __DEV__;
-
 function formatBytes(bytes: number): string {
   if (bytes < 1_000_000) return `${Math.round(bytes / 1_000)} KB`;
 
@@ -92,30 +89,24 @@ export default function Profile() {
     }, []),
   );
 
-  const previewSync = showSyncPreview;
-  const showChangeSync =
-    previewSync || pendingChanges || mediaStatus !== "idle";
-  const showDeletionSync = previewSync || deletionsPending || deletionError;
+  const showChangeSync = pendingChanges || mediaStatus !== "idle";
+  const showDeletionSync = deletionsPending || Boolean(deletionError);
   const photoSyncError = mediaStatus === "error";
   const photoSyncWaiting = mediaStatus === "waiting";
-  const changeSyncTitle = previewSync
-    ? "Syncing changes"
-    : photoSyncError
-      ? "Photo sync paused"
-      : photoSyncWaiting
-        ? "Waiting to sync photos"
-        : pendingChanges
-          ? "Syncing changes"
-          : "Syncing photos";
-  const changeSyncDescription = previewSync
-    ? "Walkthrough changes are syncing to your account."
-    : photoSyncError
-      ? "Some photos couldn’t sync. We’ll retry automatically."
-      : photoSyncWaiting
-        ? "Photos will sync when they’re ready."
-        : pendingChanges
-          ? "Your walkthrough changes are being saved to the cloud."
-          : "Your photos are being saved to the cloud.";
+  const changeSyncTitle = photoSyncError
+    ? "Photo sync paused"
+    : photoSyncWaiting
+      ? "Waiting to sync photos"
+      : pendingChanges
+        ? "Syncing changes"
+        : "Syncing photos";
+  const changeSyncDescription = photoSyncError
+    ? "Some photos couldn’t sync. We’ll retry automatically."
+    : photoSyncWaiting
+      ? "Photos will sync when they’re ready."
+      : pendingChanges
+        ? "Your walkthrough changes are being saved to the cloud."
+        : "Your photos are being saved to the cloud.";
 
   function confirmSignOut() {
     showDialog("Sign out?", "You can sign back in to access your account.", [
@@ -257,52 +248,62 @@ export default function Profile() {
           </View>
         </View>
 
-        {showChangeSync ? (
-          <View accessibilityRole="summary" style={styles.syncCard}>
-            <View style={styles.syncIcon}>
-              <CloudArrowUpIcon size={22} color={colors.accent} />
-            </View>
+        {showChangeSync || showDeletionSync ? (
+          <View style={styles.syncCards}>
+            {showChangeSync ? (
+              <View accessibilityRole="summary" style={styles.syncCard}>
+                <View style={styles.syncIcon}>
+                  <CloudArrowUpIcon
+                    size={21}
+                    color={
+                      photoSyncError
+                        ? colors.danger
+                        : photoSyncWaiting
+                          ? colors.warning
+                          : colors.muted
+                    }
+                  />
+                </View>
 
-            <View style={styles.syncText}>
-              <AppText weight="semibold">{changeSyncTitle}</AppText>
+                <View style={styles.syncText}>
+                  <AppText weight="semibold">{changeSyncTitle}</AppText>
+                  <AppText style={styles.syncDescription}>
+                    {changeSyncDescription}
+                  </AppText>
+                </View>
 
-              <AppText style={styles.syncDescription}>
-                {changeSyncDescription}
-              </AppText>
-            </View>
-
-            {previewSync || (!photoSyncError && !photoSyncWaiting) ? (
-              <ActivityIndicator color={colors.accent} size="small" />
+                {!photoSyncError && !photoSyncWaiting ? (
+                  <ActivityIndicator color={colors.muted} size="small" />
+                ) : null}
+              </View>
             ) : null}
-          </View>
-        ) : null}
 
-        {showDeletionSync ? (
-          <View accessibilityRole="summary" style={styles.syncCard}>
-            <View style={styles.syncIcon}>
-              <TrashIcon size={21} color={colors.accent} />
-            </View>
+            {showDeletionSync ? (
+              <View accessibilityRole="summary" style={styles.syncCard}>
+                <View style={styles.syncIcon}>
+                  <TrashIcon
+                    size={20}
+                    color={deletionError ? colors.danger : colors.muted}
+                  />
+                </View>
 
-            <View style={styles.syncText}>
-              <AppText weight="semibold">
-                {previewSync
-                  ? "Syncing deletions"
-                  : deletionError
-                    ? "Deletion sync paused"
-                    : "Finishing deletions"}
-              </AppText>
+                <View style={styles.syncText}>
+                  <AppText weight="semibold">
+                    {deletionError
+                      ? "Deletion sync paused"
+                      : "Finishing deletions"}
+                  </AppText>
+                  <AppText style={styles.syncDescription}>
+                    {deletionError
+                      ? "Deletion cleanup paused. We’ll retry automatically."
+                      : "Deleted records will be cleaned up when you’re online."}
+                  </AppText>
+                </View>
 
-              <AppText style={styles.syncDescription}>
-                {previewSync
-                  ? "Removed records are being cleaned up from your account."
-                  : deletionError
-                    ? "Deletion cleanup paused. We’ll retry automatically."
-                    : "Deleted records will be cleaned up when you’re online."}
-              </AppText>
-            </View>
-
-            {previewSync || !deletionError ? (
-              <ActivityIndicator color={colors.accent} size="small" />
+                {!deletionError ? (
+                  <ActivityIndicator color={colors.muted} size="small" />
+                ) : null}
+              </View>
             ) : null}
           </View>
         ) : null}
@@ -589,22 +590,20 @@ const styles = StyleSheet.create({
   identityText: { flex: 1, gap: 4 },
   name: { fontSize: 20, lineHeight: 27 },
   email: { color: colors.muted, fontSize: 14 },
+  syncCards: { gap: 10, marginTop: 22 },
   syncCard: {
     alignItems: "center",
-    backgroundColor: colors.accentFaint,
-    borderRadius: 14,
+    backgroundColor: colors.neutralSoft,
+    borderRadius: 12,
     flexDirection: "row",
-    gap: 14,
-    marginTop: 24,
-    padding: 16,
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
   },
   syncIcon: {
     alignItems: "center",
-    backgroundColor: colors.background,
-    borderRadius: 12,
-    height: 42,
     justifyContent: "center",
-    width: 42,
+    width: 30,
   },
   syncText: { flex: 1, gap: 4 },
   syncDescription: { color: colors.muted, fontSize: 13, lineHeight: 19 },
