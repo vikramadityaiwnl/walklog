@@ -23,6 +23,7 @@ import {
   mediaStoragePath,
 } from "./media-refs";
 import { useDialogStore } from "../../store/dialog-store";
+import { useFirestoreStore } from "../../store/firestore-store";
 
 const database = getFirestore();
 
@@ -37,13 +38,15 @@ function localPhotoUri(uri?: string): string | undefined {
 
 type StoredBanner = { pendingBannerId?: string; deletionPending?: boolean };
 
-type StoredItem = Omit<PunchItem, "photos"> &
+export type StoredItem = Omit<PunchItem, "photos"> &
   StoredBanner & {
     photos?: (string | PunchItem["photos"][number])[];
     pendingPhotoIds?: string[];
   };
 
-function readWalkthrough(value: Walkthrough & StoredBanner): Walkthrough {
+export function readWalkthrough(
+  value: Walkthrough & StoredBanner,
+): Walkthrough {
   return {
     ...value,
     bannerIllustration: getBannerIllustration(
@@ -56,7 +59,7 @@ function readWalkthrough(value: Walkthrough & StoredBanner): Walkthrough {
   };
 }
 
-function readProject(value: Project & StoredBanner): Project {
+export function readProject(value: Project & StoredBanner): Project {
   return {
     ...value,
     bannerIllustration: getBannerIllustration(
@@ -69,7 +72,7 @@ function readProject(value: Project & StoredBanner): Project {
   };
 }
 
-function readItem(value: StoredItem): PunchItem {
+export function readItem(value: StoredItem): PunchItem {
   const photos: PunchItem["photos"] = (value.photos ?? []).map((photo) =>
     typeof photo === "string"
       ? { localUri: photo, remoteUrl: photo }
@@ -224,18 +227,29 @@ export function createWalkthroughStorage(ownerId: string) {
   const itemRef = (id: string) => doc(items, id);
 
   async function allProjects() {
+    const store = useFirestoreStore.getState();
+    if (store.ownerId === ownerId && store.loaded.projects)
+      return store.projects;
+
     return (await getDocs(projects)).docs
       .filter((entry) => entry.data().deletionPending !== true)
       .map((entry) => readProject(entry.data() as Project));
   }
 
   async function allWalkthroughs() {
+    const store = useFirestoreStore.getState();
+    if (store.ownerId === ownerId && store.loaded.walkthroughs)
+      return store.walkthroughs;
+
     return (await getDocs(walkthroughs)).docs
       .filter((entry) => entry.data().deletionPending !== true)
       .map((entry) => readWalkthrough(entry.data() as Walkthrough));
   }
 
   async function allItems() {
+    const store = useFirestoreStore.getState();
+    if (store.ownerId === ownerId && store.loaded.items) return store.items;
+
     return (await getDocs(items)).docs.map((entry) =>
       readItem(entry.data() as StoredItem),
     );
@@ -368,6 +382,10 @@ export function createWalkthroughStorage(ownerId: string) {
     },
     async getWalkthrough(id: string): Promise<Walkthrough | null> {
       requireId(id, "Walkthrough ID");
+      const store = useFirestoreStore.getState();
+      if (store.ownerId === ownerId && store.loaded.walkthroughs)
+        return store.walkthroughs.find((entry) => entry.id === id) ?? null;
+
       const snapshot = await getDoc(walkthroughRef(id));
       return snapshot.exists() && snapshot.data().deletionPending !== true
         ? readWalkthrough(snapshot.data() as Walkthrough)
@@ -395,6 +413,14 @@ export function createWalkthroughStorage(ownerId: string) {
     },
     async listItems(walkthroughId: string): Promise<PunchItem[]> {
       requireId(walkthroughId, "Walkthrough ID");
+      const store = useFirestoreStore.getState();
+      if (store.ownerId === ownerId && store.loaded.items)
+        return store.items
+          .filter((item) => item.walkthroughId === walkthroughId)
+          .sort(
+            (a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id),
+          );
+
       if (
         (await getDoc(walkthroughRef(walkthroughId))).data()
           ?.deletionPending === true
