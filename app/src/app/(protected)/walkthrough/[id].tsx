@@ -1,12 +1,18 @@
 import { Image } from "expo-image";
 import { useCallback, useState } from "react";
-import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import {
+  router,
+  useFocusEffect,
+  useLocalSearchParams,
+  type Href,
+} from "expo-router";
 import {
   ClipboardDocumentListIcon,
   MapPinIcon,
   WrenchScrewdriverIcon,
   PlusIcon,
   CheckIcon,
+  DocumentTextIcon,
 } from "react-native-heroicons/outline";
 import {
   ActivityIndicator,
@@ -258,6 +264,30 @@ export default function WalkthroughDetail() {
                 screen.items.length === 0 && styles.emptyContent,
               ]}
             >
+              {!selecting && screen.items.length > 0 ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Open walkthrough report"
+                  onPress={() =>
+                    router.push({
+                      pathname: "/walkthrough/report",
+                      params: { id },
+                    } as Href)
+                  }
+                  style={styles.reportLink}
+                >
+                  <DocumentTextIcon size={20} color={colors.accent} />
+
+                  <View style={styles.reportText}>
+                    <AppText weight="semibold">Walkthrough report</AppText>
+
+                    <AppText style={styles.reportHint}>
+                      View or share a PDF
+                    </AppText>
+                  </View>
+                </Pressable>
+              ) : null}
+
               {selecting ? (
                 <View style={styles.selectionHeader}>
                   <AppText weight="semibold">{`${selectedIds.length} selected`}</AppText>
@@ -494,6 +524,17 @@ const styles = StyleSheet.create({
   heading: { fontSize: 30, lineHeight: 38, letterSpacing: -0.8 },
   subheading: { color: colors.muted, lineHeight: 22 },
   section: { gap: 8 },
+  reportLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+  },
+  reportText: { flex: 1, gap: 2 },
+  reportHint: { color: colors.muted, fontSize: 13 },
   label: { fontSize: 14 },
   input: {
     borderWidth: 1,
