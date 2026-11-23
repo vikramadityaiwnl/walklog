@@ -5,15 +5,10 @@ import {
   ChevronRightIcon,
   ClipboardDocumentListIcon,
 } from "react-native-heroicons/outline";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText } from "../../../components/app-text";
+import { LoadingState } from "../../../components/loading-state";
 import { ScreenBanner } from "../../../components/screen-banner";
 import { Overlay } from "../../../components/overlay";
 import { bannerColor } from "../../../utils/banner-illustrations";
@@ -87,9 +82,7 @@ export default function ProjectDetail() {
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
       <ScrollView contentContainerStyle={styles.content}>
-        {screen.status === "loading" ? (
-          <ActivityIndicator color={colors.accent} />
-        ) : null}
+        {screen.status === "loading" ? <LoadingState /> : null}
         {screen.status === "error" ? (
           <AppText>Couldn’t load this project.</AppText>
         ) : null}

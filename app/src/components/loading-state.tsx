@@ -3,7 +3,7 @@ import { colors } from "../theme";
 import { AppText } from "./app-text";
 
 interface Props {
-  description: string;
+  description?: string;
 }
 
 export function LoadingState(props: Props) {
@@ -11,7 +11,9 @@ export function LoadingState(props: Props) {
     <View style={styles.container}>
       <ActivityIndicator color={colors.accent} />
 
-      <AppText style={styles.description}>{props.description}</AppText>
+      {props.description ? (
+        <AppText style={styles.description}>{props.description}</AppText>
+      ) : null}
     </View>
   );
 }

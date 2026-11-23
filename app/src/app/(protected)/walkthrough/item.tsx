@@ -20,6 +20,7 @@ import {
   randomBannerColor,
 } from "../../../utils/banner-colors";
 import { AppText } from "../../../components/app-text";
+import { LoadingState } from "../../../components/loading-state";
 import { PhotoGallery } from "../../../components/photo-gallery";
 import type {
   ItemStatus,
@@ -419,7 +420,7 @@ export default function ItemEdit() {
           </View>
 
           {form.status === "loading" ? (
-            <AppText>Loading item</AppText>
+            <LoadingState />
           ) : (
             <>
               <View style={styles.section}>

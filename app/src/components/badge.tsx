@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   text: { fontSize: 12, lineHeight: 16 },
-  neutral: { backgroundColor: "#F0F1F0" },
+  neutral: { backgroundColor: colors.neutralSoft },
   neutralText: { color: colors.muted },
   info: { backgroundColor: colors.infoSoft },
   infoText: { color: colors.info },

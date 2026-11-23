@@ -46,6 +46,10 @@ service cloud.firestore {
       allow update: if owner(userId) && request.resource.data.get('walkthroughId', null) == resource.data.get('walkthroughId', null) && activeWalkthrough(userId, request.resource.data.get('walkthroughId', null));
     }
 
+    match /users/{userId}/preferences/{preferenceId} {
+      allow read, write: if owner(userId) && preferenceId == 'ai';
+    }
+
     match /users/{userId}/{collection}/{documentId} {
       allow read, write: if owner(userId) && collection in ['mutations', 'media-deletions', 'deletion-jobs'];
     }

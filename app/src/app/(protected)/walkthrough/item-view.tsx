@@ -5,13 +5,7 @@ import {
   useLocalSearchParams,
   type Href,
 } from "expo-router";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import {
   CameraIcon,
@@ -24,6 +18,7 @@ import { ScreenBanner } from "../../../components/screen-banner";
 import { getBannerColor } from "../../../utils/banner-colors";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText } from "../../../components/app-text";
+import { LoadingState } from "../../../components/loading-state";
 import { AppButton } from "../../../components/app-button";
 import { Badge } from "../../../components/badge";
 import { useDialogStore } from "../../../store/dialog-store";
@@ -220,14 +215,7 @@ export default function ItemView() {
       <StatusBar style={screen.status === "ready" ? "light" : "dark"} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {screen.status === "loading" ? (
-          <View style={styles.loading}>
-            <ActivityIndicator
-              color={colors.accent}
-              accessibilityLabel="Loading item"
-            />
-          </View>
-        ) : null}
+        {screen.status === "loading" ? <LoadingState /> : null}
 
         {screen.status === "error" ? (
           <AppText accessibilityRole="alert" style={styles.error}>
@@ -433,7 +421,6 @@ export default function ItemView() {
 const styles = StyleSheet.create({
   container: { backgroundColor: colors.background, flex: 1 },
   scrollContent: { flexGrow: 1 },
-  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
   content: {
     flexGrow: 1,
     paddingHorizontal: 24,

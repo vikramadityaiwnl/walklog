@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
-import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { File } from "expo-file-system";
 import * as Sharing from "expo-sharing";
@@ -11,6 +11,7 @@ import {
 } from "react-native-heroicons/outline";
 import { AppText } from "../../../components/app-text";
 import { AppButton } from "../../../components/app-button";
+import { LoadingState } from "../../../components/loading-state";
 import { useAuthStore } from "../../../store/auth-store";
 import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
 import { generateReport } from "../../../services/report/generate-report";
@@ -121,12 +122,7 @@ export default function WalkthroughReport() {
   if (screen.status === "loading") {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.loading}>
-          <ActivityIndicator
-            color={colors.accent}
-            accessibilityLabel="Loading report"
-          />
-        </View>
+        <LoadingState />
       </SafeAreaView>
     );
   }
@@ -235,7 +231,6 @@ export default function WalkthroughReport() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
   content: {
     paddingHorizontal: 24,
     paddingTop: 18,

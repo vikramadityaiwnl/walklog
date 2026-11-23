@@ -17,6 +17,7 @@ import { BannerPicker } from "../../../components/banner-picker";
 import { ProjectPicker } from "../../../components/project-picker";
 import { useBannerDraft } from "../../../hooks/use-banner-draft";
 import { AppText } from "../../../components/app-text";
+import { LoadingState } from "../../../components/loading-state";
 import type { Project, Walkthrough } from "../../../models/walkthrough";
 import {
   createFirestoreId,
@@ -289,7 +290,7 @@ export default function WalkthroughEdit() {
           </View>
 
           {form.status === "loading" ? (
-            <AppText>Loading walkthrough</AppText>
+            <LoadingState />
           ) : (
             <>
               <View style={styles.section}>

@@ -12,7 +12,7 @@ export function AppHeader() {
         accessibilityLabel="walklog"
       />
 
-      <InferenceSelector />
+      <InferenceSelector align="center" />
     </View>
   );
 }
@@ -25,5 +25,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 12,
   },
-  logo: { height: 44, width: 44 },
+  logo: { height: 56, width: 56, transform: [{ translateY: -2 }] },
 });

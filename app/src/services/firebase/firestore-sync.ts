@@ -7,9 +7,16 @@ import {
 } from "@react-native-firebase/firestore";
 import { useDialogStore } from "../../store/dialog-store";
 import { useFirestoreStore } from "../../store/firestore-store";
+import {
+  readItem,
+  readProject,
+  readWalkthrough,
+  type StoredItem,
+} from "../walkthrough/storage";
 
 export function observeFirestore(ownerId: string): () => void {
   const database = getFirestore();
+  useFirestoreStore.getState().beginSession(ownerId);
   const pendingCollections = new Map<string, boolean>();
   const unsubscribers = ["projects", "walkthroughs", "items"].map((name) =>
     onSnapshot(
@@ -22,6 +29,33 @@ export function observeFirestore(ownerId: string): () => void {
           .setPending([...pendingCollections.values()].some(Boolean));
         if (snapshot.docChanges().length)
           useFirestoreStore.getState().notifyChange();
+        const store = useFirestoreStore.getState();
+        if (name === "projects")
+          store.setProjects(
+            snapshot.docs
+              .filter((entry) => entry.data().deletionPending !== true)
+              .map((entry) =>
+                readProject({ ...entry.data(), id: entry.id } as Parameters<
+                  typeof readProject
+                >[0]),
+              ),
+          );
+        else if (name === "walkthroughs")
+          store.setWalkthroughs(
+            snapshot.docs
+              .filter((entry) => entry.data().deletionPending !== true)
+              .map((entry) =>
+                readWalkthrough({ ...entry.data(), id: entry.id } as Parameters<
+                  typeof readWalkthrough
+                >[0]),
+              ),
+          );
+        else
+          store.setItems(
+            snapshot.docs.map((entry) =>
+              readItem({ ...entry.data(), id: entry.id } as StoredItem),
+            ),
+          );
       },
       () => {
         useDialogStore
