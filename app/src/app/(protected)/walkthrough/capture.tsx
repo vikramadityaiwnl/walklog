@@ -18,9 +18,11 @@ import {
   SpeakerWaveIcon,
   StopIcon,
   ArrowUpTrayIcon,
+  ArrowDownTrayIcon,
   PencilSquareIcon,
   ExclamationTriangleIcon,
 } from "react-native-heroicons/outline";
+import Svg, { Circle } from "react-native-svg";
 import {
   ActivityIndicator,
   Pressable,
@@ -102,6 +104,9 @@ export default function Capture() {
 
   const [captureMode, setCaptureMode] = useState<CaptureMode>("voice");
   const [operation, setOperation] = useState<Operation>({ status: "idle" });
+  const [modelAvailable, setModelAvailable] = useState(
+    () => !!getWhisperModel(),
+  );
   const [voice, setVoice] = useState<VoiceDraft>({
     transcript: "",
     finalized: false,
@@ -128,6 +133,12 @@ export default function Capture() {
   const muted = operation.status === "recording" && operation.muted;
   const progress =
     operation.status === "downloading" ? operation.progress : undefined;
+  const downloadPercentage = progress
+    ? Math.min(
+        100,
+        Math.max(0, Math.round((progress.bytes / progress.total) * 100)),
+      )
+    : 0;
 
   const { stream: audioStream } = useAudioStream({
     sampleRate: 16000,
@@ -164,21 +175,11 @@ export default function Capture() {
       const modelPath = getWhisperModel();
 
       if (!modelPath) {
-        setOperation({
-          status: "downloading",
-          progress: { bytes: 0, total: whisperModelSize },
-        });
-        await downloadWhisperModel((bytes, total) => {
-          if (mounted.current)
-            setOperation({ status: "downloading", progress: { bytes, total } });
-        });
-        if (mounted.current) {
-          setOperation({ status: "idle" });
-        }
-
-        return;
+        setModelAvailable(false);
+        throw new Error("Download the transcription model before recording.");
       }
 
+      setModelAvailable(true);
       setOperation({ status: "preparing" });
       const permission = await requestRecordingPermissionsAsync();
       if (!permission.granted)
@@ -263,6 +264,36 @@ export default function Capture() {
       }
     } finally {
       recording.current.starting = false;
+    }
+  }
+
+  async function downloadModel() {
+    if (operation.status !== "idle") return;
+
+    setError("");
+    setOperation({
+      status: "downloading",
+      progress: { bytes: 0, total: whisperModelSize },
+    });
+
+    try {
+      await downloadWhisperModel((bytes, total) => {
+        if (mounted.current)
+          setOperation({ status: "downloading", progress: { bytes, total } });
+      });
+      if (mounted.current) {
+        setModelAvailable(true);
+        setOperation({ status: "idle" });
+      }
+    } catch (cause) {
+      if (mounted.current) {
+        setOperation({ status: "idle" });
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : "Couldn’t download the transcription model.",
+        );
+      }
     }
   }
 
@@ -391,6 +422,7 @@ export default function Capture() {
           if (mounted.current)
             setOperation({ status: "downloading", progress: { bytes, total } });
         });
+        if (mounted.current) setModelAvailable(true);
       }
 
       setOperation({ status: "transcribing" });
@@ -644,27 +676,100 @@ export default function Capture() {
               operation.status === "preparing" ||
               operation.status === "downloading") ? (
               <View style={styles.voiceIntro}>
-                {operation.status === "preparing" ? (
-                  <ActivityIndicator
-                    size="large"
-                    color={colors.accent}
-                    accessibilityLabel="Preparing recording"
-                  />
-                ) : (
+                <View style={styles.recordControl}>
+                  {progress ? (
+                    <Svg
+                      pointerEvents="none"
+                      style={styles.downloadRing}
+                      width={112}
+                      height={112}
+                      viewBox="0 0 112 112"
+                    >
+                      <Circle
+                        cx={56}
+                        cy={56}
+                        r={51}
+                        fill="none"
+                        stroke={colors.neutralSoft}
+                        strokeWidth={3}
+                      />
+                      <Circle
+                        cx={56}
+                        cy={56}
+                        r={51}
+                        fill="none"
+                        stroke={colors.accent}
+                        strokeWidth={3}
+                        strokeLinecap="round"
+                        strokeDasharray={`${2 * Math.PI * 51} ${2 * Math.PI * 51}`}
+                        strokeDashoffset={
+                          2 * Math.PI * 51 * (1 - downloadPercentage / 100)
+                        }
+                        transform="rotate(-90 56 56)"
+                      />
+                    </Svg>
+                  ) : null}
+
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="Start recording"
+                    accessibilityLabel={
+                      operation.status === "downloading"
+                        ? `Downloading transcription model, ${downloadPercentage}%`
+                        : modelAvailable
+                          ? "Start recording"
+                          : "Download transcription model"
+                    }
+                    accessibilityState={{ disabled: busy }}
                     disabled={busy}
-                    onPress={startRecording}
+                    onPress={() =>
+                      modelAvailable
+                        ? void startRecording()
+                        : void downloadModel()
+                    }
                     style={styles.bigMic}
                   >
-                    <MicrophoneIcon size={38} color={colors.onAccent} />
+                    {operation.status === "preparing" ? (
+                      <ActivityIndicator
+                        size="small"
+                        color={colors.onAccent}
+                        accessibilityLabel="Preparing recording"
+                      />
+                    ) : operation.status === "downloading" && progress ? (
+                      <View style={styles.downloadButtonContent}>
+                        <AppText style={styles.downloadButtonSize}>
+                          {mb(progress.bytes)} / {mb(progress.total)} MB
+                        </AppText>
+                      </View>
+                    ) : modelAvailable ? (
+                      <MicrophoneIcon size={38} color={colors.onAccent} />
+                    ) : (
+                      <ArrowDownTrayIcon size={34} color={colors.onAccent} />
+                    )}
                   </Pressable>
-                )}
+                </View>
 
-                <AppText weight="semibold">
-                  {operation.status === "preparing" ? "Preparing" : "Record"}
-                </AppText>
+                {operation.status === "preparing" ? (
+                  <AppText weight="semibold">Preparing</AppText>
+                ) : operation.status === "downloading" && progress ? (
+                  <View style={styles.modelDownloadCopy}>
+                    <AppText weight="semibold">Downloading model</AppText>
+                    <AppText style={styles.modelDownloadDescription}>
+                      The transcription model is being downloaded for
+                      long-running sessions.
+                    </AppText>
+                  </View>
+                ) : modelAvailable ? (
+                  <AppText weight="semibold">Record</AppText>
+                ) : (
+                  <View style={styles.modelDownloadCopy}>
+                    <AppText weight="semibold">
+                      Download transcription model
+                    </AppText>
+                    <AppText style={styles.modelDownloadDescription}>
+                      Needed for transcription during long-running sessions.
+                    </AppText>
+                  </View>
+                )}
               </View>
             ) : null}
 
@@ -773,29 +878,6 @@ export default function Capture() {
           </AppText>
         ) : null}
       </ScrollView>
-
-      {progress && operation.status === "downloading" ? (
-        <View style={styles.download}>
-          <AppText weight="semibold">Downloading speech model</AppText>
-
-          <AppText style={styles.subheading}>
-            {mb(progress.bytes)} MB of {mb(progress.total)} MB ·{" "}
-            {Math.min(100, Math.round((progress.bytes / progress.total) * 100))}
-            %
-          </AppText>
-
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressFill,
-                {
-                  width: `${Math.min(100, (progress.bytes / progress.total) * 100)}%`,
-                },
-              ]}
-            />
-          </View>
-        </View>
-      ) : null}
 
       {operation.status === "stopping" ? (
         <View style={styles.finishing}>
@@ -1008,16 +1090,27 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 6,
   },
-  download: { gap: 6, paddingHorizontal: 24, paddingVertical: 12 },
-  progressTrack: {
-    height: 6,
-    borderRadius: 3,
-    overflow: "hidden",
-    backgroundColor: colors.accentFaint,
+  recordControl: {
+    alignItems: "center",
+    height: 112,
+    justifyContent: "center",
+    width: 112,
   },
-  progressFill: { height: 6, backgroundColor: colors.accent },
+  downloadRing: { left: 0, position: "absolute", top: 0 },
+  downloadButtonContent: { alignItems: "center" },
+  downloadButtonSize: {
+    color: colors.onAccent,
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: "center",
+  },
+  modelDownloadCopy: { alignItems: "center", gap: 4, maxWidth: 320 },
+  modelDownloadDescription: {
+    color: colors.muted,
+    lineHeight: 22,
+    textAlign: "center",
+  },
   recordBar: {
     marginHorizontal: 24,
     marginTop: 8,
