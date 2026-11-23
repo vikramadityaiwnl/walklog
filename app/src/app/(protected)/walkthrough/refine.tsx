@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
 import {
   SparklesIcon,
@@ -153,6 +153,19 @@ export default function RefineItem() {
 
   const includesPhoto = refinementUsesPhoto(mode);
 
+  if (screen.status === "loading") {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loading}>
+          <ActivityIndicator
+            color={colors.accent}
+            accessibilityLabel="Loading item"
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (screen.status === "ready" && screen.busy) {
     return (
       <SafeAreaView style={styles.container}>
@@ -297,8 +310,6 @@ export default function RefineItem() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        {screen.status === "loading" ? <AppText>Loading item</AppText> : null}
-
         <View style={styles.intro}>
           <AppText variant="title" style={styles.heading}>
             Refine item
@@ -431,6 +442,7 @@ export default function RefineItem() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
   reviewContent: {
     paddingHorizontal: 24,
     paddingTop: 24,

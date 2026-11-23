@@ -221,10 +221,12 @@ export default function ItemView() {
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {screen.status === "loading" ? (
-          <ActivityIndicator
-            color={colors.accent}
-            accessibilityLabel="Loading item"
-          />
+          <View style={styles.loading}>
+            <ActivityIndicator
+              color={colors.accent}
+              accessibilityLabel="Loading item"
+            />
+          </View>
         ) : null}
 
         {screen.status === "error" ? (
@@ -431,6 +433,7 @@ export default function ItemView() {
 const styles = StyleSheet.create({
   container: { backgroundColor: colors.background, flex: 1 },
   scrollContent: { flexGrow: 1 },
+  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
   content: {
     flexGrow: 1,
     paddingHorizontal: 24,
