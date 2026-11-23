@@ -8,14 +8,17 @@ import {
   FolderIcon,
   PlusIcon,
 } from "react-native-heroicons/outline";
-import {
-  LayoutAnimation,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  FadeOut,
+  LinearTransition,
+  ReduceMotion,
+  useAnimatedStyle,
+  withTiming,
+} from "react-native-reanimated";
 import { AppHeader } from "../../../components/app-header";
 import { AppText } from "../../../components/app-text";
 import { EmptyState } from "../../../components/empty-state";
@@ -29,6 +32,12 @@ import { createWalkthroughStorage } from "../../../services/walkthrough/storage"
 import { useFirestoreStore } from "../../../store/firestore-store";
 import { useAuthStore } from "../../../store/auth-store";
 import { colors } from "../../../theme";
+import Svg, {
+  Defs,
+  FeColorMatrix,
+  Filter,
+  Image as SvgImage,
+} from "react-native-svg";
 
 type ListState =
   | { status: "loading" | "error" }
@@ -38,6 +47,108 @@ type ListState =
       projects: Project[];
       counts: Record<string, number>;
     };
+
+interface Props {
+  selected: boolean;
+}
+
+interface ArtworkProps {
+  walkthrough: Walkthrough;
+  muted: boolean;
+}
+
+const layoutTransition = LinearTransition.duration(180).reduceMotion(
+  ReduceMotion.System,
+);
+const fadeIn = FadeIn.duration(140).reduceMotion(ReduceMotion.System);
+const fadeOut = FadeOut.duration(120).reduceMotion(ReduceMotion.System);
+
+function SelectionIndicator(props: Props) {
+  const selectedStyle = useAnimatedStyle(
+    () => ({
+      backgroundColor: withTiming(
+        props.selected ? colors.accent : "transparent",
+        { duration: 140, reduceMotion: ReduceMotion.System },
+      ),
+      borderColor: withTiming(
+        props.selected ? colors.accent : colors.onAccent,
+        { duration: 140, reduceMotion: ReduceMotion.System },
+      ),
+    }),
+    [props.selected],
+  );
+
+  return (
+    <Animated.View
+      entering={fadeIn}
+      exiting={fadeOut}
+      style={[styles.checkbox, selectedStyle]}
+    >
+      {props.selected ? (
+        <Animated.View entering={fadeIn} exiting={fadeOut}>
+          <CheckIcon size={16} color={colors.onAccent} />
+        </Animated.View>
+      ) : null}
+    </Animated.View>
+  );
+}
+
+function WalkthroughArtwork(props: ArtworkProps) {
+  const grayscaleStyle = useAnimatedStyle(
+    () => ({
+      opacity: withTiming(props.muted ? 1 : 0, {
+        duration: 220,
+        reduceMotion: ReduceMotion.System,
+      }),
+    }),
+    [props.muted],
+  );
+
+  return (
+    <>
+      <View pointerEvents="none" style={styles.artwork}>
+        {props.walkthrough.bannerPhotoUri ? (
+          <Image
+            source={{ uri: props.walkthrough.bannerPhotoUri }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+          />
+        ) : (
+          <BannerIllustration
+            illustration={props.walkthrough.bannerIllustration}
+          />
+        )}
+      </View>
+
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.grayscaleArtwork, grayscaleStyle]}
+      >
+        {props.walkthrough.bannerPhotoUri ? (
+          <Svg width="100%" height="100%">
+            <Defs>
+              <Filter id="grayscale">
+                <FeColorMatrix type="saturate" values="0" />
+              </Filter>
+            </Defs>
+
+            <SvgImage
+              href={{ uri: props.walkthrough.bannerPhotoUri }}
+              width="100%"
+              height="100%"
+              preserveAspectRatio="xMidYMid slice"
+              filter="url(#grayscale)"
+            />
+          </Svg>
+        ) : (
+          <BannerIllustration
+            illustration={props.walkthrough.bannerIllustration}
+          />
+        )}
+      </Animated.View>
+    </>
+  );
+}
 
 export default function Walkthroughs() {
   const navigation = useNavigation();
@@ -49,9 +160,25 @@ export default function Walkthroughs() {
   const [selected, setSelected] = useState<string[] | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [revision, setRevision] = useState(0);
+  const selectionHeaderStyle = useAnimatedStyle(
+    () => ({
+      height: withTiming(selected !== null ? 24 : 0, {
+        duration: 220,
+        reduceMotion: ReduceMotion.System,
+      }),
+      marginTop: withTiming(selected !== null ? 18 : 0, {
+        duration: 220,
+        reduceMotion: ReduceMotion.System,
+      }),
+      opacity: withTiming(selected !== null ? 1 : 0, {
+        duration: 220,
+        reduceMotion: ReduceMotion.System,
+      }),
+    }),
+    [selected !== null],
+  );
 
   useLayoutEffect(() => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     navigation.setOptions({
       tabBarStyle:
         selected !== null
@@ -118,83 +245,76 @@ export default function Walkthroughs() {
     );
     const isSelected = selected?.includes(walkthrough.id) ?? false;
     return (
-      <Pressable
-        key={walkthrough.id}
-        accessibilityRole="button"
-        accessibilityLabel={`Open ${walkthrough.title}`}
-        accessibilityState={{ selected: isSelected }}
-        onLongPress={() => toggle(walkthrough.id)}
-        onPress={() => {
-          if (selected !== null) {
-            toggle(walkthrough.id);
-            return;
-          }
-          router.push({
-            pathname: "/walkthrough/[id]",
-            params: { id: walkthrough.id },
-          });
-        }}
-        style={[
-          styles.card,
-          {
-            backgroundColor: bannerColor,
-          },
-        ]}
-      >
-        {walkthrough.bannerPhotoUri ? (
-          <Image
-            source={{ uri: walkthrough.bannerPhotoUri }}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
+      <Animated.View key={walkthrough.id} collapsable={false}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${selected !== null ? "Select" : "Open"} ${walkthrough.title}`}
+          accessibilityState={{ selected: isSelected }}
+          onLongPress={() => toggle(walkthrough.id)}
+          onPress={() => {
+            if (selected !== null) {
+              toggle(walkthrough.id);
+              return;
+            }
+            router.push({
+              pathname: "/walkthrough/[id]",
+              params: { id: walkthrough.id },
+            });
+          }}
+          style={[
+            styles.card,
+            {
+              backgroundColor: bannerColor,
+            },
+          ]}
+        >
+          <WalkthroughArtwork
+            walkthrough={walkthrough}
+            muted={selected !== null && !isSelected}
           />
-        ) : null}
-        {!walkthrough.bannerPhotoUri ? (
-          <BannerIllustration illustration={walkthrough.bannerIllustration} />
-        ) : null}
-        <Overlay />
-        <View style={styles.cardContent}>
-          <View style={styles.cardText}>
-            <AppText variant="title" style={styles.cardTitle}>
-              {walkthrough.title}
-            </AppText>
-            {walkthrough.clientName || walkthrough.address ? (
-              <AppText style={styles.cardSubtitle}>
-                {[walkthrough.clientName, walkthrough.address]
-                  .filter(Boolean)
-                  .join(" · ")}
+          <Overlay />
+          <View style={styles.cardContent}>
+            <View style={styles.cardText}>
+              <AppText variant="title" style={styles.cardTitle}>
+                {walkthrough.title}
               </AppText>
-            ) : null}
-            <View style={styles.meta}>
-              {project ? (
-                <View style={styles.projectMeta}>
-                  <FolderIcon size={16} color={colors.onAccent} />
-                  <AppText
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                    style={styles.projectName}
-                  >
-                    {project.name}
-                  </AppText>
-                </View>
+              {walkthrough.clientName || walkthrough.address ? (
+                <AppText style={styles.cardSubtitle}>
+                  {[walkthrough.clientName, walkthrough.address]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </AppText>
               ) : null}
-              <AppText style={[styles.metaText, styles.itemCount]}>
-                {list.counts[walkthrough.id]}{" "}
-                {list.counts[walkthrough.id] === 1 ? "item" : "items"}
-              </AppText>
+              <View style={styles.meta}>
+                {project ? (
+                  <View style={styles.projectMeta}>
+                    <FolderIcon size={16} color={colors.onAccent} />
+                    <AppText
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                      style={styles.projectName}
+                    >
+                      {project.name}
+                    </AppText>
+                  </View>
+                ) : null}
+                <AppText style={[styles.metaText, styles.itemCount]}>
+                  {list.counts[walkthrough.id]}{" "}
+                  {list.counts[walkthrough.id] === 1 ? "item" : "items"}
+                </AppText>
+              </View>
             </View>
-          </View>
 
-          {selected !== null ? (
-            <View style={[styles.checkbox, isSelected && styles.checked]}>
-              {isSelected ? (
-                <CheckIcon size={16} color={colors.onAccent} />
-              ) : null}
-            </View>
-          ) : (
-            <ChevronRightIcon size={22} color={colors.onAccent} />
-          )}
-        </View>
-      </Pressable>
+            {selected !== null ? (
+              <SelectionIndicator selected={isSelected} />
+            ) : (
+              <Animated.View entering={fadeIn} exiting={fadeOut}>
+                <ChevronRightIcon size={22} color={colors.onAccent} />
+              </Animated.View>
+            )}
+          </View>
+        </Pressable>
+      </Animated.View>
     );
   }
 
@@ -206,36 +326,49 @@ export default function Walkthroughs() {
       <AppHeader />
       <View style={styles.main}>
         <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.headingGroup}>
-            <AppText variant="title" style={styles.heading}>
-              Walkthroughs
-            </AppText>
-            <AppText style={styles.subheading}>
-              A clear record of every site visit.
-            </AppText>
-          </View>
-          {selected !== null && list.status === "ready" ? (
-            <View style={styles.selectionHeader}>
-              <AppText weight="semibold">{selected.length} selected</AppText>
-
-              <Pressable
-                accessibilityRole="button"
-                onPress={() =>
-                  setSelected(
-                    selected.length === list.walkthroughs.length
-                      ? []
-                      : list.walkthroughs.map((entry) => entry.id),
-                  )
-                }
-              >
-                <AppText style={styles.selectAll} weight="semibold">
-                  {selected.length === list.walkthroughs.length
-                    ? "Deselect all"
-                    : "Select all"}
-                </AppText>
-              </Pressable>
+          <View>
+            <View style={styles.headingGroup}>
+              <AppText variant="title" style={styles.heading}>
+                Walkthroughs
+              </AppText>
+              <AppText style={styles.subheading}>
+                A clear record of every site visit.
+              </AppText>
             </View>
-          ) : null}
+            <Animated.View
+              style={[styles.selectionHeaderContainer, selectionHeaderStyle]}
+              pointerEvents={selected !== null ? "auto" : "none"}
+              accessibilityElementsHidden={selected === null}
+              importantForAccessibility={
+                selected === null ? "no-hide-descendants" : "auto"
+              }
+            >
+              {list.status === "ready" ? (
+                <View style={styles.selectionHeader}>
+                  <AppText weight="semibold">
+                    {selected?.length ?? 0} selected
+                  </AppText>
+
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() =>
+                      setSelected(
+                        selected?.length === list.walkthroughs.length
+                          ? []
+                          : list.walkthroughs.map((entry) => entry.id),
+                      )
+                    }
+                  >
+                    <AppText style={styles.selectAll} weight="semibold">
+                      {selected?.length === list.walkthroughs.length
+                        ? "Deselect all"
+                        : "Select all"}
+                    </AppText>
+                  </Pressable>
+                </View>
+              ) : null}
+            </Animated.View>
+          </View>
           {list.status === "loading" ? <LoadingState /> : null}
           {list.status === "error" ? (
             <EmptyState
@@ -259,7 +392,14 @@ export default function Walkthroughs() {
           {list.status === "ready" ? list.walkthroughs.map(card) : null}
         </ScrollView>
         {selected !== null ? (
-          <View style={styles.selectionActions}>
+          <Animated.View
+            entering={FadeInDown.duration(220).reduceMotion(
+              ReduceMotion.System,
+            )}
+            exiting={fadeOut}
+            layout={layoutTransition}
+            style={styles.selectionActions}
+          >
             <Pressable
               accessibilityRole="button"
               onPress={() => setSelected(null)}
@@ -281,16 +421,22 @@ export default function Walkthroughs() {
                 Move to project ({selected.length})
               </AppText>
             </Pressable>
-          </View>
+          </Animated.View>
         ) : list.status === "ready" ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="New walkthrough"
-            onPress={() => router.push("/walkthrough/edit")}
+          <Animated.View
+            entering={fadeIn}
+            exiting={fadeOut}
             style={styles.floatingAction}
           >
-            <PlusIcon size={28} color={colors.onAccent} />
-          </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="New walkthrough"
+              onPress={() => router.push("/walkthrough/edit")}
+              style={styles.floatingButton}
+            >
+              <PlusIcon size={28} color={colors.onAccent} />
+            </Pressable>
+          </Animated.View>
         ) : null}
       </View>
       {ownerId && list.status === "ready" ? (
@@ -325,6 +471,7 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   headingGroup: { gap: 8 },
+  selectionHeaderContainer: { overflow: "hidden" },
   selectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -338,6 +485,22 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     borderRadius: 16,
     overflow: "hidden",
+  },
+  artwork: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: bannerColor,
+  },
+  grayscaleArtwork: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: "#666666",
   },
   cardContent: {
     flexDirection: "row",
@@ -378,7 +541,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  checked: { backgroundColor: colors.accent, borderColor: colors.accent },
   selectionActions: { flexDirection: "row", gap: 10, padding: 16 },
   selectionButton: {
     flex: 1,
@@ -387,13 +549,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 10,
   },
-  moveButton: { backgroundColor: colors.accent },
+  moveButton: {
+    flex: 2,
+    backgroundColor: colors.accent,
+    paddingHorizontal: 16,
+  },
   disabled: { opacity: 0.5 },
   white: { color: colors.onAccent },
   floatingAction: {
     position: "absolute",
     right: 24,
     bottom: 24,
+  },
+  floatingButton: {
     width: 56,
     height: 56,
     borderRadius: 28,

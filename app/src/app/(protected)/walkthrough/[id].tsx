@@ -13,8 +13,17 @@ import {
   PlusIcon,
   CheckIcon,
   DocumentTextIcon,
+  PaperClipIcon,
 } from "react-native-heroicons/outline";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+  ReduceMotion,
+  useAnimatedStyle,
+  withTiming,
+} from "react-native-reanimated";
 import { StatusBar } from "expo-status-bar";
 import { ScreenBanner } from "../../../components/screen-banner";
 import { LoadingState } from "../../../components/loading-state";
@@ -38,6 +47,47 @@ type ScreenState =
 
 type Selection =
   { status: "inactive" } | { status: "selecting" | "saving"; ids: string[] };
+
+interface Props {
+  selected: boolean;
+}
+
+const layoutTransition = LinearTransition.duration(180).reduceMotion(
+  ReduceMotion.System,
+);
+const fadeIn = FadeIn.duration(140).reduceMotion(ReduceMotion.System);
+const fadeOut = FadeOut.duration(120).reduceMotion(ReduceMotion.System);
+
+function SelectionIndicator(props: Props) {
+  const selectedStyle = useAnimatedStyle(
+    () => ({
+      backgroundColor: withTiming(
+        props.selected ? colors.accent : colors.background,
+        { duration: 140, reduceMotion: ReduceMotion.System },
+      ),
+      borderColor: withTiming(props.selected ? colors.accent : colors.border, {
+        duration: 140,
+        reduceMotion: ReduceMotion.System,
+      }),
+    }),
+    [props.selected],
+  );
+
+  return (
+    <Animated.View
+      entering={fadeIn}
+      exiting={fadeOut}
+      layout={layoutTransition}
+      style={[styles.checkbox, selectedStyle]}
+    >
+      {props.selected ? (
+        <Animated.View entering={fadeIn} exiting={fadeOut}>
+          <CheckIcon size={14} color={colors.onAccent} />
+        </Animated.View>
+      ) : null}
+    </Animated.View>
+  );
+}
 
 export default function WalkthroughDetail() {
   const { id, fromProjectId } = useLocalSearchParams<{
@@ -246,38 +296,50 @@ export default function WalkthroughDetail() {
               }
             />
 
-            <View
+            <Animated.View
+              layout={layoutTransition}
               style={[
                 styles.content,
                 screen.items.length === 0 && styles.emptyContent,
               ]}
             >
               {!selecting && screen.items.length > 0 ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Open walkthrough report"
-                  onPress={() =>
-                    router.push({
-                      pathname: "/walkthrough/report",
-                      params: { id },
-                    } as Href)
-                  }
-                  style={styles.reportLink}
+                <Animated.View
+                  entering={fadeIn}
+                  exiting={fadeOut}
+                  layout={layoutTransition}
                 >
-                  <DocumentTextIcon size={20} color={colors.accent} />
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Open walkthrough report"
+                    onPress={() =>
+                      router.push({
+                        pathname: "/walkthrough/report",
+                        params: { id },
+                      } as Href)
+                    }
+                    style={styles.reportLink}
+                  >
+                    <DocumentTextIcon size={20} color={colors.accent} />
 
-                  <View style={styles.reportText}>
-                    <AppText weight="semibold">Walkthrough report</AppText>
+                    <View style={styles.reportText}>
+                      <AppText weight="semibold">Walkthrough report</AppText>
 
-                    <AppText style={styles.reportHint}>
-                      View or share a PDF
-                    </AppText>
-                  </View>
-                </Pressable>
+                      <AppText style={styles.reportHint}>
+                        View or share a PDF
+                      </AppText>
+                    </View>
+                  </Pressable>
+                </Animated.View>
               ) : null}
 
               {selecting ? (
-                <View style={styles.selectionHeader}>
+                <Animated.View
+                  entering={fadeIn}
+                  exiting={fadeOut}
+                  layout={layoutTransition}
+                  style={styles.selectionHeader}
+                >
                   <AppText weight="semibold">{`${selectedIds.length} selected`}</AppText>
 
                   <Pressable
@@ -299,7 +361,7 @@ export default function WalkthroughDetail() {
                         : "Select all"}
                     </AppText>
                   </Pressable>
-                </View>
+                </Animated.View>
               ) : null}
 
               {screen.items.length === 0 ? (
@@ -312,113 +374,139 @@ export default function WalkthroughDetail() {
                   compact
                 />
               ) : (
-                <View>
+                <Animated.View layout={layoutTransition}>
                   {screen.items.map((item, index) => (
-                    <Pressable
+                    <Animated.View
                       key={item.id}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Open item ${item.issueSummary}, ${item.status}, ${item.priority ? `${item.priority} priority` : ""}`}
-                      accessibilityState={{
-                        selected: selecting && selectedIds.includes(item.id),
-                        disabled: selection.status === "saving",
-                      }}
-                      disabled={selection.status === "saving"}
-                      onLongPress={() => toggleSelection(item.id)}
-                      onPress={() => {
-                        if (selecting) toggleSelection(item.id);
-                        else
-                          router.push({
-                            pathname: "/walkthrough/item-view",
-                            params: { walkthroughId: id, id: item.id },
-                          });
-                      }}
-                      style={[
-                        styles.itemRow,
-                        index < screen.items.length - 1 && styles.itemDivider,
-                      ]}
+                      layout={layoutTransition}
+                      exiting={fadeOut}
                     >
-                      <View style={styles.row}>
-                        {selecting ? (
-                          <View
-                            style={[
-                              styles.checkbox,
-                              selectedIds.includes(item.id) &&
-                                styles.checkboxSelected,
-                            ]}
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`${selecting ? "Select" : "Open"} item ${item.issueSummary}, ${item.status}, ${item.priority ? `${item.priority} priority` : ""}`}
+                        accessibilityState={{
+                          selected: selecting && selectedIds.includes(item.id),
+                          disabled: selection.status === "saving",
+                        }}
+                        disabled={selection.status === "saving"}
+                        onLongPress={() => toggleSelection(item.id)}
+                        onPress={() => {
+                          if (selecting) toggleSelection(item.id);
+                          else
+                            router.push({
+                              pathname: "/walkthrough/item-view",
+                              params: { walkthroughId: id, id: item.id },
+                            });
+                        }}
+                        style={[
+                          styles.itemRow,
+                          index < screen.items.length - 1 && styles.itemDivider,
+                        ]}
+                      >
+                        <Animated.View
+                          layout={layoutTransition}
+                          style={styles.row}
+                        >
+                          {selecting ? (
+                            <SelectionIndicator
+                              selected={selectedIds.includes(item.id)}
+                            />
+                          ) : null}
+
+                          {item.bannerPhotoUri ? (
+                            <Image
+                              source={{ uri: item.bannerPhotoUri }}
+                              style={styles.bannerThumbnail}
+                            />
+                          ) : null}
+
+                          <Animated.View
+                            layout={layoutTransition}
+                            style={styles.itemText}
                           >
-                            {selectedIds.includes(item.id) ? (
-                              <CheckIcon size={14} color={colors.onAccent} />
-                            ) : null}
-                          </View>
-                        ) : null}
+                            <AppText weight="bold" style={styles.cardTitle}>
+                              {item.issueSummary}
+                            </AppText>
 
-                        {item.bannerPhotoUri ? (
-                          <Image
-                            source={{ uri: item.bannerPhotoUri }}
-                            style={styles.bannerThumbnail}
-                          />
-                        ) : null}
-
-                        <View style={styles.itemText}>
-                          <AppText weight="bold" style={styles.cardTitle}>
-                            {item.issueSummary}
-                          </AppText>
-
-                          <View style={styles.metadata}>
-                            <View style={styles.metadataItem}>
-                              <MapPinIcon size={15} color={colors.muted} />
-
-                              <AppText style={styles.metadataText}>
-                                {item.location || "Unspecified area"}
-                              </AppText>
-                            </View>
-
-                            {item.trade ? (
+                            <View style={styles.metadata}>
                               <View style={styles.metadataItem}>
-                                <WrenchScrewdriverIcon
-                                  size={15}
-                                  color={colors.muted}
-                                />
+                                <MapPinIcon size={15} color={colors.muted} />
 
                                 <AppText style={styles.metadataText}>
-                                  {item.trade}
+                                  {item.location || "Unspecified area"}
                                 </AppText>
                               </View>
-                            ) : null}
-                          </View>
 
-                          <View style={styles.badges}>
-                            <Badge
-                              label={item.status}
-                              tone={item.status === "Done" ? "success" : "info"}
-                            />
+                              {item.trade ? (
+                                <View style={styles.metadataItem}>
+                                  <WrenchScrewdriverIcon
+                                    size={15}
+                                    color={colors.muted}
+                                  />
 
-                            {item.priority ? (
+                                  <AppText style={styles.metadataText}>
+                                    {item.trade}
+                                  </AppText>
+                                </View>
+                              ) : null}
+                            </View>
+
+                            <View style={styles.badges}>
+                              <Animated.View
+                                key={item.status}
+                                entering={fadeIn}
+                              >
+                                <Badge
+                                  label={item.status}
+                                  tone={
+                                    item.status === "Done" ? "success" : "info"
+                                  }
+                                />
+                              </Animated.View>
+
+                              {item.priority ? (
+                                <Badge
+                                  label={item.priority}
+                                  tone={
+                                    item.priority === "High"
+                                      ? "danger"
+                                      : item.priority === "Medium"
+                                        ? "warning"
+                                        : "info"
+                                  }
+                                />
+                              ) : null}
+
                               <Badge
-                                label={item.priority}
-                                tone={
-                                  item.priority === "High"
-                                    ? "danger"
-                                    : item.priority === "Medium"
-                                      ? "warning"
-                                      : "info"
+                                label={`${item.photos.length}`}
+                                accessibilityLabel={`${item.photos.length} ${item.photos.length === 1 ? "photo attachment" : "photo attachments"}`}
+                                icon={
+                                  <PaperClipIcon
+                                    size={14}
+                                    color={colors.muted}
+                                  />
                                 }
                               />
-                            ) : null}
-                          </View>
-                        </View>
-                      </View>
-                    </Pressable>
+                            </View>
+                          </Animated.View>
+                        </Animated.View>
+                      </Pressable>
+                    </Animated.View>
                   ))}
-                </View>
+                </Animated.View>
               )}
-            </View>
+            </Animated.View>
           </>
         ) : null}
       </ScrollView>
 
       {selecting ? (
-        <View style={styles.selectionActions}>
+        <Animated.View
+          entering={fadeIn}
+          exiting={fadeOut}
+          layout={layoutTransition}
+          style={styles.selectionActions}
+        >
           <Pressable
             accessibilityRole="button"
             disabled={selection.status === "saving"}
@@ -464,21 +552,27 @@ export default function WalkthroughDetail() {
               {allDone ? "Mark open" : "Mark done"}
             </AppText>
           </Pressable>
-        </View>
+        </Animated.View>
       ) : screen.status === "ready" ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Add items"
-          onPress={() =>
-            router.push({
-              pathname: "/walkthrough/capture",
-              params: { walkthroughId: id },
-            })
-          }
+        <Animated.View
+          entering={fadeIn}
+          exiting={fadeOut}
           style={styles.floatingAction}
         >
-          <PlusIcon size={28} color={colors.onAccent} />
-        </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Add items"
+            onPress={() =>
+              router.push({
+                pathname: "/walkthrough/capture",
+                params: { walkthroughId: id },
+              })
+            }
+            style={styles.floatingButton}
+          >
+            <PlusIcon size={28} color={colors.onAccent} />
+          </Pressable>
+        </Animated.View>
       ) : null}
     </SafeAreaView>
   );
@@ -586,10 +680,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  checkboxSelected: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
   itemRow: { paddingVertical: 16 },
   itemDivider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -625,6 +715,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 24,
     bottom: 24,
+  },
+  floatingButton: {
     width: 56,
     height: 56,
     borderRadius: 28,
