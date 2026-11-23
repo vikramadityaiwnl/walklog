@@ -54,6 +54,7 @@ import { useDialogStore } from "../../../store/dialog-store";
 import { useFirestoreStore } from "../../../store/firestore-store";
 import { useMediaSyncStore } from "../../../store/media-sync-store";
 import { colors } from "../../../theme";
+import { formatBytes } from "../../../utils/format-bytes";
 
 type SignOutState =
   | { status: "idle" }
@@ -70,12 +71,6 @@ type CacheState =
   | { status: "ready"; bytes: number }
   | { status: "clearing"; bytes: number }
   | { status: "error"; bytes: number; message: string };
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1_000_000) return `${Math.round(bytes / 1_000)} KB`;
-
-  return `${(bytes / 1_000_000).toFixed(1)} MB`;
-}
 
 export default function Profile() {
   const reducedMotion = useReducedMotion();
@@ -412,7 +407,7 @@ export default function Profile() {
             </View>
           </View>
 
-          <InferenceSelector allowUnavailable />
+          <InferenceSelector />
         </View>
 
         {Platform.OS === "android" ? (
@@ -479,7 +474,7 @@ export default function Profile() {
 
                   <AppText style={styles.settingDescription}>
                     {deviceModel.progress?.total
-                      ? `Downloading ${Math.min(100, Math.round((deviceModel.progress.bytes / deviceModel.progress.total) * 100))}%`
+                      ? `Downloading ${formatBytes(deviceModel.progress.bytes)} of ${formatBytes(deviceModel.progress.total)}`
                       : "Preparing download…"}
                   </AppText>
                 </View>

@@ -66,6 +66,7 @@ import { whisperFileSystem } from "../../../services/whisper/file-system";
 import { useAuthStore } from "../../../store/auth-store";
 import { useInferenceStore } from "../../../store/inference-store";
 import { colors } from "../../../theme";
+import { formatBytes } from "../../../utils/format-bytes";
 
 type CaptureMode = "voice" | "type";
 
@@ -650,7 +651,6 @@ export default function Capture() {
   const showModeSelector =
     operation.status === "idle" &&
     (captureMode === "type" || audio?.source !== "recording");
-  const mb = (bytes: number) => (bytes / 1000000).toFixed(1);
 
   if (operation.status === "processing") {
     const saving = operation.phase === "saving";
@@ -798,7 +798,8 @@ export default function Capture() {
                     ) : operation.status === "downloading" && progress ? (
                       <View style={styles.downloadButtonContent}>
                         <AppText style={styles.downloadButtonSize}>
-                          {mb(progress.bytes)} / {mb(progress.total)} MB
+                          {formatBytes(progress.bytes)} /{" "}
+                          {formatBytes(progress.total)}
                         </AppText>
                       </View>
                     ) : modelAvailable ? (

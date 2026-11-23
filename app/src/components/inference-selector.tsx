@@ -13,7 +13,6 @@ import { SegmentedControl } from "./segmented-control";
 interface Props {
   align?: "start" | "center";
   requiresAudio?: boolean;
-  allowUnavailable?: boolean;
 }
 
 export function InferenceSelector(props: Props) {
@@ -72,15 +71,7 @@ export function InferenceSelector(props: Props) {
         return {
           value: option,
           label: option === "device" ? "On device" : "Cloud",
-          disabled:
-            !available &&
-            !props.allowUnavailable &&
-            !(
-              option === "device" &&
-              Platform.OS === "android" &&
-              (model.status === "downloadable" ||
-                model.status === "downloading")
-            ),
+          disabled: !available,
           muted: !available,
           indicatorColor: available ? colors.success : colors.muted,
         };

@@ -1,9 +1,19 @@
 import { useEffect } from "react";
 import { AppState, Platform, Pressable, StyleSheet, View } from "react-native";
 import { useShallow } from "zustand/react/shallow";
+import { usePathname } from "expo-router";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+  ReduceMotion,
+  useAnimatedStyle,
+  withTiming,
+} from "react-native-reanimated";
 import { ArrowDownTrayIcon } from "react-native-heroicons/outline";
 import { useDeviceModelStore } from "../store/device-model-store";
 import { colors } from "../theme";
+import { formatBytes } from "../utils/format-bytes";
 import { AppText } from "./app-text";
 
 export function useDeviceModelStatus() {
@@ -31,12 +41,7 @@ export function useDeviceModelStatus() {
 export function DeviceModelBanner() {
   const model = useDeviceModelStatus();
   const download = useDeviceModelStore((state) => state.download);
-
-  if (
-    Platform.OS !== "android" ||
-    (model.status !== "downloadable" && model.status !== "downloading")
-  )
-    return null;
+  const pathname = usePathname();
 
   const percentage =
     model.status === "downloading" && model.progress?.total
@@ -45,32 +50,66 @@ export function DeviceModelBanner() {
           Math.round((model.progress.bytes / model.progress.total) * 100),
         )
       : null;
+  const progressStyle = useAnimatedStyle(
+    () => ({
+      width: withTiming(`${percentage ?? 0}%`, {
+        duration: 180,
+        reduceMotion: ReduceMotion.System,
+      }),
+    }),
+    [percentage],
+  );
+
+  if (
+    Platform.OS !== "android" ||
+    pathname === "/profile" ||
+    (model.status !== "downloadable" && model.status !== "downloading")
+  )
+    return null;
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      disabled={model.status === "downloading"}
-      onPress={() => void download()}
-      style={styles.banner}
+    <Animated.View
+      entering={FadeIn.duration(180).reduceMotion(ReduceMotion.System)}
+      exiting={FadeOut.duration(140).reduceMotion(ReduceMotion.System)}
+      layout={LinearTransition.duration(180).reduceMotion(ReduceMotion.System)}
     >
-      <ArrowDownTrayIcon size={21} color={colors.accent} />
+      <Pressable
+        accessibilityRole="button"
+        disabled={model.status === "downloading"}
+        onPress={() => void download()}
+        style={styles.banner}
+      >
+        <View style={styles.icon}>
+          <ArrowDownTrayIcon size={21} color={colors.muted} />
+        </View>
 
-      <View style={styles.copy}>
-        <AppText weight="semibold">
-          {model.status === "downloading"
-            ? "Downloading on-device AI"
-            : "Download on-device AI"}
-        </AppText>
+        <View style={styles.copy}>
+          <AppText weight="semibold">
+            {model.status === "downloading"
+              ? "Downloading on-device AI"
+              : "Download on-device AI"}
+          </AppText>
 
-        <AppText style={styles.description}>
-          {percentage !== null
-            ? `${percentage}% downloaded`
-            : model.status === "downloading"
-              ? "Preparing the model on this device."
-              : "Download the model to process notes on this device."}
-        </AppText>
-      </View>
-    </Pressable>
+          <AppText style={styles.description}>
+            Download Gemini Nano to process notes on this device.
+          </AppText>
+
+          {model.status === "downloading" && percentage !== null ? (
+            <View style={styles.progressTrack}>
+              <Animated.View style={[styles.progressFill, progressStyle]} />
+            </View>
+          ) : null}
+
+          {model.status === "downloading" ? (
+            <AppText style={styles.description}>
+              {model.progress?.total
+                ? `Downloading ${formatBytes(model.progress.bytes)} of ${formatBytes(model.progress.total)}`
+                : "Preparing the model on this device."}
+            </AppText>
+          ) : null}
+        </View>
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -81,10 +120,20 @@ const styles = StyleSheet.create({
     gap: 12,
     marginHorizontal: 24,
     marginTop: 12,
-    padding: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
     borderRadius: 12,
-    backgroundColor: colors.accentFaint,
+    backgroundColor: colors.neutralSoft,
   },
-  copy: { flex: 1, gap: 2 },
+  icon: { width: 30, alignItems: "center", justifyContent: "center" },
+  copy: { flex: 1, gap: 4 },
+  progressTrack: {
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.border,
+    overflow: "hidden",
+    marginTop: 4,
+  },
+  progressFill: { height: 7, borderRadius: 4, backgroundColor: colors.muted },
   description: { color: colors.muted, fontSize: 13, lineHeight: 19 },
 });
