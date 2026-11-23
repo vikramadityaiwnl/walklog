@@ -2,6 +2,15 @@
   "name": "app",
   "version": "1.0.0",
   "main": "expo-router/entry",
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "exclude": [
+          "firebase-ai-hybrid"
+        ]
+      }
+    }
+  },
   "dependencies": {
     "@expo-google-fonts/dm-sans": "^0.4.2",
     "@expo-google-fonts/manrope": "^0.4.3",
