@@ -38,22 +38,30 @@ type Screen =
 
 export default function RefineItem() {
   const insets = useSafeAreaInsets();
+
   const { id, walkthroughId } = useLocalSearchParams<{
     id: string;
     walkthroughId: string;
   }>();
+
   const auth = useAuthStore((state) => state.auth);
+
   const mode = useInferenceStore((state) => state.mode);
+
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
+
   const [screen, setScreen] = useState<Screen>({ status: "loading" });
 
   useEffect(() => {
     if (!ownerId || !id || !walkthroughId) return;
+
     let active = true;
+
     void createWalkthroughStorage(ownerId)
       .listItems(walkthroughId)
       .then((items) => {
         if (!active) return;
+
         const item = items.find((entry) => entry.id === id);
         setScreen(
           item
@@ -65,6 +73,7 @@ export default function RefineItem() {
         if (active)
           setScreen({ status: "error", message: "Couldn’t load this item." });
       });
+
     return () => {
       active = false;
     };
@@ -234,7 +243,9 @@ export default function RefineItem() {
 
             <View style={styles.badges}>
               {result.location ? <Badge label={result.location} /> : null}
+
               {result.trade ? <Badge label={result.trade} /> : null}
+
               {result.priority ? (
                 <Badge
                   label={`${result.priority} priority`}
@@ -346,9 +357,11 @@ export default function RefineItem() {
                   {screen.item.location ? (
                     <Badge label={screen.item.location} />
                   ) : null}
+
                   {screen.item.trade ? (
                     <Badge label={screen.item.trade} />
                   ) : null}
+
                   {screen.item.priority ? (
                     <Badge
                       label={`${screen.item.priority} priority`}
@@ -371,6 +384,7 @@ export default function RefineItem() {
                   <AppText variant="title" style={styles.sectionTitle}>
                     Photos
                   </AppText>
+
                   <AppText style={styles.hint}>
                     {mode === "cloud"
                       ? "These photos will be included."
@@ -399,6 +413,7 @@ export default function RefineItem() {
                   <AppText weight="semibold" style={styles.noticeTitle}>
                     Photos stay out of this refinement
                   </AppText>
+
                   <AppText style={styles.noticeBody}>
                     On-device AI on this device supports text only. Choose cloud
                     AI to include your photos.

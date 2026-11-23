@@ -42,8 +42,11 @@ type Form = {
 
 export default function ProjectEdit() {
   const { id } = useLocalSearchParams<{ id?: string }>();
+
   const auth = useAuthStore((state) => state.auth);
+
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
+
   const [form, setForm] = useState<Form>({
     status: id ? "loading" : "ready",
     name: "",
@@ -54,8 +57,11 @@ export default function ProjectEdit() {
     | { status: "idle" | "loading" }
     | { status: "ready"; projects: Project[]; ids: string[] }
   >({ status: "idle" });
+
   const showDialog = useDialogStore((state) => state.showDialog);
+
   const banner = useBannerDraft();
+
   const changed =
     !id ||
     (!!form.project &&
@@ -64,11 +70,14 @@ export default function ProjectEdit() {
 
   useEffect(() => {
     if (!id || !ownerId) return;
+
     let active = true;
+
     void createWalkthroughStorage(ownerId)
       .listProjects()
       .then((projects) => {
         if (!active) return;
+
         const project = projects.find((entry) => entry.id === id);
         if (!project) {
           setForm({
@@ -76,6 +85,7 @@ export default function ProjectEdit() {
             name: "",
             message: "This project could not be found.",
           });
+
           return;
         }
         banner.load(project.bannerPhotoUri);
@@ -89,6 +99,7 @@ export default function ProjectEdit() {
             message: "Couldn’t load this project.",
           });
       });
+
     return () => {
       active = false;
     };
@@ -104,6 +115,7 @@ export default function ProjectEdit() {
       return;
     if (!form.name.trim()) {
       setForm({ ...form, status: "error", message: "Enter a project name." });
+
       return;
     }
     banner.beginSave();
@@ -140,6 +152,7 @@ export default function ProjectEdit() {
 
   function cancel() {
     if (!form.project) return;
+
     banner.reset();
     setForm({
       status: "ready",
@@ -186,6 +199,7 @@ export default function ProjectEdit() {
 
   async function moveWalkthroughs() {
     if (!ownerId || !id || move.status !== "idle") return;
+
     setMove({ status: "loading" });
     try {
       const storage = createWalkthroughStorage(ownerId);
@@ -202,6 +216,7 @@ export default function ProjectEdit() {
           "No walkthroughs to move",
           "Add walkthroughs to this project first.",
         );
+
         return;
       }
       setMove({
@@ -256,12 +271,14 @@ export default function ProjectEdit() {
             <AppText variant="title" style={styles.heading}>
               {id ? "Settings" : "New project"}
             </AppText>
+
             <AppText style={styles.subheading}>
               {id
                 ? "Update the details of this project."
                 : "Keep related walkthroughs together."}
             </AppText>
           </View>
+
           {form.status === "loading" ? (
             <LoadingState />
           ) : (
@@ -276,6 +293,7 @@ export default function ProjectEdit() {
                   style={styles.input}
                 />
               </View>
+
               {!id || form.project ? (
                 <BannerPicker
                   uri={banner.uri}
@@ -287,6 +305,7 @@ export default function ProjectEdit() {
             </>
           )}
         </ScrollView>
+
         {form.status !== "loading" && changed ? (
           <Animated.View
             key="save-actions"
@@ -305,6 +324,7 @@ export default function ProjectEdit() {
                 />
               </View>
             ) : null}
+
             <View style={styles.action}>
               <AppButton
                 title={

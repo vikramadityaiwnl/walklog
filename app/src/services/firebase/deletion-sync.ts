@@ -54,6 +54,7 @@ export function observeDeletions(ownerId: string): () => void {
     "deletion-jobs",
   );
   let jobs: DeletionJob[] = [];
+
   let active = true;
   let running = false;
   let rerun = false;
@@ -123,10 +124,12 @@ export function observeDeletions(ownerId: string): () => void {
 
     for (const child of snapshot.docs) {
       if (!active || getAuth().currentUser?.uid !== ownerId) return;
+
       const paths = job.kind === "walkthrough" ? mediaPaths(child.data()) : [];
       if (paths.length > 450) {
         for (let offset = 0; offset < paths.length; offset += 400) {
           if (!active || getAuth().currentUser?.uid !== ownerId) return;
+
           const batch = writeBatch(database);
           for (const path of paths.slice(offset, offset + 400))
             batch.set(doc(mediaDeletions), { path, createdAt: Date.now() });
@@ -151,9 +154,11 @@ export function observeDeletions(ownerId: string): () => void {
               projectId: deleteField(),
               updatedAt: Date.now(),
             });
+
           return [];
         }
         if (data.walkthroughId !== job.targetId) return [];
+
         if (paths.length <= 450) queueMedia(transaction, data);
         transaction.delete(child.ref);
 
@@ -170,13 +175,17 @@ export function observeDeletions(ownerId: string): () => void {
         job.kind === "walkthrough" || entry.data().deletionPending !== true,
     );
     if (unfinished) return;
+
     if (!active || getAuth().currentUser?.uid !== ownerId) return;
+
     const local = await runTransaction(database, async (transaction) => {
       const jobSnapshot = await transaction.get(job.reference);
       const parentSnapshot = await transaction.get(parent);
       if (!jobSnapshot.exists()) return [];
+
       if (!parentSnapshot.exists()) {
         transaction.delete(job.reference);
+
         return [];
       }
       const data = parentSnapshot.data();
@@ -193,8 +202,10 @@ export function observeDeletions(ownerId: string): () => void {
 
   async function run() {
     if (!active || getAuth().currentUser?.uid !== ownerId) return;
+
     if (running) {
       rerun = true;
+
       return;
     }
     running = true;
@@ -234,6 +245,7 @@ export function observeDeletions(ownerId: string): () => void {
 
   function listen() {
     if (!active) return;
+
     unsubscribe = onSnapshot(
       jobsCollection,
       { includeMetadataChanges: true },
@@ -247,6 +259,7 @@ export function observeDeletions(ownerId: string): () => void {
             data.targetId.includes("/")
           )
             return [];
+
           return [
             {
               reference: entry.ref,
@@ -261,6 +274,7 @@ export function observeDeletions(ownerId: string): () => void {
       },
       () => {
         if (!active) return;
+
         listenerHealthy = false;
         useFirestoreStore.getState().setDeletionsPending(true);
         useFirestoreStore.getState().setDeletionError(true);

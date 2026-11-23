@@ -39,6 +39,7 @@ type ViewerState =
 
 export function PhotoGallery(props: Props) {
   const reducedMotion = useReducedMotion();
+
   const [viewer, setViewer] = useState<ViewerState>({ status: "closed" });
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRemoval = useRef<Photo | null>(null);
@@ -48,6 +49,7 @@ export function PhotoGallery(props: Props) {
   const showDialog = useDialogStore((state) => state.showDialog);
 
   const { width } = useWindowDimensions();
+
   const tileWidth = Math.max(60, (width - 68) / 3);
 
   useEffect(
@@ -71,6 +73,7 @@ export function PhotoGallery(props: Props) {
 
   function closeViewer() {
     if (viewer.status !== "open") return;
+
     setViewer({ status: "closing", photo: viewer.photo });
     if (Platform.OS !== "ios") {
       dismissTimer.current = setTimeout(
@@ -82,6 +85,7 @@ export function PhotoGallery(props: Props) {
 
   function confirmRemove() {
     if (viewer.status !== "open" || props.busy) return;
+
     const photo = viewer.photo;
 
     showDialog(

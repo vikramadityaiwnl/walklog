@@ -7,6 +7,7 @@ import type {
 
 export class WhisperAudioStream implements AudioStreamInterface {
   private stream: AudioStream;
+
   private onDataCallback?: (data: AudioStreamData) => void;
   private onErrorCallback?: (error: string) => void;
   private onStatusCallback?: (recording: boolean) => void;
@@ -28,10 +29,12 @@ export class WhisperAudioStream implements AudioStreamInterface {
     await this.stream.start();
     if (this.stream.sampleRate !== 16000 || this.stream.channels !== 1) {
       this.stream.stop();
+
       throw new Error(
         "This device couldn’t start the microphone in the required format.",
       );
     }
+
     this.onStatusCallback?.(true);
   }
 
@@ -59,6 +62,7 @@ export class WhisperAudioStream implements AudioStreamInterface {
   handleBuffer(buffer: AudioStreamBuffer): void {
     if (buffer.sampleRate !== 16000 || buffer.channels !== 1) {
       this.onErrorCallback?.("Microphone audio format changed unexpectedly.");
+
       return;
     }
     this.onDataCallback?.({
@@ -71,6 +75,7 @@ export class WhisperAudioStream implements AudioStreamInterface {
 
   async release(): Promise<void> {
     await this.stop();
+
     this.onDataCallback = undefined;
     this.onErrorCallback = undefined;
     this.onStatusCallback = undefined;

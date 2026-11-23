@@ -17,6 +17,7 @@ interface Props {
 
 export function AppDialog(props: Props) {
   const reducedMotion = useReducedMotion();
+
   const { dialog, closeDialog, finishDismissal } = useDialogStore(
     useShallow((state) => ({
       dialog: state.dialog,

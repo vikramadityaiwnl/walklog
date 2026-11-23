@@ -121,6 +121,7 @@ export async function refineItem(
       !actions.length
     )
       throw new Error("Invalid response");
+
     return {
       issueSummary: record.issueSummary.trim(),
       location:

@@ -53,14 +53,17 @@ export function observeMedia(ownerId: string): () => void {
     reference: DocumentReference<DocumentData>;
     path: string;
   }[] = [];
+
   let active = true;
   let running = false;
   let rerun = false;
 
   async function run() {
     if (!active || getAuth().currentUser?.uid !== ownerId) return;
+
     if (running) {
       rerun = true;
+
       return;
     }
     running = true;
@@ -124,10 +127,12 @@ export function observeMedia(ownerId: string): () => void {
       }
       const network = await Network.getNetworkStateAsync().catch(() => null);
       if (!active) return;
+
       if (!network?.isConnected || network.isInternetReachable === false) {
         useMediaSyncStore
           .getState()
           .setStatus(jobs.length || deletions.length ? "waiting" : "idle");
+
         return;
       }
       useMediaSyncStore
@@ -157,6 +162,7 @@ export function observeMedia(ownerId: string): () => void {
             async (transaction) => {
               const snapshot = await transaction.get(job.reference);
               if (!snapshot.exists()) return false;
+
               const current = snapshot.data();
               if (job.kind === "banner") {
                 if (
@@ -202,6 +208,7 @@ export function observeMedia(ownerId: string): () => void {
                   ),
                 });
               }
+
               return true;
             },
           );
@@ -272,6 +279,7 @@ export function observeMedia(ownerId: string): () => void {
                         : photo && typeof photo === "object"
                           ? (photo as { remoteUrl?: string }).remoteUrl
                           : undefined;
+
                     return (
                       !!url && mediaStoragePath(url, ownerId) === deletion.path
                     );

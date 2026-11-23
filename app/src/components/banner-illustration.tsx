@@ -69,6 +69,7 @@ function IllustrationObject(props: ObjectProps) {
           />
         </>
       ) : null}
+
       {props.kind === 1 ? (
         <>
           <Circle cx={80} cy={37} r={10} />
@@ -84,6 +85,7 @@ function IllustrationObject(props: ObjectProps) {
           />
         </>
       ) : null}
+
       {props.kind === 2 ? (
         <>
           <Path d="M30 25 Q32 18 39 18 L115 20 Q122 20 123 27 L122 51 Q121 57 114 58 L39 56 Q31 56 30 50 Z" />
@@ -95,6 +97,7 @@ function IllustrationObject(props: ObjectProps) {
           />
         </>
       ) : null}
+
       {props.kind === 3 ? (
         <>
           <Path d="M27 42 L34 31 Q44 24 56 29 L78 37 L90 37 L96 43 L91 51 L80 53 L72 47 L59 47 L55 55 L45 57 L35 53 L27 53 Z" />
@@ -105,6 +108,7 @@ function IllustrationObject(props: ObjectProps) {
           />
         </>
       ) : null}
+
       {props.kind === 4 ? (
         <>
           <Path d="M17 57 Q18 53 23 53 L137 53 Q142 54 142 59 L141 103 Q141 108 136 108 L22 107 Q17 107 17 102 Z" />
@@ -119,6 +123,7 @@ function IllustrationObject(props: ObjectProps) {
           />
         </>
       ) : null}
+
       {props.kind === 5 ? (
         <>
           <Path d="M65 79 Q42 71 42 49 Q42 24 67 21 Q93 19 97 44 Q99 63 82 75 L82 105 L91 105 L91 114 L82 114 L82 123 L89 123 L89 132 L80 141 L65 132 Z" />

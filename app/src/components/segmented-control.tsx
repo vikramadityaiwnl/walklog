@@ -37,6 +37,7 @@ export function SegmentedControl<T extends string>(props: Props<T>) {
   const x = useSharedValue(0);
   const width = useSharedValue(0);
   const height = useSharedValue(0);
+
   const indicatorStyle = useAnimatedStyle(() => ({
     width: width.value,
     height: height.value,

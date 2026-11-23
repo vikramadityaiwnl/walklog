@@ -70,6 +70,7 @@ export async function generateText(
   audio?: { uri: string; mimeType: string },
 ): Promise<Generation> {
   if (!prompt.trim()) throw new Error("Enter a prompt first.");
+
   if (
     audio &&
     mode !== "cloud" &&

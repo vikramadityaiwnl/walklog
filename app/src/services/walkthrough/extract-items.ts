@@ -110,6 +110,7 @@ function parseItems(text: string, note?: string): ExtractedItem[] {
 
   const items = parsed.flatMap((value: unknown): ExtractedItem[] => {
     if (!value || typeof value !== "object") return [];
+
     const item = value as Record<string, unknown>;
     if (typeof item.issueSummary !== "string" || !item.issueSummary.trim())
       return [];
@@ -141,5 +142,6 @@ function parseItems(text: string, note?: string): ExtractedItem[] {
       },
     ];
   });
+
   return items;
 }

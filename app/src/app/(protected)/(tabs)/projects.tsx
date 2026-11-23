@@ -33,14 +33,19 @@ type Screen =
 
 export default function Projects() {
   const auth = useAuthStore((state) => state.auth);
+
   const firestoreRevision = useFirestoreStore((state) => state.revision);
+
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
+
   const [screen, setScreen] = useState<Screen>({ status: "loading" });
 
   useFocusEffect(
     useCallback(() => {
       if (!ownerId) return;
+
       let active = true;
+
       const storage = createWalkthroughStorage(ownerId);
       void Promise.all([storage.listProjects(), storage.listWalkthroughs()])
         .then(([projects, walkthroughs]) => {
@@ -49,6 +54,7 @@ export default function Projects() {
         .catch(() => {
           if (active) setScreen({ status: "error" });
         });
+
       return () => {
         active = false;
       };
@@ -64,11 +70,14 @@ export default function Projects() {
             <AppText variant="title" style={styles.heading}>
               Projects
             </AppText>
+
             <AppText style={styles.subtitle}>
               Keep related site visits together.
             </AppText>
           </View>
+
           {screen.status === "loading" ? <LoadingState /> : null}
+
           {screen.status === "error" ? (
             <EmptyState
               variant="error"
@@ -77,6 +86,7 @@ export default function Projects() {
               compact
             />
           ) : null}
+
           {screen.status === "ready" ? (
             <View
               style={[
@@ -97,6 +107,7 @@ export default function Projects() {
                 const count = screen.walkthroughs.filter(
                   (walkthrough) => walkthrough.projectId === project.id,
                 ).length;
+
                 return (
                   <Animated.View
                     key={project.id}
@@ -127,6 +138,7 @@ export default function Projects() {
                           contentFit="cover"
                         />
                       ) : null}
+
                       {!project.bannerPhotoUri ? (
                         <BannerIllustration
                           illustration={project.bannerIllustration}
@@ -141,6 +153,7 @@ export default function Projects() {
                               {project.name}
                             </AppText>
                           </View>
+
                           <AppText style={styles.cardCount}>
                             {count}{" "}
                             {count === 1 ? "walkthrough" : "walkthroughs"}
@@ -155,6 +168,7 @@ export default function Projects() {
             </View>
           ) : null}
         </ScrollView>
+
         {screen.status === "ready" ? (
           <Pressable
             accessibilityRole="button"

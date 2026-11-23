@@ -54,14 +54,17 @@ type PickerState = {
 
 export function ProjectPicker(props: Props) {
   const reducedMotion = useReducedMotion();
+
   const [state, setState] = useState<PickerState>({
     status: "choosing",
     name: "",
   });
+
   const banner = useBannerDraft("project-picker");
 
   async function move(projectId: string | null, create = false) {
     if (state.status === "saving" || banner.busy) return;
+
     setState({ ...state, status: "saving" });
     if (create) banner.beginSave();
     try {
@@ -96,6 +99,7 @@ export function ProjectPicker(props: Props) {
 
   function close() {
     if (state.status === "saving" || banner.busy) return;
+
     banner.reset();
     setState({ status: "choosing", name: "" });
     props.onClose();

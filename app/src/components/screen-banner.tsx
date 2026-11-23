@@ -24,6 +24,7 @@ interface Props {
 
 export function ScreenBanner(props: Props) {
   const { height } = useWindowDimensions();
+
   const insets = useSafeAreaInsets();
 
   return (

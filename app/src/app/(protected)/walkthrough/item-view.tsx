@@ -96,6 +96,7 @@ export default function ItemView() {
   }>();
 
   const auth = useAuthStore((state) => state.auth);
+
   const firestoreRevision = useFirestoreStore((state) => state.revision);
 
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
@@ -114,6 +115,7 @@ export default function ItemView() {
       if (!ownerId || !walkthroughId || !id) return;
 
       let active = true;
+
       void createWalkthroughStorage(ownerId)
         .listItems(walkthroughId)
         .then((items) => {
@@ -143,6 +145,7 @@ export default function ItemView() {
 
     setPhotoBusy(true);
     let added: PunchItem["photos"][number] | null = null;
+
     try {
       added = await selectItemPhoto(source);
       if (!added) return;
@@ -226,6 +229,7 @@ export default function ItemView() {
     const item = screen.item;
     const refinement = item.refinement;
     if (!refinement) return;
+
     const actions = refinement.actions ?? [
       { text: refinement.recommendedAction, completed: false },
     ];
@@ -403,6 +407,7 @@ export default function ItemView() {
                   }
                 />
               </Animated.View>
+
               {screen.item.refinement ? (
                 <Animated.View layout={layoutTransition} style={styles.section}>
                   <View style={styles.headingRow}>

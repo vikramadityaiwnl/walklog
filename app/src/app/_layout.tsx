@@ -33,8 +33,11 @@ export default function RootLayout() {
   });
 
   const auth = useAuthStore((state) => state.auth);
+
   const appCheck = useAppCheckStore((state) => state.appCheck);
+
   const updateStatus = useUpdateStore((state) => state.status);
+
   const userId = auth.status === "ready" ? auth.user?.uid : undefined;
 
   useEffect(() => {

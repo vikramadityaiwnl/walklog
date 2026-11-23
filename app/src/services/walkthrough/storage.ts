@@ -29,8 +29,10 @@ const database = getFirestore();
 
 function localPhotoUri(uri?: string): string | undefined {
   if (!uri) return uri;
+
   const marker = "/walkthrough-photos/";
   const index = uri.lastIndexOf(marker);
+
   return index < 0 || !FileSystem.documentDirectory
     ? uri
     : `${FileSystem.documentDirectory}walkthrough-photos/${uri.slice(index + marker.length)}`;
@@ -100,6 +102,7 @@ export function readItem(value: StoredItem): PunchItem {
 
 function serializeBanner<T extends { bannerPhotoUri?: string }>(value: T) {
   const id = localMediaId(value.bannerPhotoUri);
+
   return {
     ...value,
     bannerPhotoUri: isRemoteMedia(value.bannerPhotoUri)
@@ -127,6 +130,7 @@ function serializeItem(item: PunchItem) {
 
 export function mediaUrls(value: unknown): string[] {
   if (!value || typeof value !== "object") return [];
+
   const data = value as { bannerPhotoUri?: unknown; photos?: unknown };
   const result: string[] = [];
   if (
@@ -387,6 +391,7 @@ export function createWalkthroughStorage(ownerId: string) {
         return store.walkthroughs.find((entry) => entry.id === id) ?? null;
 
       const snapshot = await getDoc(walkthroughRef(id));
+
       return snapshot.exists() && snapshot.data().deletionPending !== true
         ? readWalkthrough(snapshot.data() as Walkthrough)
         : null;
@@ -490,6 +495,7 @@ export function createWalkthroughStorage(ownerId: string) {
       const allProjectsList = await allProjects();
       const project = allProjectsList.find((entry) => entry.id === id);
       if (!project) throw new Error("Project not found");
+
       const batch = writeBatch(database);
       batch.update(projectRef(id), { deletionPending: true });
       batch.set(doc(deletionJobs), {
