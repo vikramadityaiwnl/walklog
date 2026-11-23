@@ -226,14 +226,6 @@ export default function Profile() {
       <AppHeader />
 
       <ScrollView contentContainerStyle={styles.content}>
-        <AppText variant="title" style={styles.heading}>
-          Profile
-        </AppText>
-
-        <AppText style={styles.subtitle}>
-          Your account and preferences, in one place.
-        </AppText>
-
         <View style={styles.identity}>
           <Avatar name={auth.user.displayName ?? ""} />
 
@@ -384,16 +376,13 @@ export default function Profile() {
               }
               style={({ pressed }) => [
                 styles.iconAction,
-                modelInstalled
-                  ? styles.deleteIconAction
-                  : styles.downloadIconAction,
                 (pressed || modelBusy) && styles.actionDimmed,
               ]}
             >
               {modelInstalled ? (
-                <TrashIcon size={19} color={colors.danger} />
+                <TrashIcon size={19} color={colors.foreground} />
               ) : (
-                <ArrowDownTrayIcon size={19} color={colors.accent} />
+                <ArrowDownTrayIcon size={19} color={colors.foreground} />
               )}
             </Pressable>
           </View>
@@ -450,12 +439,11 @@ export default function Profile() {
               onPress={confirmClearCache}
               style={({ pressed }) => [
                 styles.iconAction,
-                styles.downloadIconAction,
                 (pressed || cacheBusy || cache.bytes === 0) &&
                   styles.actionDimmed,
               ]}
             >
-              <TrashIcon size={19} color={colors.accent} />
+              <TrashIcon size={19} color={colors.foreground} />
             </Pressable>
           </View>
 
@@ -575,8 +563,6 @@ export default function Profile() {
 const styles = StyleSheet.create({
   container: { backgroundColor: colors.background, flex: 1 },
   content: { paddingHorizontal: 24, paddingTop: 28, paddingBottom: 36 },
-  heading: { fontSize: 32, letterSpacing: -1, marginTop: 8 },
-  subtitle: { color: colors.muted, lineHeight: 23, marginTop: 5 },
   identity: {
     alignItems: "center",
     borderBottomColor: colors.border,
@@ -630,13 +616,11 @@ const styles = StyleSheet.create({
   badges: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 3 },
   iconAction: {
     alignItems: "center",
-    borderRadius: 11,
+    borderRadius: 20,
     height: 40,
     justifyContent: "center",
     width: 40,
   },
-  deleteIconAction: { backgroundColor: colors.dangerSoft },
-  downloadIconAction: { backgroundColor: colors.accentFaint },
   actionDimmed: { opacity: 0.55 },
   progressSection: { gap: 8 },
   progressTrack: {
