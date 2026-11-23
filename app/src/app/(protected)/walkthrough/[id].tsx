@@ -3,7 +3,6 @@ import { useCallback, useState } from "react";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import {
   ClipboardDocumentListIcon,
-  PaperClipIcon,
   MapPinIcon,
   WrenchScrewdriverIcon,
   PlusIcon,
@@ -300,7 +299,7 @@ export default function WalkthroughDetail() {
                     <Pressable
                       key={item.id}
                       accessibilityRole="button"
-                      accessibilityLabel={`Open item ${item.issueSummary}, ${item.status}, ${item.priority ? `${item.priority} priority, ` : ""}${item.photos.length} ${item.photos.length === 1 ? "attachment" : "attachments"}`}
+                      accessibilityLabel={`Open item ${item.issueSummary}, ${item.status}, ${item.priority ? `${item.priority} priority` : ""}`}
                       accessibilityState={{
                         selected: selecting && selectedIds.includes(item.id),
                         disabled: selection.status === "saving",
@@ -388,14 +387,6 @@ export default function WalkthroughDetail() {
                                 }
                               />
                             ) : null}
-
-                            <Badge
-                              label={String(item.photos.length)}
-                              accessibilityLabel={`${item.photos.length} ${item.photos.length === 1 ? "attachment" : "attachments"}`}
-                              icon={
-                                <PaperClipIcon size={14} color={colors.muted} />
-                              }
-                            />
                           </View>
                         </View>
                       </View>

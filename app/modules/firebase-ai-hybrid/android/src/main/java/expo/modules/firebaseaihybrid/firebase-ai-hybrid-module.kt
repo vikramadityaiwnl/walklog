@@ -9,6 +9,7 @@ import com.google.firebase.ai.OnDeviceModelStatus
 import com.google.firebase.ai.type.PublicPreviewAPI
 import com.google.firebase.ai.type.content
 import android.net.Uri
+import android.graphics.BitmapFactory
 import java.io.ByteArrayOutputStream
 import expo.modules.kotlin.functions.Coroutine
 import expo.modules.kotlin.modules.Module
@@ -24,6 +25,32 @@ class FirebaseAiHybridModule : Module() {
 
   override fun definition() = ModuleDefinition {
     Name("FirebaseAiHybrid")
+
+    AsyncFunction("generateTextWithImages") Coroutine { prompt: String, uris: List<String> ->
+      val context = appContext.reactContext ?: throw IllegalStateException("Application unavailable.")
+      var totalSize = 0
+      val images = uris.map { uri ->
+        val parsed = Uri.parse(uri)
+        require(parsed.scheme == "file" || parsed.scheme == "content") { "Invalid image file." }
+        context.contentResolver.openInputStream(parsed)?.use { stream ->
+          val output = ByteArrayOutputStream()
+          val buffer = ByteArray(8192)
+          var count = stream.read(buffer)
+          while (count != -1) {
+            totalSize += count
+            require(totalSize <= 14_000_000) { "The photos are too large to process together." }
+            output.write(buffer, 0, count)
+            count = stream.read(buffer)
+          }
+          output.toByteArray()
+        } ?: throw IllegalStateException("Couldn’t open an image.")
+      }
+      val response = model(InferenceMode.ONLY_IN_CLOUD).generateContent(content {
+        text(prompt)
+        images.forEach { inlineData(it, "image/jpeg") }
+      })
+      mapOf("text" to (response.text ?: ""), "source" to "cloud")
+    }
 
     AsyncFunction("checkAvailability") Coroutine { ->
       val status = model().onDeviceExtension?.checkStatus()
@@ -55,7 +82,7 @@ class FirebaseAiHybridModule : Module() {
 
     AsyncFunction("generateText") Coroutine { prompt: String, mode: String, audioUri: String?, mimeType: String? ->
       require(prompt.isNotBlank()) { "Enter a prompt first." }
-      require(audioUri == null || (mode == "cloud" && mimeType != null)) { "Audio input requires cloud processing and a MIME type." }
+      require(audioUri == null || (mimeType != null && (mode == "cloud" || (mode == "device" && mimeType.startsWith("image/"))))) { "This input requires cloud processing and a MIME type." }
       val inferenceMode = when (mode) {
         "auto" -> InferenceMode.PREFER_ON_DEVICE
         "device" -> InferenceMode.ONLY_ON_DEVICE
@@ -77,10 +104,19 @@ class FirebaseAiHybridModule : Module() {
           }
           output.toByteArray()
         } ?: throw IllegalStateException("Couldn’t open the audio file.")
-        model(inferenceMode).generateContent(content {
-          inlineData(bytes, mimeType)
-          text(prompt)
-        })
+        if (mode == "device" && mimeType.startsWith("image/")) {
+          val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            ?: throw IllegalArgumentException("Couldn’t open the image.")
+          model(inferenceMode).generateContent(content {
+            image(bitmap)
+            text(prompt)
+          })
+        } else {
+          model(inferenceMode).generateContent(content {
+            inlineData(bytes, mimeType)
+            text(prompt)
+          })
+        }
       } else {
         model(inferenceMode).generateContent(prompt)
       }

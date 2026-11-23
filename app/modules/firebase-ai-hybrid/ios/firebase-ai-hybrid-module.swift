@@ -5,6 +5,27 @@ import FirebaseCore
 public class FirebaseAiHybridModule: Module {
   public func definition() -> ModuleDefinition {
     Name("FirebaseAiHybrid")
+    AsyncFunction("generateTextWithImages") { (prompt: String, uris: [String]) async throws -> [String: String] in
+      var parts: [any Part] = [TextPart(prompt)]
+      var totalSize = 0
+      for uri in uris {
+        guard let url = URL(string: uri), url.isFileURL else {
+          throw NSError(domain: "FirebaseAiHybrid", code: 5, userInfo: [NSLocalizedDescriptionKey: "Invalid image file."])
+        }
+        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+        guard let size = attributes[.size] as? NSNumber else {
+          throw NSError(domain: "FirebaseAiHybrid", code: 5, userInfo: [NSLocalizedDescriptionKey: "Couldn’t read an image."])
+        }
+        totalSize += size.intValue
+        guard totalSize <= 14_000_000 else {
+          throw NSError(domain: "FirebaseAiHybrid", code: 6, userInfo: [NSLocalizedDescriptionKey: "The photos are too large to process together."])
+        }
+        parts.append(InlineDataPart(data: try Data(contentsOf: url), mimeType: "image/jpeg"))
+      }
+      let model = FirebaseAI.firebaseAI(backend: .googleAI()).generativeModel(modelName: "gemini-3.1-flash-lite")
+      let response = try await model.generateContent([ModelContent(parts: parts)])
+      return ["text": response.text ?? "", "source": "cloud"]
+    }
     AsyncFunction("checkAvailability") { () -> [String: Any] in
       guard #available(iOS 26.0, *) else {
         return ["status": "unavailable", "message": "On-device AI requires iOS 26 or later."]

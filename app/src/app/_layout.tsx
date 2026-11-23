@@ -115,6 +115,8 @@ export default function RootLayout() {
 
             <Stack.Screen name="(protected)/walkthrough/item" />
 
+            <Stack.Screen name="(protected)/walkthrough/refine" />
+
             <Stack.Screen
               name="(protected)/walkthrough/item-view"
               options={{ statusBarStyle: "light" }}
