@@ -7,6 +7,7 @@ import {
 } from "react-native-heroicons/outline";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Animated from "react-native-reanimated";
 import { AppText } from "../../../components/app-text";
 import { LoadingState } from "../../../components/loading-state";
 import { ScreenBanner } from "../../../components/screen-banner";
@@ -19,6 +20,11 @@ import { createWalkthroughStorage } from "../../../services/walkthrough/storage"
 import { useFirestoreStore } from "../../../store/firestore-store";
 import { useAuthStore } from "../../../store/auth-store";
 import { colors } from "../../../theme";
+import {
+  listItemEnter,
+  listItemExit,
+  listItemLayout,
+} from "../../../utils/list-motion";
 
 type Screen =
   | { status: "loading" | "error" }
@@ -112,57 +118,63 @@ export default function ProjectDetail() {
                 />
               ) : (
                 screen.walkthroughs.map((walkthrough) => (
-                  <Pressable
+                  <Animated.View
                     key={walkthrough.id}
-                    accessibilityRole="button"
-                    onPress={() => {
-                      router.push({
-                        pathname: "/walkthrough/[id]",
-                        params: { id: walkthrough.id, fromProjectId: id },
-                      });
-                    }}
-                    style={[
-                      styles.card,
-                      {
-                        backgroundColor: bannerColor,
-                      },
-                    ]}
+                    entering={listItemEnter}
+                    exiting={listItemExit}
+                    layout={listItemLayout}
                   >
-                    {walkthrough.bannerPhotoUri ? (
-                      <Image
-                        source={{ uri: walkthrough.bannerPhotoUri }}
-                        style={StyleSheet.absoluteFill}
-                        contentFit="cover"
-                      />
-                    ) : null}
-                    {!walkthrough.bannerPhotoUri ? (
-                      <BannerIllustration
-                        illustration={walkthrough.bannerIllustration}
-                      />
-                    ) : null}
-                    <Overlay />
-                    <View style={styles.cardContent}>
-                      <View style={styles.cardText}>
-                        <AppText variant="title" style={styles.cardTitle}>
-                          {walkthrough.title}
-                        </AppText>
-                        {walkthrough.clientName || walkthrough.address ? (
-                          <AppText style={styles.cardSubtitle}>
-                            {[walkthrough.clientName, walkthrough.address]
-                              .filter(Boolean)
-                              .join(" · ")}
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => {
+                        router.push({
+                          pathname: "/walkthrough/[id]",
+                          params: { id: walkthrough.id, fromProjectId: id },
+                        });
+                      }}
+                      style={[
+                        styles.card,
+                        {
+                          backgroundColor: bannerColor,
+                        },
+                      ]}
+                    >
+                      {walkthrough.bannerPhotoUri ? (
+                        <Image
+                          source={{ uri: walkthrough.bannerPhotoUri }}
+                          style={StyleSheet.absoluteFill}
+                          contentFit="cover"
+                        />
+                      ) : null}
+                      {!walkthrough.bannerPhotoUri ? (
+                        <BannerIllustration
+                          illustration={walkthrough.bannerIllustration}
+                        />
+                      ) : null}
+                      <Overlay />
+                      <View style={styles.cardContent}>
+                        <View style={styles.cardText}>
+                          <AppText variant="title" style={styles.cardTitle}>
+                            {walkthrough.title}
                           </AppText>
-                        ) : null}
-                        <AppText style={styles.cardCount}>
-                          {screen.counts[walkthrough.id]}{" "}
-                          {screen.counts[walkthrough.id] === 1
-                            ? "item"
-                            : "items"}
-                        </AppText>
+                          {walkthrough.clientName || walkthrough.address ? (
+                            <AppText style={styles.cardSubtitle}>
+                              {[walkthrough.clientName, walkthrough.address]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </AppText>
+                          ) : null}
+                          <AppText style={styles.cardCount}>
+                            {screen.counts[walkthrough.id]}{" "}
+                            {screen.counts[walkthrough.id] === 1
+                              ? "item"
+                              : "items"}
+                          </AppText>
+                        </View>
+                        <ChevronRightIcon size={22} color={colors.onAccent} />
                       </View>
-                      <ChevronRightIcon size={22} color={colors.onAccent} />
-                    </View>
-                  </Pressable>
+                    </Pressable>
+                  </Animated.View>
                 ))
               )}
             </View>

@@ -1,4 +1,4 @@
-import { View, StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Svg, { Circle, G, Path, Rect } from "react-native-svg";
 
 interface Props {
@@ -63,6 +63,10 @@ function IllustrationObject(props: ObjectProps) {
           <Path d="M18 102 L116 39 Q120 37 123 42 L132 57 Q134 61 130 64 L32 126 Q28 128 25 123 L17 108 Q15 104 18 102 Z" />
           <Path d="M26 99 l6 10 M37 92 l4 6 M48 85 l6 10 M59 78 l4 6 M70 71 l6 10 M81 64 l4 6 M92 57 l6 10 M103 50 l4 6 M114 43 l6 10" />
           <Path d="M25 128 L133 61 M20 103 L115 42" opacity={0.55} />
+          <Path
+            d="M33 116 L40 111 M48 107 L55 102 M63 97 L70 92 M78 87 L85 82 M93 77 L100 72 M108 67 L115 62"
+            opacity={0.5}
+          />
         </>
       ) : null}
       {props.kind === 1 ? (
@@ -74,6 +78,10 @@ function IllustrationObject(props: ObjectProps) {
             opacity={0.65}
           />
           <Circle cx={80} cy={37} r={3} />
+          <Path
+            d="M52 117 L56 119 M104 119 L108 117 M63 99 Q80 104 97 99"
+            opacity={0.6}
+          />
         </>
       ) : null}
       {props.kind === 2 ? (
@@ -81,12 +89,20 @@ function IllustrationObject(props: ObjectProps) {
           <Path d="M30 25 Q32 18 39 18 L115 20 Q122 20 123 27 L122 51 Q121 57 114 58 L39 56 Q31 56 30 50 Z" />
           <Path d="M43 19 Q37 37 42 55 M108 20 Q114 37 109 56 M122 37 L133 38 Q138 38 138 44 L138 67 Q138 76 128 77 L83 77 Q77 77 77 84 L77 91 M83 91 L83 79" />
           <Path d="M72 91 Q72 88 76 88 L84 88 Q88 88 88 92 L87 137 Q86 142 82 143 L77 143 Q73 142 73 137 Z M35 31 Q56 28 77 31 M39 49 Q72 52 110 49" />
+          <Path
+            d="M39 39 Q68 35 101 39 M76 100 L76 130 M82 100 L82 130"
+            opacity={0.5}
+          />
         </>
       ) : null}
       {props.kind === 3 ? (
         <>
           <Path d="M27 42 L34 31 Q44 24 56 29 L78 37 L90 37 L96 43 L91 51 L80 53 L72 47 L59 47 L55 55 L45 57 L35 53 L27 53 Z" />
           <Path d="M56 54 L71 58 L51 131 Q49 139 42 137 L38 135 Q33 133 35 126 Z M55 60 L68 64 M40 126 L47 129 M30 42 L43 40 M46 31 Q55 30 63 35" />
+          <Path
+            d="M43 117 L56 72 M48 120 L61 75 M34 48 L46 46"
+            opacity={0.55}
+          />
         </>
       ) : null}
       {props.kind === 4 ? (
@@ -97,6 +113,10 @@ function IllustrationObject(props: ObjectProps) {
           <Path d="M72 72 L72 86 M88 72 L88 86 M26 62 L48 62 M112 98 L134 98 M22 103 L136 104" />
           <Circle cx={31} cy={80} r={4} />
           <Circle cx={129} cy={80} r={4} />
+          <Path
+            d="M25 68 L25 73 M25 87 L25 92 M135 68 L135 73 M135 87 L135 92 M63 99 L97 99"
+            opacity={0.55}
+          />
         </>
       ) : null}
       {props.kind === 5 ? (
@@ -104,6 +124,10 @@ function IllustrationObject(props: ObjectProps) {
           <Path d="M65 79 Q42 71 42 49 Q42 24 67 21 Q93 19 97 44 Q99 63 82 75 L82 105 L91 105 L91 114 L82 114 L82 123 L89 123 L89 132 L80 141 L65 132 Z" />
           <Circle cx={69} cy={48} r={12} />
           <Path d="M67 82 L68 128 M46 47 Q48 27 68 25 M75 84 L75 123" />
+          <Path
+            d="M53 62 Q61 73 73 74 M82 108 L86 108 M82 126 L85 126"
+            opacity={0.55}
+          />
         </>
       ) : null}
     </>
@@ -126,14 +150,31 @@ export function BannerIllustration(props: Props) {
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        <G opacity={0.7} strokeWidth={1.6} strokeDasharray="1 7">
+        <G opacity={0.32} strokeWidth={0.75}>
+          <Rect
+            x={98}
+            y={21}
+            width={151}
+            height={112}
+            rx={10}
+            fill="#FFF7EA"
+            fillOpacity={0.08}
+            transform="rotate(-8 174 77)"
+          />
+          <Path d="M116 31 L115 20 L126 19 M237 10 L248 9 L249 20 M101 123 L102 134 L113 133 M234 124 L245 123 L244 112" />
+          <Path d="M104 143 L244 123 M104 139 L105 147 M243 119 L245 127" />
+          <Path d="M260 27 L273 120 M256 28 L264 27 M269 121 L277 120" />
+          <Circle cx={174} cy={77} r={59} strokeDasharray="3 6" />
+        </G>
+
+        <G opacity={0.65} strokeWidth={1.4} strokeDasharray="1 7">
           {paths.map((path) => (
             <Path key={path} d={path} />
           ))}
         </G>
 
-        <G opacity={0.35} strokeWidth={1}>
-          <Path d="M51 55 l0 8 M47 59 l8 0 M239 30 l0 10 M234 35 l10 0 M226 132 l0 7 M222 135.5 l8 0" />
+        <G opacity={0.48} strokeWidth={1}>
+          <Path d="M51 55 l0 8 M47 59 l8 0 M239 30 l0 10 M234 35 l10 0 M226 132 l0 7 M222 135.5 l8 0 M23 113 h15 M27 117 h7 M258 146 h19 M262 150 h11" />
           <Circle cx={82} cy={29} r={2} />
           <Circle cx={220} cy={151} r={2} />
         </G>
@@ -141,7 +182,7 @@ export function BannerIllustration(props: Props) {
         {objects.map((kind, index) => (
           <G
             key={kind}
-            opacity={index === 0 ? 1 : 0.75}
+            opacity={index === 0 ? 1 : 0.72}
             transform={placements[index]}
           >
             <IllustrationObject kind={kind} />
@@ -157,8 +198,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 0,
     top: 0,
-    width: 250,
-    height: 158,
-    opacity: 0.23,
+    width: 265,
+    height: 164,
+    opacity: 0.34,
   },
 });

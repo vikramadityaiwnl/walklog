@@ -32,6 +32,15 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+  ReduceMotion,
+  useAnimatedProps,
+  useAnimatedStyle,
+  withTiming,
+} from "react-native-reanimated";
 import { AppButton } from "../../../components/app-button";
 import { AppText } from "../../../components/app-text";
 import { EmptyState } from "../../../components/empty-state";
@@ -57,6 +66,14 @@ import { useInferenceStore } from "../../../store/inference-store";
 import { colors } from "../../../theme";
 
 type CaptureMode = "voice" | "type";
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const fadeIn = FadeIn.duration(180).reduceMotion(ReduceMotion.System);
+const fadeOut = FadeOut.duration(140).reduceMotion(ReduceMotion.System);
+const layoutTransition = LinearTransition.duration(180).reduceMotion(
+  ReduceMotion.System,
+);
+const ringCircumference = 2 * Math.PI * 51;
 
 interface AudioFile {
   uri: string;
@@ -114,6 +131,7 @@ export default function Capture() {
   });
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
+  const [actionsWidth, setActionsWidth] = useState(0);
 
   const recording = useRef<RecordingSession>({
     context: null,
@@ -134,12 +152,22 @@ export default function Capture() {
   const muted = operation.status === "recording" && operation.muted;
   const progress =
     operation.status === "downloading" ? operation.progress : undefined;
-  const downloadPercentage = progress
-    ? Math.min(
-        100,
-        Math.max(0, Math.round((progress.bytes / progress.total) * 100)),
-      )
-    : 0;
+  const downloadPercentage =
+    progress && progress.total > 0
+      ? Math.min(
+          100,
+          Math.max(0, Math.round((progress.bytes / progress.total) * 100)),
+        )
+      : 0;
+  const downloadRingProps = useAnimatedProps(
+    () => ({
+      strokeDashoffset: withTiming(
+        ringCircumference * (1 - downloadPercentage / 100),
+        { duration: 180, reduceMotion: ReduceMotion.System },
+      ),
+    }),
+    [downloadPercentage],
+  );
 
   const { stream: audioStream } = useAudioStream({
     sampleRate: 16000,
@@ -563,6 +591,19 @@ export default function Capture() {
 
   const busy = operation.status !== "idle" && operation.status !== "recording";
   const hasDraft = captureMode === "type" ? !!note : !!audio || !!transcript;
+  const createButtonStyle = useAnimatedStyle(() => {
+    const availableWidth = Math.max(0, actionsWidth - 48);
+
+    return {
+      width: withTiming(
+        hasDraft ? Math.max(0, (availableWidth - 10) / 2) : availableWidth,
+        {
+          duration: 180,
+          reduceMotion: ReduceMotion.System,
+        },
+      ),
+    };
+  }, [actionsWidth, hasDraft]);
   const initialVoice =
     captureMode === "voice" &&
     !hasDraft &&
@@ -653,7 +694,11 @@ export default function Capture() {
         ) : null}
 
         {captureMode === "voice" ? (
-          <View
+          <Animated.View
+            key="voice"
+            entering={fadeIn}
+            exiting={fadeOut}
+            layout={layoutTransition}
             style={[
               styles.voice,
               (initialVoice || operation.status === "transcribing") &&
@@ -683,7 +728,7 @@ export default function Capture() {
                         stroke={colors.neutralSoft}
                         strokeWidth={3}
                       />
-                      <Circle
+                      <AnimatedCircle
                         cx={56}
                         cy={56}
                         r={51}
@@ -691,10 +736,8 @@ export default function Capture() {
                         stroke={colors.accent}
                         strokeWidth={3}
                         strokeLinecap="round"
-                        strokeDasharray={`${2 * Math.PI * 51} ${2 * Math.PI * 51}`}
-                        strokeDashoffset={
-                          2 * Math.PI * 51 * (1 - downloadPercentage / 100)
-                        }
+                        strokeDasharray={`${ringCircumference} ${ringCircumference}`}
+                        animatedProps={downloadRingProps}
                         transform="rotate(-90 56 56)"
                       />
                     </Svg>
@@ -738,34 +781,52 @@ export default function Capture() {
                   </Pressable>
                 </View>
 
-                {operation.status === "preparing" ? (
-                  <AppText weight="semibold">Preparing</AppText>
-                ) : operation.status === "downloading" && progress ? (
-                  <View style={styles.modelDownloadCopy}>
-                    <AppText weight="semibold">Downloading model</AppText>
-                    <AppText style={styles.modelDownloadDescription}>
-                      The transcription model is being downloaded for
-                      long-running sessions.
-                    </AppText>
-                  </View>
-                ) : modelAvailable ? (
-                  <AppText weight="semibold">Record</AppText>
-                ) : (
-                  <View style={styles.modelDownloadCopy}>
-                    <AppText weight="semibold">
-                      Download transcription model
-                    </AppText>
-                    <AppText style={styles.modelDownloadDescription}>
-                      Needed for transcription during long-running sessions.
-                    </AppText>
-                  </View>
-                )}
+                <Animated.View
+                  key={
+                    operation.status === "preparing" ||
+                    operation.status === "downloading"
+                      ? operation.status
+                      : modelAvailable
+                        ? "record"
+                        : "download"
+                  }
+                  entering={fadeIn}
+                  layout={layoutTransition}
+                  style={styles.voiceStatus}
+                >
+                  {operation.status === "preparing" ? (
+                    <AppText weight="semibold">Preparing</AppText>
+                  ) : operation.status === "downloading" && progress ? (
+                    <View style={styles.modelDownloadCopy}>
+                      <AppText weight="semibold">Downloading model</AppText>
+                      <AppText style={styles.modelDownloadDescription}>
+                        The transcription model is being downloaded for
+                        long-running sessions.
+                      </AppText>
+                    </View>
+                  ) : modelAvailable ? (
+                    <AppText weight="semibold">Record</AppText>
+                  ) : (
+                    <View style={styles.modelDownloadCopy}>
+                      <AppText weight="semibold">
+                        Download transcription model
+                      </AppText>
+                      <AppText style={styles.modelDownloadDescription}>
+                        Needed for transcription during long-running sessions.
+                      </AppText>
+                    </View>
+                  )}
+                </Animated.View>
               </View>
             ) : null}
 
             {operation.status !== "transcribing" &&
             (operation.status === "recording" || !!transcript) ? (
-              <View style={styles.section}>
+              <Animated.View
+                entering={fadeIn}
+                layout={layoutTransition}
+                style={styles.section}
+              >
                 <View style={styles.between}>
                   <AppText weight="semibold">Transcript</AppText>
 
@@ -800,7 +861,23 @@ export default function Capture() {
                     operation.status === "idle" && styles.completedTranscript,
                   ]}
                 />
-              </View>
+              </Animated.View>
+            ) : null}
+
+            {operation.status === "downloading" && progress && !!audio ? (
+              <Animated.View
+                entering={fadeIn}
+                layout={layoutTransition}
+                style={styles.downloadStatus}
+              >
+                <ActivityIndicator color={colors.accent} />
+
+                <AppText style={styles.subheading}>
+                  {progress.total > 0
+                    ? `Downloading model · ${downloadPercentage}%`
+                    : "Downloading model"}
+                </AppText>
+              </Animated.View>
             ) : null}
 
             {operation.status === "transcribing" ? (
@@ -836,9 +913,15 @@ export default function Capture() {
                 </Pressable>
               </View>
             ) : null}
-          </View>
+          </Animated.View>
         ) : (
-          <View style={styles.section}>
+          <Animated.View
+            key="type"
+            entering={fadeIn}
+            exiting={fadeOut}
+            layout={layoutTransition}
+            style={styles.section}
+          >
             <AppText weight="semibold">Walkthrough notes</AppText>
 
             <TextInput
@@ -850,42 +933,65 @@ export default function Capture() {
               placeholder="Describe what needs attention"
               style={[styles.input, styles.multiline]}
             />
-          </View>
+          </Animated.View>
         )}
 
         {captureMode === "type" ||
         (captureMode === "voice" && !!audio && operation.status === "idle") ? (
-          <View style={styles.section}>
+          <Animated.View
+            entering={fadeIn}
+            exiting={fadeOut}
+            layout={layoutTransition}
+            style={styles.section}
+          >
             <AppText weight="semibold">Process with</AppText>
 
             <InferenceSelector requiresAudio={captureMode === "voice"} />
-          </View>
+          </Animated.View>
         ) : null}
 
         {error ? (
-          <AppText accessibilityRole="alert" style={styles.error}>
-            {error}
-          </AppText>
+          <Animated.View entering={fadeIn} layout={layoutTransition}>
+            <AppText accessibilityRole="alert" style={styles.error}>
+              {error}
+            </AppText>
+          </Animated.View>
         ) : null}
       </ScrollView>
 
       {operation.status === "stopping" ? (
-        <View style={styles.finishing}>
+        <Animated.View
+          entering={fadeIn}
+          exiting={fadeOut}
+          layout={layoutTransition}
+          style={styles.finishing}
+        >
           <ActivityIndicator color={colors.accent} />
 
           <AppText style={styles.subheading}>Finishing recording</AppText>
-        </View>
+        </Animated.View>
       ) : null}
 
       {captureMode === "voice" &&
       (operation.status === "recording" ||
         (audio?.source === "recording" && operation.status === "idle")) ? (
-        <View style={styles.recordBar}>
+        <Animated.View
+          entering={fadeIn}
+          exiting={fadeOut}
+          layout={layoutTransition}
+          style={styles.recordBar}
+        >
           {operation.status === "recording" ? (
             <>
-              <AppText style={styles.barText}>
-                {muted ? "Microphone muted" : "Listening"}
-              </AppText>
+              <View style={styles.recordLabel}>
+                {!muted ? (
+                  <View accessible={false} style={styles.recordDot} />
+                ) : null}
+
+                <AppText style={styles.barText}>
+                  {muted ? "Microphone muted" : "Listening"}
+                </AppText>
+              </View>
 
               <Pressable
                 accessibilityRole="button"
@@ -913,7 +1019,9 @@ export default function Capture() {
             </>
           ) : (
             <>
-              <AppText style={styles.barText}>Continue recording</AppText>
+              <AppText style={[styles.barText, styles.continueLabel]}>
+                Continue recording
+              </AppText>
 
               <Pressable
                 accessibilityRole="button"
@@ -926,12 +1034,18 @@ export default function Capture() {
               </Pressable>
             </>
           )}
-        </View>
+        </Animated.View>
       ) : null}
 
       {captureMode === "type" ||
       (captureMode === "voice" && !!audio && operation.status === "idle") ? (
-        <View style={styles.actions}>
+        <Animated.View
+          entering={fadeIn}
+          exiting={fadeOut}
+          layout={layoutTransition}
+          style={styles.actions}
+          onLayout={(event) => setActionsWidth(event.nativeEvent.layout.width)}
+        >
           {hasDraft ? (
             <View style={styles.action}>
               <AppButton
@@ -943,7 +1057,12 @@ export default function Capture() {
             </View>
           ) : null}
 
-          <View style={styles.action}>
+          <Animated.View
+            style={[
+              styles.createAction,
+              actionsWidth > 0 ? createButtonStyle : styles.action,
+            ]}
+          >
             <AppButton
               title="Create items"
               disabled={
@@ -954,8 +1073,8 @@ export default function Capture() {
               }
               onPress={complete}
             />
-          </View>
-        </View>
+          </Animated.View>
+        </Animated.View>
       ) : null}
     </SafeAreaView>
   );
@@ -978,6 +1097,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   action: { flex: 1 },
+  createAction: { marginLeft: "auto" },
   row: { flexDirection: "row", alignItems: "center", gap: 12 },
   between: {
     flexDirection: "row",
@@ -1088,6 +1208,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   modelDownloadCopy: { alignItems: "center", gap: 4, maxWidth: 320 },
+  voiceStatus: { alignItems: "center" },
+  downloadStatus: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingVertical: 24,
+  },
   modelDownloadDescription: {
     color: colors.muted,
     lineHeight: 22,
@@ -1113,7 +1240,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  barText: { flex: 1, color: colors.muted, paddingLeft: 12 },
+  recordLabel: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingLeft: 12,
+  },
+  recordDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.danger,
+  },
+  barText: { color: colors.muted },
+  continueLabel: { flex: 1, paddingLeft: 12 },
   stopButton: {
     width: 42,
     height: 42,

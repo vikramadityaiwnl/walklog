@@ -32,6 +32,11 @@ import { createWalkthroughStorage } from "../../../services/walkthrough/storage"
 import { useFirestoreStore } from "../../../store/firestore-store";
 import { useAuthStore } from "../../../store/auth-store";
 import { colors } from "../../../theme";
+import {
+  listItemEnter,
+  listItemExit,
+  listItemLayout,
+} from "../../../utils/list-motion";
 import Svg, {
   Defs,
   FeColorMatrix,
@@ -245,7 +250,13 @@ export default function Walkthroughs() {
     );
     const isSelected = selected?.includes(walkthrough.id) ?? false;
     return (
-      <Animated.View key={walkthrough.id} collapsable={false}>
+      <Animated.View
+        key={walkthrough.id}
+        collapsable={false}
+        entering={listItemEnter}
+        exiting={listItemExit}
+        layout={listItemLayout}
+      >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`${selected !== null ? "Select" : "Open"} ${walkthrough.title}`}
@@ -379,17 +390,27 @@ export default function Walkthroughs() {
               description="Please reopen this screen to try again."
             />
           ) : null}
-          {list.status === "ready" && !list.walkthroughs.length ? (
-            <EmptyState
-              icon={
-                <ClipboardDocumentListIcon size={48} color={colors.muted} />
-              }
-              title="No walkthroughs yet"
-              description="Tap the plus button to start your first walkthrough."
-              compact
-            />
+          {list.status === "ready" ? (
+            <View
+              style={[
+                styles.cards,
+                !list.walkthroughs.length && styles.emptyCards,
+              ]}
+            >
+              {!list.walkthroughs.length ? (
+                <EmptyState
+                  icon={
+                    <ClipboardDocumentListIcon size={48} color={colors.muted} />
+                  }
+                  title="No walkthroughs yet"
+                  description="Tap the plus button to start your first walkthrough."
+                  compact
+                />
+              ) : null}
+
+              {list.walkthroughs.map(card)}
+            </View>
           ) : null}
-          {list.status === "ready" ? list.walkthroughs.map(card) : null}
         </ScrollView>
         {selected !== null ? (
           <Animated.View
@@ -471,6 +492,8 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   headingGroup: { gap: 8 },
+  cards: { gap: 18 },
+  emptyCards: { flex: 1 },
   selectionHeaderContainer: { overflow: "hidden" },
   selectionHeader: {
     flexDirection: "row",

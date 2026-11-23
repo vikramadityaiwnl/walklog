@@ -8,6 +8,7 @@ import {
 } from "react-native-heroicons/outline";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Animated from "react-native-reanimated";
 import { AppText } from "../../../components/app-text";
 import { AppHeader } from "../../../components/app-header";
 import { EmptyState } from "../../../components/empty-state";
@@ -20,6 +21,11 @@ import { useAuthStore } from "../../../store/auth-store";
 import { bannerColor } from "../../../utils/banner-illustrations";
 import { BannerIllustration } from "../../../components/banner-illustration";
 import { colors } from "../../../theme";
+import {
+  listItemEnter,
+  listItemExit,
+  listItemLayout,
+} from "../../../utils/list-motion";
 
 type Screen =
   | { status: "loading" | "error" }
@@ -68,68 +74,83 @@ export default function Projects() {
               Couldn’t load projects. Please reopen this screen.
             </AppText>
           ) : null}
-          {screen.status === "ready" && !screen.projects.length ? (
-            <EmptyState
-              icon={<FolderIcon size={48} color={colors.muted} />}
-              title="No projects yet"
-              description="Create a project to keep related walkthroughs together."
-              compact
-            />
-          ) : null}
-          {screen.status === "ready"
-            ? screen.projects.map((project) => {
+          {screen.status === "ready" ? (
+            <View
+              style={[
+                styles.cards,
+                !screen.projects.length && styles.emptyCards,
+              ]}
+            >
+              {!screen.projects.length ? (
+                <EmptyState
+                  icon={<FolderIcon size={48} color={colors.muted} />}
+                  title="No projects yet"
+                  description="Create a project to keep related walkthroughs together."
+                  compact
+                />
+              ) : null}
+
+              {screen.projects.map((project) => {
                 const count = screen.walkthroughs.filter(
                   (walkthrough) => walkthrough.projectId === project.id,
                 ).length;
                 return (
-                  <Pressable
+                  <Animated.View
                     key={project.id}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Open ${project.name}`}
-                    onPress={() =>
-                      router.push({
-                        pathname: "/project/[id]",
-                        params: { id: project.id },
-                      })
-                    }
-                    style={[
-                      styles.card,
-                      {
-                        backgroundColor: bannerColor,
-                      },
-                    ]}
+                    entering={listItemEnter}
+                    exiting={listItemExit}
+                    layout={listItemLayout}
                   >
-                    {project.bannerPhotoUri ? (
-                      <Image
-                        source={{ uri: project.bannerPhotoUri }}
-                        style={StyleSheet.absoluteFill}
-                        contentFit="cover"
-                      />
-                    ) : null}
-                    {!project.bannerPhotoUri ? (
-                      <BannerIllustration
-                        illustration={project.bannerIllustration}
-                      />
-                    ) : null}
-                    <Overlay />
-                    <View style={styles.cardContent}>
-                      <View style={styles.cardText}>
-                        <View style={styles.titleRow}>
-                          <FolderIcon size={20} color={colors.onAccent} />
-                          <AppText variant="title" style={styles.cardTitle}>
-                            {project.name}
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Open ${project.name}`}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/project/[id]",
+                          params: { id: project.id },
+                        })
+                      }
+                      style={[
+                        styles.card,
+                        {
+                          backgroundColor: bannerColor,
+                        },
+                      ]}
+                    >
+                      {project.bannerPhotoUri ? (
+                        <Image
+                          source={{ uri: project.bannerPhotoUri }}
+                          style={StyleSheet.absoluteFill}
+                          contentFit="cover"
+                        />
+                      ) : null}
+                      {!project.bannerPhotoUri ? (
+                        <BannerIllustration
+                          illustration={project.bannerIllustration}
+                        />
+                      ) : null}
+                      <Overlay />
+                      <View style={styles.cardContent}>
+                        <View style={styles.cardText}>
+                          <View style={styles.titleRow}>
+                            <FolderIcon size={20} color={colors.onAccent} />
+                            <AppText variant="title" style={styles.cardTitle}>
+                              {project.name}
+                            </AppText>
+                          </View>
+                          <AppText style={styles.cardCount}>
+                            {count}{" "}
+                            {count === 1 ? "walkthrough" : "walkthroughs"}
                           </AppText>
                         </View>
-                        <AppText style={styles.cardCount}>
-                          {count} {count === 1 ? "walkthrough" : "walkthroughs"}
-                        </AppText>
+                        <ChevronRightIcon size={22} color={colors.onAccent} />
                       </View>
-                      <ChevronRightIcon size={22} color={colors.onAccent} />
-                    </View>
-                  </Pressable>
+                    </Pressable>
+                  </Animated.View>
                 );
-              })
-            : null}
+              })}
+            </View>
+          ) : null}
         </ScrollView>
         {screen.status === "ready" ? (
           <Pressable
@@ -157,6 +178,8 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   header: { gap: 8 },
+  cards: { gap: 18 },
+  emptyCards: { flex: 1 },
   heading: { fontSize: 30, lineHeight: 38, letterSpacing: -0.8 },
   subtitle: { color: colors.muted, lineHeight: 22 },
   card: {
