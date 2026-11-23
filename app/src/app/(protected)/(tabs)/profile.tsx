@@ -437,11 +437,9 @@ export default function Profile() {
 
             <View style={styles.settingText}>
               <AppText weight="semibold">Temporary files</AppText>
-              <AppText style={styles.settingDescription}>
-                {cache.status === "clearing"
-                  ? "Clearing temporary files…"
-                  : `${formatBytes(cache.bytes)} available to clear`}
-              </AppText>
+              <View style={styles.cacheSizeBadge}>
+                <Badge label={formatBytes(cache.bytes)} />
+              </View>
             </View>
 
             <Pressable
@@ -626,6 +624,7 @@ const styles = StyleSheet.create({
     width: 42,
   },
   settingText: { flex: 1, gap: 4 },
+  cacheSizeBadge: { alignSelf: "flex-start" },
   settingDescription: { color: colors.muted, fontSize: 13, lineHeight: 19 },
   footnote: { color: colors.muted, fontSize: 12, lineHeight: 18 },
   badges: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 3 },

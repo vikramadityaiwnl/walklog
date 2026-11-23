@@ -7,7 +7,9 @@ const model = new File(Paths.document, "whisper-tiny-multilingual.bin");
 const partial = new File(Paths.cache, "whisper-tiny-download.bin");
 
 export function getWhisperModel(): string | null {
-  return model.exists && model.size === whisperModelSize ? model.uri : null;
+  return model.exists && Number(model.size) === whisperModelSize
+    ? model.uri
+    : null;
 }
 
 export function deleteWhisperModel(): void {
@@ -22,13 +24,15 @@ export async function downloadWhisperModel(
   const task = File.createDownloadTask(modelUrl, partial, {
     onProgress: (progress) =>
       onProgress(
-        progress.bytesWritten,
-        progress.totalBytes > 0 ? progress.totalBytes : whisperModelSize,
+        Number(progress.bytesWritten),
+        Number(progress.totalBytes) > 0
+          ? Number(progress.totalBytes)
+          : whisperModelSize,
       ),
   });
   try {
     const downloaded = await task.downloadAsync();
-    if (!downloaded || downloaded.size !== whisperModelSize)
+    if (!downloaded || Number(downloaded.size) !== whisperModelSize)
       throw new Error("The model download was incomplete. Please try again.");
     if (model.exists) model.delete();
     downloaded.move(model);

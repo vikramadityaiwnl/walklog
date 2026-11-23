@@ -8,7 +8,9 @@ function directorySize(directory: Directory): number {
     .reduce(
       (size, entry) =>
         size +
-        (entry instanceof File ? (entry.size ?? 0) : directorySize(entry)),
+        (entry instanceof File
+          ? Number(entry.size ?? 0)
+          : directorySize(entry)),
       0,
     );
 }
