@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ComponentRef } from "react";
 import { router, useLocalSearchParams } from "expo-router";
-import * as Crypto from "expo-crypto";
 import * as DocumentPicker from "expo-document-picker";
 import * as Network from "expo-network";
 import { File, Paths } from "expo-file-system";
@@ -9,7 +8,6 @@ import {
   setAudioModeAsync,
   useAudioStream,
 } from "expo-audio";
-import RNFS from "react-native-fs";
 import { initWhisper, type WhisperContext } from "whisper.rn";
 import { RealtimeTranscriber } from "whisper.rn/realtime-transcription";
 import {
@@ -61,6 +59,7 @@ import {
   createWalkthroughStorage,
 } from "../../../services/walkthrough/storage";
 import { WhisperAudioStream } from "../../../services/whisper/audio-stream";
+import { whisperFileSystem } from "../../../services/whisper/file-system";
 import { useAuthStore } from "../../../store/auth-store";
 import { useInferenceStore } from "../../../store/inference-store";
 import { colors } from "../../../theme";
@@ -74,6 +73,19 @@ const layoutTransition = LinearTransition.duration(180).reduceMotion(
   ReduceMotion.System,
 );
 const ringCircumference = 2 * Math.PI * 51;
+
+function createAudioFile(prefix: string, suffix: string) {
+  const timestamp = Date.now();
+  let index = 0;
+  let file = new File(Paths.document, `${prefix}-${timestamp}${suffix}`);
+
+  while (file.exists) {
+    index += 1;
+    file = new File(Paths.document, `${prefix}-${timestamp}-${index}${suffix}`);
+  }
+
+  return file;
+}
 
 interface AudioFile {
   uri: string;
@@ -223,14 +235,16 @@ export default function Capture() {
 
       const stream = new WhisperAudioStream(audioStream);
       recording.current.stream = stream;
-      const path = `${RNFS.DocumentDirectoryPath}/walklog-${Crypto.randomUUID()}.wav`;
+      const path = decodeURIComponent(
+        createAudioFile("walklog", ".wav").uri.replace(/^file:\/\//, ""),
+      );
       recording.current.outputPath = path;
       recording.current.slices = {};
       recording.current.prefix = voice.transcript;
       recording.current.previous = voice;
 
       const transcriber = new RealtimeTranscriber(
-        { whisperContext: context, audioStream: stream, fs: RNFS },
+        { whisperContext: context, audioStream: stream, fs: whisperFileSystem },
         {
           audioOutputPath: path,
           audioSliceSec: 25,
@@ -362,8 +376,10 @@ export default function Capture() {
       await transcriber.stop();
 
       if (recording.current.outputPath) {
-        const recordingInfo = await RNFS.stat(recording.current.outputPath);
-        if (Number(recordingInfo.size) <= 44) {
+        const recordingFile = new File(
+          `file://${recording.current.outputPath}`,
+        );
+        if (!recordingFile.exists || recordingFile.size <= 44) {
           setVoice(
             recording.current.previous ?? { transcript: "", finalized: false },
           );
@@ -411,8 +427,8 @@ export default function Capture() {
       }
     } catch (cause) {
       const path = recording.current.outputPath;
-      const info = path ? await RNFS.stat(path).catch(() => null) : null;
-      if (!info || Number(info.size) <= 44) {
+      const file = path ? new File(`file://${path}`) : null;
+      if (!file?.exists || file.size <= 44) {
         setVoice(
           recording.current.previous ?? { transcript: "", finalized: false },
         );
@@ -508,10 +524,7 @@ export default function Capture() {
 
       const source = result.assets[0];
       const suffix = source.name.match(/\.[a-z0-9]+$/i)?.[0] ?? ".m4a";
-      const destination = new File(
-        Paths.document,
-        `walklog-audio-${Crypto.randomUUID()}${suffix}`,
-      );
+      const destination = createAudioFile("walklog-audio", suffix);
       new File(source.uri).copy(destination);
 
       const file: AudioFile = {
