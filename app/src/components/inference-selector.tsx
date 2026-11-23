@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNetworkState } from "expo-network";
-import { Pressable, StyleSheet, View } from "react-native";
 import { useShallow } from "zustand/react/shallow";
 import { checkModelAvailability } from "../services/firebase/ai";
 import { saveInferencePreference } from "../services/firebase/user-preferences";
@@ -8,7 +7,7 @@ import { useAuthStore } from "../store/auth-store";
 import { useDialogStore } from "../store/dialog-store";
 import { useInferenceStore } from "../store/inference-store";
 import { colors } from "../theme";
-import { AppText } from "./app-text";
+import { SegmentedControl } from "./segmented-control";
 
 interface Props {
   align?: "start" | "center";
@@ -68,68 +67,24 @@ export function InferenceSelector(props: Props) {
   }
 
   return (
-    <View
-      accessibilityLabel="AI processing mode"
-      style={[
-        styles.group,
-        props.align === "center" ? styles.centered : styles.startAligned,
-      ]}
-    >
-      {(["device", "cloud"] as const).map((option) => {
+    <SegmentedControl
+      label="AI processing mode"
+      value={preference}
+      onChange={choose}
+      align={props.align}
+      compact
+      options={(["device", "cloud"] as const).map((option) => {
         const available =
           option === "device" ? localReady === true : cloudReady;
 
-        return (
-          <Pressable
-            key={option}
-            accessibilityRole="radio"
-            accessibilityState={{
-              selected: preference === option,
-              disabled: !available && !props.allowUnavailable,
-            }}
-            disabled={!available && !props.allowUnavailable}
-            onPress={() => choose(option)}
-            style={[styles.option, preference === option && styles.selected]}
-          >
-            <View
-              style={[
-                styles.dot,
-                { backgroundColor: available ? colors.success : colors.muted },
-              ]}
-            />
-            <AppText
-              weight="semibold"
-              style={[styles.label, !available && styles.disabled]}
-            >
-              {option === "device" ? "On device" : "Cloud"}
-            </AppText>
-          </Pressable>
-        );
+        return {
+          value: option,
+          label: option === "device" ? "On device" : "Cloud",
+          disabled: !available && !props.allowUnavailable,
+          muted: !available,
+          indicatorColor: available ? colors.success : colors.muted,
+        };
       })}
-    </View>
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  group: {
-    flexDirection: "row",
-    padding: 3,
-    borderRadius: 12,
-    backgroundColor: colors.accentFaint,
-  },
-  startAligned: { alignSelf: "flex-start" },
-  centered: { alignSelf: "center" },
-  option: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 9,
-    gap: 5,
-  },
-  selected: { backgroundColor: colors.background },
-  dot: { width: 7, height: 7, borderRadius: 4 },
-  label: { fontSize: 12 },
-  disabled: { color: colors.muted },
-});

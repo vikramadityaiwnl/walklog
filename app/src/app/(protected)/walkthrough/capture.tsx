@@ -37,6 +37,7 @@ import { AppText } from "../../../components/app-text";
 import { EmptyState } from "../../../components/empty-state";
 import { InferenceSelector } from "../../../components/inference-selector";
 import { LoadingState } from "../../../components/loading-state";
+import { SegmentedControl } from "../../../components/segmented-control";
 import { extractItems } from "../../../services/walkthrough/extract-items";
 import { randomBannerColor } from "../../../utils/banner-colors";
 import { cleanTranscript } from "../../../services/transcription/transcript";
@@ -638,28 +639,17 @@ export default function Capture() {
         </View>
 
         {showModeSelector ? (
-          <View style={styles.segments}>
-            {(["voice", "type"] as const).map((option) => (
-              <Pressable
-                key={option}
-                accessibilityRole="radio"
-                accessibilityState={{
-                  selected: captureMode === option,
-                  disabled: operation.status !== "idle",
-                }}
-                disabled={operation.status !== "idle"}
-                onPress={() => setCaptureMode(option)}
-                style={[
-                  styles.segment,
-                  captureMode === option && styles.selected,
-                ]}
-              >
-                <AppText weight="semibold">
-                  {option === "voice" ? "Voice" : "Type"}
-                </AppText>
-              </Pressable>
-            ))}
-          </View>
+          <SegmentedControl
+            label="Capture mode"
+            value={captureMode}
+            onChange={setCaptureMode}
+            disabled={operation.status !== "idle"}
+            fullWidth
+            options={[
+              { value: "voice", label: "Voice" },
+              { value: "type", label: "Type" },
+            ]}
+          />
         ) : null}
 
         {captureMode === "voice" ? (
@@ -1040,14 +1030,6 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
   },
   completedTranscript: { color: colors.foreground },
-  segments: {
-    flexDirection: "row",
-    borderRadius: 12,
-    padding: 4,
-    backgroundColor: colors.accentFaint,
-  },
-  segment: { flex: 1, alignItems: "center", padding: 10, borderRadius: 9 },
-  selected: { backgroundColor: colors.background },
   voice: { gap: 12 },
   initialVoice: { flexGrow: 1 },
   importSection: { gap: 20 },

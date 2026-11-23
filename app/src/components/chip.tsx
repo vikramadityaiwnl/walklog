@@ -1,4 +1,9 @@
 import { Pressable, StyleSheet } from "react-native";
+import Animated, {
+  ReduceMotion,
+  useAnimatedStyle,
+  withTiming,
+} from "react-native-reanimated";
 import { colors } from "../theme";
 import { AppText } from "./app-text";
 
@@ -10,16 +15,31 @@ interface Props {
 }
 
 export function Chip(props: Props) {
+  const selectionStyle = useAnimatedStyle(
+    () => ({
+      backgroundColor: withTiming(
+        props.selected ? colors.accentSoft : colors.background,
+        { duration: 180, reduceMotion: ReduceMotion.System },
+      ),
+      borderColor: withTiming(props.selected ? colors.accent : colors.border, {
+        duration: 180,
+        reduceMotion: ReduceMotion.System,
+      }),
+    }),
+    [props.selected],
+  );
+
   return (
     <Pressable
       accessibilityRole={props.mode === "single" ? "radio" : "checkbox"}
       accessibilityState={{ checked: props.selected }}
       onPress={props.onPress}
-      style={[styles.chip, props.selected && styles.selected]}
     >
-      <AppText style={props.selected ? styles.selectedText : undefined}>
-        {props.label}
-      </AppText>
+      <Animated.View style={[styles.chip, selectionStyle]}>
+        <AppText style={props.selected ? styles.selectedText : undefined}>
+          {props.label}
+        </AppText>
+      </Animated.View>
     </Pressable>
   );
 }
@@ -32,6 +52,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     paddingVertical: 8,
   },
-  selected: { backgroundColor: colors.accentSoft, borderColor: colors.accent },
   selectedText: { color: colors.accent },
 });

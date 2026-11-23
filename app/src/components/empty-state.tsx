@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
+import Animated, { FadeIn, ReduceMotion } from "react-native-reanimated";
 import { colors } from "../theme";
 import { AppText } from "./app-text";
 
@@ -13,7 +14,11 @@ interface Props {
 export function EmptyState(props: Props) {
   return (
     <View style={styles.container}>
-      {props.icon}
+      <Animated.View
+        entering={FadeIn.duration(240).reduceMotion(ReduceMotion.System)}
+      >
+        {props.icon}
+      </Animated.View>
 
       <AppText
         variant="title"

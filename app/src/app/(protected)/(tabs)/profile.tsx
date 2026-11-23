@@ -17,6 +17,15 @@ import {
   TrashIcon,
 } from "react-native-heroicons/outline";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+  ReduceMotion,
+  useAnimatedStyle,
+  useReducedMotion,
+  withTiming,
+} from "react-native-reanimated";
 import { useFocusEffect } from "expo-router";
 import { AppButton } from "../../../components/app-button";
 import { AppHeader } from "../../../components/app-header";
@@ -64,6 +73,7 @@ function formatBytes(bytes: number): string {
 }
 
 export default function Profile() {
+  const reducedMotion = useReducedMotion();
   const auth = useAuthStore((state) => state.auth);
   const pendingChanges = useFirestoreStore((state) => state.pending);
   const deletionsPending = useFirestoreStore((state) => state.deletionsPending);
@@ -81,6 +91,19 @@ export default function Profile() {
   const [howItWorksVisible, setHowItWorksVisible] = useState(false);
 
   const showDialog = useDialogStore((state) => state.showDialog);
+  const downloadProgress =
+    model.status === "downloading" && model.total > 0
+      ? Math.min(model.bytes / model.total, 1)
+      : 0;
+  const progressStyle = useAnimatedStyle(
+    () => ({
+      width: withTiming(`${downloadProgress * 100}%`, {
+        duration: 180,
+        reduceMotion: ReduceMotion.System,
+      }),
+    }),
+    [downloadProgress],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -218,8 +241,6 @@ export default function Profile() {
   const modelInstalled =
     (model.status === "ready" || model.status === "error") && model.installed;
   const cacheBusy = cache.status === "clearing";
-  const downloadProgress =
-    model.status === "downloading" ? Math.min(model.bytes / model.total, 1) : 0;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -241,7 +262,14 @@ export default function Profile() {
         </View>
 
         {showChangeSync || showDeletionSync ? (
-          <View style={styles.syncCards}>
+          <Animated.View
+            entering={FadeIn.duration(180).reduceMotion(ReduceMotion.System)}
+            exiting={FadeOut.duration(140).reduceMotion(ReduceMotion.System)}
+            layout={LinearTransition.duration(180).reduceMotion(
+              ReduceMotion.System,
+            )}
+            style={styles.syncCards}
+          >
             {showChangeSync ? (
               <View accessibilityRole="summary" style={styles.syncCard}>
                 <View style={styles.syncIcon}>
@@ -297,7 +325,7 @@ export default function Profile() {
                 ) : null}
               </View>
             ) : null}
-          </View>
+          </Animated.View>
         ) : null}
 
         <View style={styles.sectionHeading}>
@@ -388,27 +416,32 @@ export default function Profile() {
           </View>
 
           {model.status === "downloading" ? (
-            <View style={styles.progressSection}>
+            <Animated.View
+              entering={FadeIn.duration(180).reduceMotion(ReduceMotion.System)}
+              layout={LinearTransition.duration(180).reduceMotion(
+                ReduceMotion.System,
+              )}
+              style={styles.progressSection}
+            >
               <View style={styles.progressTrack}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    { width: `${downloadProgress * 100}%` },
-                  ]}
-                />
+                <Animated.View style={[styles.progressFill, progressStyle]} />
               </View>
 
               <AppText style={styles.settingDescription}>
                 Downloading {formatBytes(model.bytes)} of{" "}
                 {formatBytes(model.total)}
               </AppText>
-            </View>
+            </Animated.View>
           ) : null}
 
           {model.status === "error" ? (
-            <AppText accessibilityRole="alert" style={styles.error}>
-              {model.message}
-            </AppText>
+            <Animated.View
+              entering={FadeIn.duration(180).reduceMotion(ReduceMotion.System)}
+            >
+              <AppText accessibilityRole="alert" style={styles.error}>
+                {model.message}
+              </AppText>
+            </Animated.View>
           ) : null}
         </View>
 
@@ -448,9 +481,13 @@ export default function Profile() {
           </View>
 
           {cache.status === "error" ? (
-            <AppText accessibilityRole="alert" style={styles.error}>
-              {cache.message}
-            </AppText>
+            <Animated.View
+              entering={FadeIn.duration(180).reduceMotion(ReduceMotion.System)}
+            >
+              <AppText accessibilityRole="alert" style={styles.error}>
+                {cache.message}
+              </AppText>
+            </Animated.View>
           ) : null}
 
           <AppText style={styles.footnote}>
@@ -467,7 +504,10 @@ export default function Profile() {
         <Pressable
           accessibilityRole="button"
           onPress={() => setHowItWorksVisible(true)}
-          style={styles.infoRow}
+          style={({ pressed }) => [
+            styles.infoRow,
+            pressed && styles.actionDimmed,
+          ]}
         >
           <View style={styles.settingIcon}>
             <InformationCircleIcon size={20} color={colors.accent} />
@@ -483,20 +523,26 @@ export default function Profile() {
 
         <View style={styles.signOut}>
           <AppButton
-            title="Sign out"
+            title={
+              signingOut.status === "loading" ? "Signing out…" : "Sign out"
+            }
             disabled={signingOut.status === "loading"}
             onPress={confirmSignOut}
           />
 
           {signingOut.status === "error" ? (
-            <AppText accessibilityRole="alert">{signingOut.message}</AppText>
+            <Animated.View
+              entering={FadeIn.duration(180).reduceMotion(ReduceMotion.System)}
+            >
+              <AppText accessibilityRole="alert">{signingOut.message}</AppText>
+            </Animated.View>
           ) : null}
         </View>
       </ScrollView>
 
       <Modal
         visible={howItWorksVisible}
-        animationType="slide"
+        animationType={reducedMotion ? "none" : "slide"}
         onRequestClose={() => setHowItWorksVisible(false)}
       >
         <SafeAreaView style={styles.modalContainer} edges={["top", "bottom"]}>

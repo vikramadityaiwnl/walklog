@@ -16,6 +16,12 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Animated, {
+  FadeIn,
+  LinearTransition,
+  ReduceMotion,
+  useReducedMotion,
+} from "react-native-reanimated";
 import { AppText } from "./app-text";
 import { AppButton } from "./app-button";
 import { AppDialog } from "./app-dialog";
@@ -46,6 +52,7 @@ type PickerState = {
 };
 
 export function ProjectPicker(props: Props) {
+  const reducedMotion = useReducedMotion();
   const [state, setState] = useState<PickerState>({
     status: "choosing",
     name: "",
@@ -97,7 +104,11 @@ export function ProjectPicker(props: Props) {
     state.status === "creating" || (state.status === "error" && !!state.name);
 
   return (
-    <Modal visible={props.visible} animationType="slide" onRequestClose={close}>
+    <Modal
+      visible={props.visible}
+      animationType={reducedMotion ? "none" : "slide"}
+      onRequestClose={close}
+    >
       <SafeAreaView style={styles.container}>
         <KeyboardAvoidingView
           style={styles.container}
@@ -120,7 +131,15 @@ export function ProjectPicker(props: Props) {
             keyboardShouldPersistTaps="handled"
           >
             {creating ? (
-              <View style={styles.form}>
+              <Animated.View
+                entering={FadeIn.duration(180).reduceMotion(
+                  ReduceMotion.System,
+                )}
+                layout={LinearTransition.duration(180).reduceMotion(
+                  ReduceMotion.System,
+                )}
+                style={styles.form}
+              >
                 <View style={styles.field}>
                   <AppText weight="semibold">Project name</AppText>
 
@@ -152,7 +171,7 @@ export function ProjectPicker(props: Props) {
                   }
                   onPress={() => void move(null, true)}
                 />
-              </View>
+              </Animated.View>
             ) : (
               <>
                 {props.projects.map((project) => (
@@ -161,7 +180,10 @@ export function ProjectPicker(props: Props) {
                     accessibilityRole="button"
                     disabled={state.status === "saving"}
                     onPress={() => void move(project.id)}
-                    style={styles.option}
+                    style={({ pressed }) => [
+                      styles.option,
+                      pressed && styles.optionPressed,
+                    ]}
                   >
                     <View style={styles.optionIcon}>
                       <FolderIcon size={21} color={colors.accent} />
@@ -179,7 +201,10 @@ export function ProjectPicker(props: Props) {
                   accessibilityRole="button"
                   disabled={state.status === "saving"}
                   onPress={() => setState({ status: "creating", name: "" })}
-                  style={styles.option}
+                  style={({ pressed }) => [
+                    styles.option,
+                    pressed && styles.optionPressed,
+                  ]}
                 >
                   <View style={styles.optionIcon}>
                     <PlusIcon size={21} color={colors.accent} />
@@ -193,9 +218,15 @@ export function ProjectPicker(props: Props) {
             )}
 
             {state.message ? (
-              <AppText accessibilityRole="alert" style={styles.error}>
-                {state.message}
-              </AppText>
+              <Animated.View
+                entering={FadeIn.duration(180).reduceMotion(
+                  ReduceMotion.System,
+                )}
+              >
+                <AppText accessibilityRole="alert" style={styles.error}>
+                  {state.message}
+                </AppText>
+              </Animated.View>
             ) : null}
           </ScrollView>
 
@@ -253,6 +284,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: colors.accentFaint,
   },
+  optionPressed: { opacity: 0.65 },
   optionName: { flex: 1 },
   form: { gap: 20 },
   field: { gap: 8 },
