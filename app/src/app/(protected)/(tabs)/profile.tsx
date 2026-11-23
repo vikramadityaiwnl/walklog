@@ -17,13 +17,23 @@ import {
   TrashIcon,
 } from "react-native-heroicons/outline";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect } from "expo-router";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+  ReduceMotion,
+  useAnimatedStyle,
+  useReducedMotion,
+  withTiming,
+} from "react-native-reanimated";
+import { router, useFocusEffect } from "expo-router";
 import { AppButton } from "../../../components/app-button";
 import { AppHeader } from "../../../components/app-header";
 import { AppText } from "../../../components/app-text";
 import { Avatar } from "../../../components/avatar";
 import { Badge } from "../../../components/badge";
 import { InferenceSelector } from "../../../components/inference-selector";
+import { ErrorState } from "../../../components/error-state";
 import {
   clearTemporaryCache,
   getTemporaryCacheSize,
@@ -64,6 +74,7 @@ function formatBytes(bytes: number): string {
 }
 
 export default function Profile() {
+  const reducedMotion = useReducedMotion();
   const auth = useAuthStore((state) => state.auth);
   const pendingChanges = useFirestoreStore((state) => state.pending);
   const deletionsPending = useFirestoreStore((state) => state.deletionsPending);
@@ -81,6 +92,19 @@ export default function Profile() {
   const [howItWorksVisible, setHowItWorksVisible] = useState(false);
 
   const showDialog = useDialogStore((state) => state.showDialog);
+  const downloadProgress =
+    model.status === "downloading" && model.total > 0
+      ? Math.min(model.bytes / model.total, 1)
+      : 0;
+  const progressStyle = useAnimatedStyle(
+    () => ({
+      width: withTiming(`${downloadProgress * 100}%`, {
+        duration: 180,
+        reduceMotion: ReduceMotion.System,
+      }),
+    }),
+    [downloadProgress],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -213,27 +237,59 @@ export default function Profile() {
 
   if (auth.status !== "ready" || !auth.user) return null;
 
+  const profileError =
+    signingOut.status === "error"
+      ? {
+          title: "Couldn’t sign out",
+          message: signingOut.message,
+          dismiss: () => setSigningOut({ status: "idle" }),
+        }
+      : model.status === "error"
+        ? {
+            title: "Transcription model issue",
+            message: model.message,
+            dismiss: () =>
+              setModel({ status: "ready", installed: model.installed }),
+          }
+        : cache.status === "error"
+          ? {
+              title: "Couldn’t clear temporary files",
+              message: cache.message,
+              dismiss: () => setCache({ status: "ready", bytes: cache.bytes }),
+            }
+          : null;
+
+  if (profileError) {
+    return (
+      <ErrorState
+        title={profileError.title}
+        description={profileError.message}
+        actions={[
+          {
+            title: "Go home",
+            variant: "secondary",
+            onPress: () => {
+              profileError.dismiss();
+              router.replace("/(protected)/(tabs)");
+            },
+          },
+          { title: "Try again", onPress: profileError.dismiss },
+        ]}
+      />
+    );
+  }
+
   const modelBusy =
     model.status === "downloading" || model.status === "deleting";
   const modelInstalled =
     (model.status === "ready" || model.status === "error") && model.installed;
   const cacheBusy = cache.status === "clearing";
-  const downloadProgress =
-    model.status === "downloading" ? Math.min(model.bytes / model.total, 1) : 0;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <AppHeader />
 
       <ScrollView contentContainerStyle={styles.content}>
-        <AppText variant="title" style={styles.heading}>
-          Profile
-        </AppText>
-
-        <AppText style={styles.subtitle}>
-          Your account and preferences, in one place.
-        </AppText>
-
         <View style={styles.identity}>
           <Avatar name={auth.user.displayName ?? ""} />
 
@@ -249,7 +305,14 @@ export default function Profile() {
         </View>
 
         {showChangeSync || showDeletionSync ? (
-          <View style={styles.syncCards}>
+          <Animated.View
+            entering={FadeIn.duration(180).reduceMotion(ReduceMotion.System)}
+            exiting={FadeOut.duration(140).reduceMotion(ReduceMotion.System)}
+            layout={LinearTransition.duration(180).reduceMotion(
+              ReduceMotion.System,
+            )}
+            style={styles.syncCards}
+          >
             {showChangeSync ? (
               <View accessibilityRole="summary" style={styles.syncCard}>
                 <View style={styles.syncIcon}>
@@ -305,7 +368,7 @@ export default function Profile() {
                 ) : null}
               </View>
             ) : null}
-          </View>
+          </Animated.View>
         ) : null}
 
         <View style={styles.sectionHeading}>
@@ -384,42 +447,34 @@ export default function Profile() {
               }
               style={({ pressed }) => [
                 styles.iconAction,
-                modelInstalled
-                  ? styles.deleteIconAction
-                  : styles.downloadIconAction,
                 (pressed || modelBusy) && styles.actionDimmed,
               ]}
             >
               {modelInstalled ? (
-                <TrashIcon size={19} color={colors.danger} />
+                <TrashIcon size={19} color={colors.foreground} />
               ) : (
-                <ArrowDownTrayIcon size={19} color={colors.accent} />
+                <ArrowDownTrayIcon size={19} color={colors.foreground} />
               )}
             </Pressable>
           </View>
 
           {model.status === "downloading" ? (
-            <View style={styles.progressSection}>
+            <Animated.View
+              entering={FadeIn.duration(180).reduceMotion(ReduceMotion.System)}
+              layout={LinearTransition.duration(180).reduceMotion(
+                ReduceMotion.System,
+              )}
+              style={styles.progressSection}
+            >
               <View style={styles.progressTrack}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    { width: `${downloadProgress * 100}%` },
-                  ]}
-                />
+                <Animated.View style={[styles.progressFill, progressStyle]} />
               </View>
 
               <AppText style={styles.settingDescription}>
                 Downloading {formatBytes(model.bytes)} of{" "}
                 {formatBytes(model.total)}
               </AppText>
-            </View>
-          ) : null}
-
-          {model.status === "error" ? (
-            <AppText accessibilityRole="alert" style={styles.error}>
-              {model.message}
-            </AppText>
+            </Animated.View>
           ) : null}
         </View>
 
@@ -450,20 +505,13 @@ export default function Profile() {
               onPress={confirmClearCache}
               style={({ pressed }) => [
                 styles.iconAction,
-                styles.downloadIconAction,
                 (pressed || cacheBusy || cache.bytes === 0) &&
                   styles.actionDimmed,
               ]}
             >
-              <TrashIcon size={19} color={colors.accent} />
+              <TrashIcon size={19} color={colors.foreground} />
             </Pressable>
           </View>
-
-          {cache.status === "error" ? (
-            <AppText accessibilityRole="alert" style={styles.error}>
-              {cache.message}
-            </AppText>
-          ) : null}
 
           <AppText style={styles.footnote}>
             Temporary files only. Saved walkthroughs and projects are kept.
@@ -479,7 +527,10 @@ export default function Profile() {
         <Pressable
           accessibilityRole="button"
           onPress={() => setHowItWorksVisible(true)}
-          style={styles.infoRow}
+          style={({ pressed }) => [
+            styles.infoRow,
+            pressed && styles.actionDimmed,
+          ]}
         >
           <View style={styles.settingIcon}>
             <InformationCircleIcon size={20} color={colors.accent} />
@@ -495,20 +546,18 @@ export default function Profile() {
 
         <View style={styles.signOut}>
           <AppButton
-            title="Sign out"
+            title={
+              signingOut.status === "loading" ? "Signing out…" : "Sign out"
+            }
             disabled={signingOut.status === "loading"}
             onPress={confirmSignOut}
           />
-
-          {signingOut.status === "error" ? (
-            <AppText accessibilityRole="alert">{signingOut.message}</AppText>
-          ) : null}
         </View>
       </ScrollView>
 
       <Modal
         visible={howItWorksVisible}
-        animationType="slide"
+        animationType={reducedMotion ? "none" : "slide"}
         onRequestClose={() => setHowItWorksVisible(false)}
       >
         <SafeAreaView style={styles.modalContainer} edges={["top", "bottom"]}>
@@ -575,8 +624,6 @@ export default function Profile() {
 const styles = StyleSheet.create({
   container: { backgroundColor: colors.background, flex: 1 },
   content: { paddingHorizontal: 24, paddingTop: 28, paddingBottom: 36 },
-  heading: { fontSize: 32, letterSpacing: -1, marginTop: 8 },
-  subtitle: { color: colors.muted, lineHeight: 23, marginTop: 5 },
   identity: {
     alignItems: "center",
     borderBottomColor: colors.border,
@@ -630,13 +677,11 @@ const styles = StyleSheet.create({
   badges: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 3 },
   iconAction: {
     alignItems: "center",
-    borderRadius: 11,
+    borderRadius: 20,
     height: 40,
     justifyContent: "center",
     width: 40,
   },
-  deleteIconAction: { backgroundColor: colors.dangerSoft },
-  downloadIconAction: { backgroundColor: colors.accentFaint },
   actionDimmed: { opacity: 0.55 },
   progressSection: { gap: 8 },
   progressTrack: {
@@ -646,7 +691,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   progressFill: { backgroundColor: colors.accent, borderRadius: 4, height: 7 },
-  error: { color: colors.danger, fontSize: 13, lineHeight: 19 },
   infoRow: {
     alignItems: "center",
     flexDirection: "row",

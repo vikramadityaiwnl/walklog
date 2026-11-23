@@ -1,4 +1,5 @@
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, StyleSheet } from "react-native";
+import Animated, { FadeIn, ReduceMotion } from "react-native-reanimated";
 import { colors } from "../theme";
 import { AppText } from "./app-text";
 
@@ -8,13 +9,16 @@ interface Props {
 
 export function LoadingState(props: Props) {
   return (
-    <View style={styles.container}>
+    <Animated.View
+      entering={FadeIn.duration(180).reduceMotion(ReduceMotion.System)}
+      style={styles.container}
+    >
       <ActivityIndicator color={colors.accent} />
 
       {props.description ? (
         <AppText style={styles.description}>{props.description}</AppText>
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
 

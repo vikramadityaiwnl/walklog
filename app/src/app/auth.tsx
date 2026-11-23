@@ -3,6 +3,7 @@ import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { AppButton } from "../components/app-button";
 import { AppText } from "../components/app-text";
+import { ErrorState } from "../components/error-state";
 import { signInWithGoogle } from "../services/firebase/google-sign-in";
 import { useAuthStore } from "../store/auth-store";
 import { colors } from "../theme";
@@ -36,6 +37,18 @@ export default function AuthScreen() {
 
   if (auth.user) return <Redirect href="/(protected)/(tabs)" />;
 
+  if (signIn.status === "error") {
+    return (
+      <ErrorState
+        title="Couldn’t sign in"
+        description={signIn.message}
+        actions={[
+          { title: "Try again", onPress: () => setSignIn({ status: "idle" }) },
+        ]}
+      />
+    );
+  }
+
   return (
     <View style={styles.container}>
       <AppText variant="title">Sign in to walklog</AppText>
@@ -45,10 +58,6 @@ export default function AuthScreen() {
         disabled={signIn.status === "loading"}
         onPress={handleSignIn}
       />
-
-      {signIn.status === "error" ? (
-        <AppText accessibilityRole="alert">{signIn.message}</AppText>
-      ) : null}
     </View>
   );
 }

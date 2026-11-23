@@ -1,5 +1,10 @@
 import { CameraIcon, PhotoIcon } from "react-native-heroicons/outline";
 import { Modal, Pressable, StyleSheet, View } from "react-native";
+import Animated, {
+  ReduceMotion,
+  FadeIn,
+  useReducedMotion,
+} from "react-native-reanimated";
 import { useShallow } from "zustand/react/shallow";
 import { useDialogStore } from "../store/dialog-store";
 import { colors } from "../theme";
@@ -11,6 +16,7 @@ interface Props {
 }
 
 export function AppDialog(props: Props) {
+  const reducedMotion = useReducedMotion();
   const { dialog, closeDialog, finishDismissal } = useDialogStore(
     useShallow((state) => ({
       dialog: state.dialog,
@@ -34,7 +40,7 @@ export function AppDialog(props: Props) {
     <Modal
       transparent
       visible={dialog.status === "open" && !!content}
-      animationType="fade"
+      animationType={reducedMotion ? "none" : "fade"}
       onRequestClose={() => closeDialog()}
       onDismiss={finishDismissal}
     >
@@ -46,69 +52,81 @@ export function AppDialog(props: Props) {
           onPress={() => closeDialog()}
         />
 
-        <View accessibilityViewIsModal style={styles.dialog}>
-          <AppText variant="title" style={styles.title}>
-            {content?.title}
-          </AppText>
+        {content ? (
+          <Animated.View
+            accessibilityViewIsModal
+            entering={FadeIn.duration(140).reduceMotion(ReduceMotion.System)}
+            style={styles.dialog}
+          >
+            <AppText variant="title" style={styles.title}>
+              {content?.title}
+            </AppText>
 
-          {content?.message ? (
-            <AppText style={styles.message}>{content.message}</AppText>
-          ) : null}
+            {content?.message ? (
+              <AppText style={styles.message}>{content.message}</AppText>
+            ) : null}
 
-          {showPhotoChoices ? (
-            <View style={styles.actions}>
-              <View style={styles.choiceRow}>
-                {photoChoices.map((action) => (
-                  <Pressable
-                    key={action.text}
-                    accessibilityRole="button"
-                    onPress={() => closeDialog(action)}
-                    style={styles.choice}
+            {showPhotoChoices ? (
+              <View style={styles.actions}>
+                <View style={styles.choiceRow}>
+                  {photoChoices.map((action) => (
+                    <Pressable
+                      key={action.text}
+                      accessibilityRole="button"
+                      onPress={() => closeDialog(action)}
+                      style={({ pressed }) => [
+                        styles.choice,
+                        pressed && styles.choicePressed,
+                      ]}
+                    >
+                      {action.icon === "camera" ? (
+                        <CameraIcon size={26} color={colors.accent} />
+                      ) : (
+                        <PhotoIcon size={26} color={colors.accent} />
+                      )}
+
+                      <AppText weight="semibold" style={styles.choiceLabel}>
+                        {action.text}
+                      </AppText>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <AppButton
+                  title={cancel.text}
+                  variant="secondary"
+                  onPress={() => closeDialog(cancel)}
+                />
+              </View>
+            ) : (
+              <View
+                style={[
+                  styles.actions,
+                  actions.length <= 2 && styles.actionRow,
+                ]}
+              >
+                {actions.map((action, index) => (
+                  <View
+                    key={`${action.text}-${index}`}
+                    style={actions.length <= 2 && styles.action}
                   >
-                    {action.icon === "camera" ? (
-                      <CameraIcon size={26} color={colors.accent} />
-                    ) : (
-                      <PhotoIcon size={26} color={colors.accent} />
-                    )}
-
-                    <AppText weight="semibold" style={styles.choiceLabel}>
-                      {action.text}
-                    </AppText>
-                  </Pressable>
+                    <AppButton
+                      title={action.text}
+                      variant={
+                        action.style === "cancel"
+                          ? "secondary"
+                          : action.style === "destructive"
+                            ? "danger"
+                            : undefined
+                      }
+                      onPress={() => closeDialog(action)}
+                    />
+                  </View>
                 ))}
               </View>
-
-              <AppButton
-                title={cancel.text}
-                variant="secondary"
-                onPress={() => closeDialog(cancel)}
-              />
-            </View>
-          ) : (
-            <View
-              style={[styles.actions, actions.length <= 2 && styles.actionRow]}
-            >
-              {actions.map((action, index) => (
-                <View
-                  key={`${action.text}-${index}`}
-                  style={actions.length <= 2 && styles.action}
-                >
-                  <AppButton
-                    title={action.text}
-                    variant={
-                      action.style === "cancel"
-                        ? "secondary"
-                        : action.style === "destructive"
-                          ? "danger"
-                          : undefined
-                    }
-                    onPress={() => closeDialog(action)}
-                  />
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
+            )}
+          </Animated.View>
+        ) : null}
       </View>
     </Modal>
   );
@@ -146,4 +164,5 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   choiceLabel: { color: colors.foreground, fontSize: 14, textAlign: "center" },
+  choicePressed: { opacity: 0.65 },
 });

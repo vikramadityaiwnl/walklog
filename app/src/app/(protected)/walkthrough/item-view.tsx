@@ -6,6 +6,14 @@ import {
   type Href,
 } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+  ReduceMotion,
+  useAnimatedStyle,
+  withTiming,
+} from "react-native-reanimated";
 import { StatusBar } from "expo-status-bar";
 import {
   CameraIcon,
@@ -19,6 +27,7 @@ import { getBannerColor } from "../../../utils/banner-colors";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText } from "../../../components/app-text";
 import { LoadingState } from "../../../components/loading-state";
+import { ErrorState } from "../../../components/error-state";
 import { AppButton } from "../../../components/app-button";
 import { Badge } from "../../../components/badge";
 import { useDialogStore } from "../../../store/dialog-store";
@@ -44,6 +53,42 @@ type ScreenState =
   | { status: "error"; message: string }
   | { status: "ready"; item: PunchItem };
 
+interface Props {
+  completed: boolean;
+}
+
+const layoutTransition = LinearTransition.duration(180).reduceMotion(
+  ReduceMotion.System,
+);
+const fadeIn = FadeIn.duration(140).reduceMotion(ReduceMotion.System);
+const fadeOut = FadeOut.duration(120).reduceMotion(ReduceMotion.System);
+
+function ActionIndicator(props: Props) {
+  const selectedStyle = useAnimatedStyle(
+    () => ({
+      backgroundColor: withTiming(
+        props.completed ? colors.accent : colors.background,
+        { duration: 140, reduceMotion: ReduceMotion.System },
+      ),
+      borderColor: withTiming(props.completed ? colors.accent : colors.border, {
+        duration: 140,
+        reduceMotion: ReduceMotion.System,
+      }),
+    }),
+    [props.completed],
+  );
+
+  return (
+    <Animated.View style={[styles.checkbox, selectedStyle]}>
+      {props.completed ? (
+        <Animated.View entering={fadeIn} exiting={fadeOut}>
+          <CheckIcon size={14} color={colors.onAccent} />
+        </Animated.View>
+      ) : null}
+    </Animated.View>
+  );
+}
+
 export default function ItemView() {
   const { id, walkthroughId } = useLocalSearchParams<{
     id: string;
@@ -56,6 +101,7 @@ export default function ItemView() {
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
 
   const [screen, setScreen] = useState<ScreenState>({ status: "loading" });
+  const [loadRevision, setLoadRevision] = useState(0);
 
   const [photoBusy, setPhotoBusy] = useState(false);
 
@@ -88,7 +134,7 @@ export default function ItemView() {
       return () => {
         active = false;
       };
-    }, [ownerId, walkthroughId, id, firestoreRevision]),
+    }, [ownerId, walkthroughId, id, firestoreRevision, loadRevision]),
   );
 
   async function addPhoto(source: "camera" | "library") {
@@ -158,7 +204,6 @@ export default function ItemView() {
       };
       await createWalkthroughStorage(ownerId).saveItem(item);
       setScreen({ status: "ready", item });
-      await deleteItemPhotos([photo]).catch(() => {});
 
       return true;
     } catch {
@@ -210,18 +255,31 @@ export default function ItemView() {
     }
   }
 
+  if (screen.status === "error") {
+    return (
+      <ErrorState
+        title="Couldn’t load item"
+        description={screen.message}
+        actions={[
+          { title: "Back", variant: "secondary", onPress: () => router.back() },
+          {
+            title: "Try again",
+            onPress: () => {
+              setScreen({ status: "loading" });
+              setLoadRevision((current) => current + 1);
+            },
+          },
+        ]}
+      />
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
       <StatusBar style={screen.status === "ready" ? "light" : "dark"} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {screen.status === "loading" ? <LoadingState /> : null}
-
-        {screen.status === "error" ? (
-          <AppText accessibilityRole="alert" style={styles.error}>
-            {screen.message}
-          </AppText>
-        ) : null}
 
         {screen.status === "ready" ? (
           <>
@@ -239,25 +297,29 @@ export default function ItemView() {
               }
             />
 
-            <View style={styles.body}>
+            <Animated.View layout={layoutTransition} style={styles.body}>
               <View style={styles.overview}>
                 <View style={styles.badges}>
-                  <Badge
-                    label={screen.item.status}
-                    tone={screen.item.status === "Done" ? "success" : "info"}
-                  />
+                  <Animated.View key={screen.item.status} entering={fadeIn}>
+                    <Badge
+                      label={screen.item.status}
+                      tone={screen.item.status === "Done" ? "success" : "info"}
+                    />
+                  </Animated.View>
 
                   {screen.item.priority ? (
-                    <Badge
-                      label={`${screen.item.priority} priority`}
-                      tone={
-                        screen.item.priority === "High"
-                          ? "danger"
-                          : screen.item.priority === "Medium"
-                            ? "warning"
-                            : "neutral"
-                      }
-                    />
+                    <Animated.View key={screen.item.priority} entering={fadeIn}>
+                      <Badge
+                        label={`${screen.item.priority} priority`}
+                        tone={
+                          screen.item.priority === "High"
+                            ? "danger"
+                            : screen.item.priority === "Medium"
+                              ? "warning"
+                              : "neutral"
+                        }
+                      />
+                    </Animated.View>
                   ) : null}
 
                   <Badge label={processingLabels[screen.item.processingMode]} />
@@ -296,44 +358,53 @@ export default function ItemView() {
                 </View>
               </View>
 
-              <View style={styles.photos}>
+              <Animated.View layout={layoutTransition} style={styles.photos}>
                 <View style={styles.headingRow}>
                   <AppText variant="title" style={styles.sectionTitle}>
                     Photos
                   </AppText>
                 </View>
 
-                {screen.item.photos.length ? (
-                  <PhotoGallery
-                    photos={screen.item.photos}
-                    busy={photoBusy || actionBusy}
-                    onAdd={choosePhoto}
-                    onRemove={removePhoto}
-                  />
-                ) : (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Add photos"
-                    disabled={photoBusy || actionBusy}
-                    onPress={choosePhoto}
-                    style={styles.addPhoto}
-                  >
-                    <View style={styles.photoIcon}>
-                      <CameraIcon size={22} color={colors.accent} />
-                    </View>
+                <PhotoGallery
+                  photos={screen.item.photos}
+                  busy={photoBusy || actionBusy}
+                  onAdd={choosePhoto}
+                  onRemove={removePhoto}
+                  onRemoved={(photo) => {
+                    void deleteItemPhotos([photo]).catch(() => {});
+                  }}
+                  emptyState={
+                    <Animated.View
+                      key="empty"
+                      entering={fadeIn}
+                      exiting={fadeOut}
+                      layout={layoutTransition}
+                    >
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Add photos"
+                        disabled={photoBusy || actionBusy}
+                        onPress={choosePhoto}
+                        style={styles.addPhoto}
+                      >
+                        <View style={styles.photoIcon}>
+                          <CameraIcon size={22} color={colors.accent} />
+                        </View>
 
-                    <View style={styles.photoCopy}>
-                      <AppText weight="semibold">Add photos</AppText>
+                        <View style={styles.photoCopy}>
+                          <AppText weight="semibold">Add photos</AppText>
 
-                      <AppText style={styles.photoHint}>
-                        Capture or choose photos of this item
-                      </AppText>
-                    </View>
-                  </Pressable>
-                )}
-              </View>
+                          <AppText style={styles.photoHint}>
+                            Capture or choose photos of this item
+                          </AppText>
+                        </View>
+                      </Pressable>
+                    </Animated.View>
+                  }
+                />
+              </Animated.View>
               {screen.item.refinement ? (
-                <View style={styles.section}>
+                <Animated.View layout={layoutTransition} style={styles.section}>
                   <View style={styles.headingRow}>
                     <AppText variant="title" style={styles.sectionTitle}>
                       Suggested actions
@@ -368,16 +439,7 @@ export default function ItemView() {
                       onPress={() => void toggleAction(index)}
                       style={styles.checklistRow}
                     >
-                      <View
-                        style={[
-                          styles.checkbox,
-                          action.completed && styles.checkboxSelected,
-                        ]}
-                      >
-                        {action.completed ? (
-                          <CheckIcon size={14} color={colors.onAccent} />
-                        ) : null}
-                      </View>
+                      <ActionIndicator completed={action.completed} />
 
                       <AppText
                         style={[
@@ -389,9 +451,9 @@ export default function ItemView() {
                       </AppText>
                     </Pressable>
                   ))}
-                </View>
+                </Animated.View>
               ) : null}
-            </View>
+            </Animated.View>
           </>
         ) : null}
       </ScrollView>
@@ -468,7 +530,6 @@ const styles = StyleSheet.create({
   link: { color: colors.accent },
   danger: { color: colors.danger },
   photo: { width: 96, height: 96, borderRadius: 10 },
-  error: { color: colors.danger },
   back: { paddingVertical: 10, alignSelf: "flex-start" },
   body: { paddingHorizontal: 24, paddingTop: 28, paddingBottom: 40, gap: 32 },
   overview: { gap: 24 },
@@ -495,10 +556,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: 1,
-  },
-  checkboxSelected: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
   },
   checklistText: { flex: 1, lineHeight: 22 },
   completedText: { color: colors.muted, textDecorationLine: "line-through" },

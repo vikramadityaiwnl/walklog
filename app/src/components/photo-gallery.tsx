@@ -1,14 +1,22 @@
 import { Image } from "expo-image";
-import { useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { PlusIcon, XMarkIcon } from "react-native-heroicons/outline";
 import {
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   useWindowDimensions,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+  ReduceMotion,
+  useReducedMotion,
+} from "react-native-reanimated";
 import type { PunchItem } from "../models/walkthrough";
 import { colors } from "../theme";
 import { AppButton } from "./app-button";
@@ -22,18 +30,59 @@ interface Props {
   busy: boolean;
   onAdd: () => void;
   onRemove: (photo: Photo) => Promise<boolean>;
+  onRemoved?: (photo: Photo) => void;
+  emptyState?: ReactNode;
 }
 
+type ViewerState =
+  { status: "closed" } | { status: "open" | "closing"; photo: Photo };
+
 export function PhotoGallery(props: Props) {
-  const [selected, setSelected] = useState<Photo | null>(null);
+  const reducedMotion = useReducedMotion();
+  const [viewer, setViewer] = useState<ViewerState>({ status: "closed" });
+  const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingRemoval = useRef<Photo | null>(null);
+  const onRemoved = useRef(props.onRemoved);
+  onRemoved.current = props.onRemoved;
 
   const showDialog = useDialogStore((state) => state.showDialog);
 
   const { width } = useWindowDimensions();
   const tileWidth = Math.max(60, (width - 68) / 3);
 
+  useEffect(
+    () => () => {
+      if (dismissTimer.current) clearTimeout(dismissTimer.current);
+      if (pendingRemoval.current) onRemoved.current?.(pendingRemoval.current);
+    },
+    [],
+  );
+
+  function finishDismissal() {
+    if (dismissTimer.current) clearTimeout(dismissTimer.current);
+    dismissTimer.current = null;
+    const removed = pendingRemoval.current;
+    pendingRemoval.current = null;
+    setViewer((current) =>
+      current.status === "closing" ? { status: "closed" } : current,
+    );
+    if (removed) onRemoved.current?.(removed);
+  }
+
+  function closeViewer() {
+    if (viewer.status !== "open") return;
+    setViewer({ status: "closing", photo: viewer.photo });
+    if (Platform.OS !== "ios") {
+      dismissTimer.current = setTimeout(
+        finishDismissal,
+        reducedMotion ? 0 : 300,
+      );
+    }
+  }
+
   function confirmRemove() {
-    if (!selected || props.busy) return;
+    if (viewer.status !== "open" || props.busy) return;
+    const photo = viewer.photo;
 
     showDialog(
       "Delete photo?",
@@ -44,9 +93,11 @@ export function PhotoGallery(props: Props) {
           text: "Delete",
           style: "destructive",
           onPress: () => {
-            void props.onRemove(selected).then((removed) => {
-              if (removed) setSelected(null);
-              else
+            void props.onRemove(photo).then((removed) => {
+              if (removed) {
+                pendingRemoval.current = photo;
+                closeViewer();
+              } else
                 showDialog(
                   "Couldn’t remove photo",
                   "Please try again.",
@@ -63,55 +114,86 @@ export function PhotoGallery(props: Props) {
 
   return (
     <>
-      <View style={styles.gallery}>
-        {props.photos.map((photo, index) => (
-          <Pressable
-            key={photo.localUri}
-            accessibilityRole="button"
-            accessibilityLabel={`View photo ${index + 1}`}
-            onPress={() => setSelected(photo)}
-            style={[styles.tile, { width: tileWidth, height: tileWidth }]}
-          >
-            <Image source={{ uri: photo.localUri }} style={styles.thumbnail} />
-          </Pressable>
-        ))}
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Add photo"
-          disabled={props.busy}
-          onPress={props.onAdd}
-          style={[
-            styles.tile,
-            styles.add,
-            { width: tileWidth, height: tileWidth },
-          ]}
+      {props.photos.length === 0 && props.emptyState ? (
+        props.emptyState
+      ) : (
+        <Animated.View
+          layout={LinearTransition.duration(180).reduceMotion(
+            ReduceMotion.System,
+          )}
+          style={styles.gallery}
         >
-          <PlusIcon size={26} color={colors.accent} />
-        </Pressable>
-      </View>
+          {props.photos.map((photo, index) => (
+            <Animated.View
+              key={photo.localUri}
+              entering={FadeIn.duration(140).reduceMotion(ReduceMotion.System)}
+              exiting={FadeOut.duration(120).reduceMotion(ReduceMotion.System)}
+              layout={LinearTransition.duration(180).reduceMotion(
+                ReduceMotion.System,
+              )}
+            >
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`View photo ${index + 1}`}
+                disabled={viewer.status !== "closed"}
+                onPress={() => setViewer({ status: "open", photo })}
+                style={[styles.tile, { width: tileWidth, height: tileWidth }]}
+              >
+                <Image
+                  source={{ uri: photo.localUri }}
+                  style={styles.thumbnail}
+                />
+              </Pressable>
+            </Animated.View>
+          ))}
+
+          <Animated.View
+            layout={LinearTransition.duration(180).reduceMotion(
+              ReduceMotion.System,
+            )}
+          >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Add photo"
+              disabled={props.busy}
+              onPress={props.onAdd}
+              style={[
+                styles.tile,
+                styles.add,
+                { width: tileWidth, height: tileWidth },
+              ]}
+            >
+              <PlusIcon size={26} color={colors.accent} />
+            </Pressable>
+          </Animated.View>
+        </Animated.View>
+      )}
 
       <Modal
-        visible={selected !== null}
-        animationType="fade"
-        onRequestClose={() => setSelected(null)}
+        visible={viewer.status === "open"}
+        animationType={reducedMotion ? "none" : "fade"}
+        onRequestClose={() => {
+          if (!props.busy) closeViewer();
+        }}
+        onDismiss={finishDismissal}
       >
         <SafeAreaView style={styles.viewer}>
           <View style={styles.viewerHeader}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Close photo"
+              disabled={props.busy}
               hitSlop={10}
-              onPress={() => setSelected(null)}
+              onPress={closeViewer}
               style={styles.close}
             >
               <XMarkIcon size={26} color={colors.onAccent} />
             </Pressable>
           </View>
 
-          {selected ? (
+          {viewer.status !== "closed" ? (
             <Image
-              source={{ uri: selected.localUri }}
+              source={{ uri: viewer.photo.localUri }}
               contentFit="contain"
               style={styles.fullImage}
             />
