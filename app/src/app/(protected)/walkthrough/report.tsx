@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { ScrollView, StyleSheet, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -13,6 +13,8 @@ import {
 import { AppText } from "../../../components/app-text";
 import { AppButton } from "../../../components/app-button";
 import { LoadingState } from "../../../components/loading-state";
+import { ErrorState } from "../../../components/error-state";
+import { EmptyState } from "../../../components/empty-state";
 import { useAuthStore } from "../../../store/auth-store";
 import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
 import { generateReport } from "../../../services/report/generate-report";
@@ -39,6 +41,7 @@ export default function WalkthroughReport() {
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
 
   const [screen, setScreen] = useState<Screen>({ status: "loading" });
+  const [loadRevision, setLoadRevision] = useState(0);
 
   useEffect(() => {
     if (!ownerId || !id) return;
@@ -69,7 +72,7 @@ export default function WalkthroughReport() {
     return () => {
       active = false;
     };
-  }, [ownerId, id]);
+  }, [ownerId, id, loadRevision]);
 
   async function openReport(operation: "view" | "share") {
     if (!ownerId || !id || screen.status !== "ready" || screen.operation)
@@ -131,11 +134,20 @@ export default function WalkthroughReport() {
 
   if (screen.status === "error") {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.content}>
-          <AppText accessibilityRole="alert">{screen.message}</AppText>
-        </View>
-      </SafeAreaView>
+      <ErrorState
+        title="Couldn’t load report"
+        description={screen.message}
+        actions={[
+          { title: "Back", variant: "secondary", onPress: () => router.back() },
+          {
+            title: "Try again",
+            onPress: () => {
+              setScreen({ status: "loading" });
+              setLoadRevision((current) => current + 1);
+            },
+          },
+        ]}
+      />
     );
   }
 
@@ -203,9 +215,13 @@ export default function WalkthroughReport() {
 
         {screen.message ? (
           <Animated.View entering={formFadeIn} exiting={formFadeOut}>
-            <AppText accessibilityRole="alert" style={styles.error}>
-              {screen.message}
-            </AppText>
+            <EmptyState
+              variant="error"
+              title="Report unavailable"
+              description={screen.message}
+              compact
+              inline
+            />
           </Animated.View>
         ) : null}
       </ScrollView>
@@ -274,7 +290,6 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 22, lineHeight: 28, color: colors.accent },
   statLabel: { fontSize: 13, color: colors.muted },
   hint: { color: colors.muted, fontSize: 13, lineHeight: 19 },
-  error: { color: colors.danger },
   actions: {
     flexDirection: "row",
     gap: 10,

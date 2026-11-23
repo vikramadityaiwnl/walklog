@@ -16,6 +16,7 @@
 ## Interface design
 
 - Keep interfaces minimal and contextual: show only the information and actions needed for the current state, and reveal additional controls as they become relevant.
+- Use the shared full-screen error state when an error makes the page unusable. When surrounding content or controls remain useful, show an error-style empty state in context so the user can continue interacting with them.
 
 - Group related titles and descriptions closely, and separate them from subsequent fields or sections. Use clear text and spacing hierarchy to communicate which elements belong together.
 - Keep Back buttons out of nested screens; use the platform’s back navigation. Place bottom actions in one row, with equal widths when there are two.

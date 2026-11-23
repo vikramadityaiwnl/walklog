@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import { ExclamationTriangleIcon } from "react-native-heroicons/outline";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import { colors } from "../theme";
 import { AppButton } from "./app-button";
 import { EmptyState } from "./empty-state";
@@ -23,7 +24,10 @@ interface Props {
 export function ErrorState(props: Props) {
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar style="dark" />
+
       <EmptyState
+        variant="error"
         icon={
           props.icon ?? (
             <ExclamationTriangleIcon size={40} color={colors.accent} />

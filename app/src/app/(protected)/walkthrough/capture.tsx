@@ -43,6 +43,7 @@ import Animated, {
 import { AppButton } from "../../../components/app-button";
 import { AppText } from "../../../components/app-text";
 import { ErrorState } from "../../../components/error-state";
+import { EmptyState } from "../../../components/empty-state";
 import { InferenceSelector } from "../../../components/inference-selector";
 import { LoadingState } from "../../../components/loading-state";
 import { SegmentedControl } from "../../../components/segmented-control";
@@ -942,9 +943,13 @@ export default function Capture() {
 
         {error ? (
           <Animated.View entering={fadeIn} layout={layoutTransition}>
-            <AppText accessibilityRole="alert" style={styles.error}>
-              {error}
-            </AppText>
+            <EmptyState
+              variant="error"
+              title="Something went wrong"
+              description={error}
+              compact
+              inline
+            />
           </Animated.View>
         ) : null}
       </ScrollView>
@@ -1121,7 +1126,6 @@ const styles = StyleSheet.create({
   link: { color: colors.accent },
   danger: { color: colors.danger },
   photo: { width: 96, height: 96, borderRadius: 10 },
-  error: { color: colors.danger },
   back: { paddingVertical: 10, alignSelf: "flex-start" },
   editTranscript: {
     flexDirection: "row",

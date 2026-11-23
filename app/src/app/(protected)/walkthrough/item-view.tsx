@@ -27,6 +27,7 @@ import { getBannerColor } from "../../../utils/banner-colors";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText } from "../../../components/app-text";
 import { LoadingState } from "../../../components/loading-state";
+import { ErrorState } from "../../../components/error-state";
 import { AppButton } from "../../../components/app-button";
 import { Badge } from "../../../components/badge";
 import { useDialogStore } from "../../../store/dialog-store";
@@ -100,6 +101,7 @@ export default function ItemView() {
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
 
   const [screen, setScreen] = useState<ScreenState>({ status: "loading" });
+  const [loadRevision, setLoadRevision] = useState(0);
 
   const [photoBusy, setPhotoBusy] = useState(false);
 
@@ -132,7 +134,7 @@ export default function ItemView() {
       return () => {
         active = false;
       };
-    }, [ownerId, walkthroughId, id, firestoreRevision]),
+    }, [ownerId, walkthroughId, id, firestoreRevision, loadRevision]),
   );
 
   async function addPhoto(source: "camera" | "library") {
@@ -253,18 +255,31 @@ export default function ItemView() {
     }
   }
 
+  if (screen.status === "error") {
+    return (
+      <ErrorState
+        title="Couldn’t load item"
+        description={screen.message}
+        actions={[
+          { title: "Back", variant: "secondary", onPress: () => router.back() },
+          {
+            title: "Try again",
+            onPress: () => {
+              setScreen({ status: "loading" });
+              setLoadRevision((current) => current + 1);
+            },
+          },
+        ]}
+      />
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
       <StatusBar style={screen.status === "ready" ? "light" : "dark"} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {screen.status === "loading" ? <LoadingState /> : null}
-
-        {screen.status === "error" ? (
-          <AppText accessibilityRole="alert" style={styles.error}>
-            {screen.message}
-          </AppText>
-        ) : null}
 
         {screen.status === "ready" ? (
           <>
@@ -515,7 +530,6 @@ const styles = StyleSheet.create({
   link: { color: colors.accent },
   danger: { color: colors.danger },
   photo: { width: 96, height: 96, borderRadius: 10 },
-  error: { color: colors.danger },
   back: { paddingVertical: 10, alignSelf: "flex-start" },
   body: { paddingHorizontal: 24, paddingTop: 28, paddingBottom: 40, gap: 32 },
   overview: { gap: 24 },

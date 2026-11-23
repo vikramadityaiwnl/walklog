@@ -26,13 +26,14 @@ import Animated, {
   useReducedMotion,
   withTiming,
 } from "react-native-reanimated";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { AppButton } from "../../../components/app-button";
 import { AppHeader } from "../../../components/app-header";
 import { AppText } from "../../../components/app-text";
 import { Avatar } from "../../../components/avatar";
 import { Badge } from "../../../components/badge";
 import { InferenceSelector } from "../../../components/inference-selector";
+import { ErrorState } from "../../../components/error-state";
 import {
   clearTemporaryCache,
   getTemporaryCacheSize,
@@ -236,6 +237,48 @@ export default function Profile() {
 
   if (auth.status !== "ready" || !auth.user) return null;
 
+  const profileError =
+    signingOut.status === "error"
+      ? {
+          title: "Couldn’t sign out",
+          message: signingOut.message,
+          dismiss: () => setSigningOut({ status: "idle" }),
+        }
+      : model.status === "error"
+        ? {
+            title: "Transcription model issue",
+            message: model.message,
+            dismiss: () =>
+              setModel({ status: "ready", installed: model.installed }),
+          }
+        : cache.status === "error"
+          ? {
+              title: "Couldn’t clear temporary files",
+              message: cache.message,
+              dismiss: () => setCache({ status: "ready", bytes: cache.bytes }),
+            }
+          : null;
+
+  if (profileError) {
+    return (
+      <ErrorState
+        title={profileError.title}
+        description={profileError.message}
+        actions={[
+          {
+            title: "Go home",
+            variant: "secondary",
+            onPress: () => {
+              profileError.dismiss();
+              router.replace("/(protected)/(tabs)");
+            },
+          },
+          { title: "Try again", onPress: profileError.dismiss },
+        ]}
+      />
+    );
+  }
+
   const modelBusy =
     model.status === "downloading" || model.status === "deleting";
   const modelInstalled =
@@ -433,16 +476,6 @@ export default function Profile() {
               </AppText>
             </Animated.View>
           ) : null}
-
-          {model.status === "error" ? (
-            <Animated.View
-              entering={FadeIn.duration(180).reduceMotion(ReduceMotion.System)}
-            >
-              <AppText accessibilityRole="alert" style={styles.error}>
-                {model.message}
-              </AppText>
-            </Animated.View>
-          ) : null}
         </View>
 
         <View style={styles.sectionHeading}>
@@ -479,16 +512,6 @@ export default function Profile() {
               <TrashIcon size={19} color={colors.foreground} />
             </Pressable>
           </View>
-
-          {cache.status === "error" ? (
-            <Animated.View
-              entering={FadeIn.duration(180).reduceMotion(ReduceMotion.System)}
-            >
-              <AppText accessibilityRole="alert" style={styles.error}>
-                {cache.message}
-              </AppText>
-            </Animated.View>
-          ) : null}
 
           <AppText style={styles.footnote}>
             Temporary files only. Saved walkthroughs and projects are kept.
@@ -529,14 +552,6 @@ export default function Profile() {
             disabled={signingOut.status === "loading"}
             onPress={confirmSignOut}
           />
-
-          {signingOut.status === "error" ? (
-            <Animated.View
-              entering={FadeIn.duration(180).reduceMotion(ReduceMotion.System)}
-            >
-              <AppText accessibilityRole="alert">{signingOut.message}</AppText>
-            </Animated.View>
-          ) : null}
         </View>
       </ScrollView>
 
@@ -676,7 +691,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   progressFill: { backgroundColor: colors.accent, borderRadius: 4, height: 7 },
-  error: { color: colors.danger, fontSize: 13, lineHeight: 19 },
   infoRow: {
     alignItems: "center",
     flexDirection: "row",

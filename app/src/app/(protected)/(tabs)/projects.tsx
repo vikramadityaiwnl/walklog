@@ -70,9 +70,12 @@ export default function Projects() {
           </View>
           {screen.status === "loading" ? <LoadingState /> : null}
           {screen.status === "error" ? (
-            <AppText>
-              Couldn’t load projects. Please reopen this screen.
-            </AppText>
+            <EmptyState
+              variant="error"
+              title="Couldn’t load projects"
+              description="Please reopen this screen to try again."
+              compact
+            />
           ) : null}
           {screen.status === "ready" ? (
             <View

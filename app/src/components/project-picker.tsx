@@ -25,6 +25,7 @@ import Animated, {
 import { AppText } from "./app-text";
 import { AppButton } from "./app-button";
 import { AppDialog } from "./app-dialog";
+import { EmptyState } from "./empty-state";
 import { BannerPicker } from "./banner-picker";
 import { useBannerDraft } from "../hooks/use-banner-draft";
 import { colors } from "../theme";
@@ -223,9 +224,13 @@ export function ProjectPicker(props: Props) {
                   ReduceMotion.System,
                 )}
               >
-                <AppText accessibilityRole="alert" style={styles.error}>
-                  {state.message}
-                </AppText>
+                <EmptyState
+                  variant="error"
+                  title="Move unsuccessful"
+                  description={state.message}
+                  compact
+                  inline
+                />
               </Animated.View>
             ) : null}
           </ScrollView>
@@ -302,7 +307,6 @@ const styles = StyleSheet.create({
     textAlignVertical: "center",
   },
   accent: { color: colors.accent },
-  error: { color: colors.danger },
   footer: {
     flexDirection: "row",
     gap: 10,

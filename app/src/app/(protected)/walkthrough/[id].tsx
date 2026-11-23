@@ -31,6 +31,7 @@ import { bannerColor } from "../../../utils/banner-illustrations";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Badge } from "../../../components/badge";
 import { EmptyState } from "../../../components/empty-state";
+import { ErrorState } from "../../../components/error-state";
 import { AppText } from "../../../components/app-text";
 import type { PunchItem, Walkthrough } from "../../../models/walkthrough";
 import { deleteItemPhotos } from "../../../services/walkthrough/photos";
@@ -101,6 +102,7 @@ export default function WalkthroughDetail() {
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
 
   const [screen, setScreen] = useState<ScreenState>({ status: "loading" });
+  const [loadRevision, setLoadRevision] = useState(0);
   const [selection, setSelection] = useState<Selection>({ status: "inactive" });
 
   const showDialog = useDialogStore((state) => state.showDialog);
@@ -134,7 +136,7 @@ export default function WalkthroughDetail() {
       return () => {
         active = false;
       };
-    }, [ownerId, id, firestoreRevision]),
+    }, [ownerId, id, firestoreRevision, loadRevision]),
   );
 
   function toggleSelection(itemId: string) {
@@ -262,18 +264,31 @@ export default function WalkthroughDetail() {
       .filter((item) => selectedIds.includes(item.id))
       .every((item) => item.status === "Done");
 
+  if (screen.status === "error") {
+    return (
+      <ErrorState
+        title="Couldn’t load walkthrough"
+        description={screen.message}
+        actions={[
+          { title: "Back", variant: "secondary", onPress: () => router.back() },
+          {
+            title: "Try again",
+            onPress: () => {
+              setScreen({ status: "loading" });
+              setLoadRevision((current) => current + 1);
+            },
+          },
+        ]}
+      />
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
       <StatusBar style={screen.status === "ready" ? "light" : "dark"} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {screen.status === "loading" ? <LoadingState /> : null}
-
-        {screen.status === "error" ? (
-          <AppText accessibilityRole="alert" style={styles.error}>
-            {screen.message}
-          </AppText>
-        ) : null}
 
         {screen.status === "ready" ? (
           <>
@@ -640,7 +655,6 @@ const styles = StyleSheet.create({
   link: { color: colors.accent },
   danger: { color: colors.danger },
   photo: { width: 96, height: 96, borderRadius: 10 },
-  error: { color: colors.danger },
   back: { paddingVertical: 10, alignSelf: "flex-start" },
   emptyContent: { flexGrow: 1 },
   selectionHeader: {

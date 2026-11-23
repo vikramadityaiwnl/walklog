@@ -15,6 +15,7 @@ import { Overlay } from "../../../components/overlay";
 import { bannerColor } from "../../../utils/banner-illustrations";
 import { BannerIllustration } from "../../../components/banner-illustration";
 import { EmptyState } from "../../../components/empty-state";
+import { ErrorState } from "../../../components/error-state";
 import type { Project, Walkthrough } from "../../../models/walkthrough";
 import { createWalkthroughStorage } from "../../../services/walkthrough/storage";
 import { useFirestoreStore } from "../../../store/firestore-store";
@@ -41,6 +42,7 @@ export default function ProjectDetail() {
   const firestoreRevision = useFirestoreStore((state) => state.revision);
   const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
   const [screen, setScreen] = useState<Screen>({ status: "loading" });
+  const [loadRevision, setLoadRevision] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -82,16 +84,32 @@ export default function ProjectDetail() {
       return () => {
         active = false;
       };
-    }, [ownerId, id, firestoreRevision]),
+    }, [ownerId, id, firestoreRevision, loadRevision]),
   );
+
+  if (screen.status === "error") {
+    return (
+      <ErrorState
+        title="Couldn’t load project"
+        description="Please try again."
+        actions={[
+          { title: "Back", variant: "secondary", onPress: () => router.back() },
+          {
+            title: "Try again",
+            onPress: () => {
+              setScreen({ status: "loading" });
+              setLoadRevision((current) => current + 1);
+            },
+          },
+        ]}
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
       <ScrollView contentContainerStyle={styles.content}>
         {screen.status === "loading" ? <LoadingState /> : null}
-        {screen.status === "error" ? (
-          <AppText>Couldn’t load this project.</AppText>
-        ) : null}
         {screen.status === "ready" ? (
           <>
             <ScreenBanner
