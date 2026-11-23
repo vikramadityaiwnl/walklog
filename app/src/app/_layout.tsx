@@ -17,6 +17,7 @@ import { colors } from "../theme";
 import { observeMedia } from "../services/firebase/media-sync";
 import { observeDeletions } from "../services/firebase/deletion-sync";
 import { observeFirestore } from "../services/firebase/firestore-sync";
+import { observeUserPreferences } from "../services/firebase/user-preferences";
 import { AppDialog } from "../components/app-dialog";
 
 export default function RootLayout() {
@@ -40,12 +41,14 @@ export default function RootLayout() {
     if (!userId || appCheck !== "ready") return;
 
     const stopFirestore = observeFirestore(userId);
+    const stopPreferences = observeUserPreferences(userId);
     const stopMedia = observeMedia(userId);
     const stopDeletions = observeDeletions(userId);
 
     return () => {
       stopMedia();
       stopDeletions();
+      stopPreferences();
       stopFirestore();
     };
   }, [userId, appCheck]);

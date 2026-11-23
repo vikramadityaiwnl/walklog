@@ -42,6 +42,7 @@ import { transcribeImportedAudio } from "../../../services/transcription/importe
 import {
   downloadWhisperModel,
   getWhisperModel,
+  whisperModelSize,
 } from "../../../services/whisper/model";
 import {
   createFirestoreId,
@@ -165,7 +166,7 @@ export default function Capture() {
       if (!modelPath) {
         setOperation({
           status: "downloading",
-          progress: { bytes: 0, total: 77691713 },
+          progress: { bytes: 0, total: whisperModelSize },
         });
         await downloadWhisperModel((bytes, total) => {
           if (mounted.current)
@@ -384,7 +385,7 @@ export default function Capture() {
       if (!modelPath) {
         setOperation({
           status: "downloading",
-          progress: { bytes: 0, total: 77691713 },
+          progress: { bytes: 0, total: whisperModelSize },
         });
         modelPath = await downloadWhisperModel((bytes, total) => {
           if (mounted.current)

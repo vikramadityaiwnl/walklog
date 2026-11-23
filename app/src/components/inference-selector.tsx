@@ -3,6 +3,9 @@ import { useNetworkState } from "expo-network";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useShallow } from "zustand/react/shallow";
 import { checkModelAvailability } from "../services/firebase/ai";
+import { saveInferencePreference } from "../services/firebase/user-preferences";
+import { useAuthStore } from "../store/auth-store";
+import { useDialogStore } from "../store/dialog-store";
 import { useInferenceStore } from "../store/inference-store";
 import { colors } from "../theme";
 import { AppText } from "./app-text";
@@ -10,12 +13,17 @@ import { AppText } from "./app-text";
 interface Props {
   align?: "start" | "center";
   requiresAudio?: boolean;
+  allowUnavailable?: boolean;
 }
 
 export function InferenceSelector(props: Props) {
-  const { mode, setMode } = useInferenceStore(
-    useShallow((state) => ({ mode: state.mode, setMode: state.setMode })),
+  const { preference, setMode } = useInferenceStore(
+    useShallow((state) => ({
+      preference: state.preference,
+      setMode: state.setMode,
+    })),
   );
+  const auth = useAuthStore((state) => state.auth);
   const network = useNetworkState();
   const [deviceReady, setDeviceReady] = useState<boolean | null>(null);
   const cloudReady =
@@ -38,11 +46,26 @@ export function InferenceSelector(props: Props) {
   }, []);
 
   useEffect(() => {
-    if (mode === "device" && localReady === false && cloudReady)
-      setMode("cloud");
-    if (mode === "cloud" && !cloudReady && localReady === true)
-      setMode("device");
-  }, [mode, localReady, cloudReady, setMode]);
+    if (preference === "device") {
+      if (localReady === true) setMode("device");
+      else if (localReady === false && cloudReady) setMode("cloud");
+    } else if (cloudReady) setMode("cloud");
+    else if (localReady === true) setMode("device");
+  }, [preference, localReady, cloudReady, setMode]);
+
+  function choose(option: "device" | "cloud") {
+    const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
+    if (!ownerId) return;
+
+    void saveInferencePreference(ownerId, option).catch(() => {
+      useDialogStore
+        .getState()
+        .showDialog(
+          "Couldn’t sync preference",
+          "Your inference preference couldn’t be saved to your account. Please try again.",
+        );
+    });
+  }
 
   return (
     <View
@@ -61,15 +84,12 @@ export function InferenceSelector(props: Props) {
             key={option}
             accessibilityRole="radio"
             accessibilityState={{
-              selected: mode === option,
-              disabled: !available,
+              selected: preference === option,
+              disabled: !available && !props.allowUnavailable,
             }}
-            disabled={!available}
-            onPress={() => setMode(option)}
-            style={[
-              styles.option,
-              mode === option && available && styles.selected,
-            ]}
+            disabled={!available && !props.allowUnavailable}
+            onPress={() => choose(option)}
+            style={[styles.option, preference === option && styles.selected]}
           >
             <View
               style={[
