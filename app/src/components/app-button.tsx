@@ -11,7 +11,7 @@ interface Props {
   title: string;
   onPress: (event: GestureResponderEvent) => void;
   disabled?: boolean;
-  variant?: "danger" | "secondary";
+  variant?: "danger" | "secondary" | "outline";
   accessibilityLabel?: string;
   icon?: ReactNode;
 }
@@ -27,6 +27,7 @@ export function AppButton(props: Props) {
         styles.button,
         props.variant === "danger" && styles.danger,
         props.variant === "secondary" && styles.secondary,
+        props.variant === "outline" && styles.outline,
         (pressed || props.disabled) && styles.dimmed,
       ]}
     >
@@ -37,6 +38,7 @@ export function AppButton(props: Props) {
         style={[
           styles.label,
           props.variant === "secondary" && styles.secondaryLabel,
+          props.variant === "outline" && styles.outlineLabel,
         ]}
       >
         {props.title}
@@ -58,6 +60,12 @@ const styles = StyleSheet.create({
   },
   danger: { backgroundColor: colors.danger },
   secondary: { backgroundColor: "transparent" },
+  outline: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: colors.accent,
+  },
+  outlineLabel: { color: colors.accent },
   secondaryLabel: { color: colors.foreground },
   dimmed: { opacity: 0.6 },
   label: { color: colors.onAccent },

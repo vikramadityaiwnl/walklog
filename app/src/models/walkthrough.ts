@@ -47,6 +47,12 @@ export interface PunchItem {
     ranOffline: boolean;
   };
   photos: { localUri: string; remoteUrl?: string }[];
+  refinement?: {
+    recommendedAction: string;
+    actions?: { text: string; completed: boolean }[];
+    source: "device" | "cloud";
+    usedPhoto: boolean;
+  };
   cloudVerification?: {
     visualVerification: string;
     recommendedAction: string;

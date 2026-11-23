@@ -22,6 +22,20 @@ interface FirebaseAiNativeModule {
     audioUri: string | null,
     mimeType: string | null,
   ): Promise<Generation>;
+  generateTextWithImages(prompt: string, uris: string[]): Promise<Generation>;
+}
+
+export async function generateTextWithImages(
+  prompt: string,
+  uris: string[],
+): Promise<Generation> {
+  if (!prompt.trim() || !uris.length)
+    throw new Error("Add a prompt and photos first.");
+  const result = await getNativeModule().generateTextWithImages(prompt, uris);
+  if (!result.text.trim())
+    throw new Error("The model returned an empty response.");
+
+  return result;
 }
 
 const native =
@@ -56,8 +70,12 @@ export async function generateText(
   audio?: { uri: string; mimeType: string },
 ): Promise<Generation> {
   if (!prompt.trim()) throw new Error("Enter a prompt first.");
-  if (audio && mode !== "cloud")
-    throw new Error("Audio input requires cloud processing.");
+  if (
+    audio &&
+    mode !== "cloud" &&
+    !(Platform.OS === "android" && audio.mimeType.startsWith("image/"))
+  )
+    throw new Error("This input requires cloud processing.");
 
   const result = await getNativeModule().generateText(
     prompt,

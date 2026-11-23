@@ -1,5 +1,10 @@
 import { useCallback, useState } from "react";
-import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import {
+  router,
+  useFocusEffect,
+  useLocalSearchParams,
+  type Href,
+} from "expo-router";
 import {
   ActivityIndicator,
   Pressable,
@@ -10,13 +15,16 @@ import {
 import { StatusBar } from "expo-status-bar";
 import {
   CameraIcon,
+  CheckIcon,
   MapPinIcon,
+  SparklesIcon,
   WrenchScrewdriverIcon,
 } from "react-native-heroicons/outline";
 import { ScreenBanner } from "../../../components/screen-banner";
 import { getBannerColor } from "../../../utils/banner-colors";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText } from "../../../components/app-text";
+import { AppButton } from "../../../components/app-button";
 import { Badge } from "../../../components/badge";
 import { useDialogStore } from "../../../store/dialog-store";
 import { PhotoGallery } from "../../../components/photo-gallery";
@@ -56,6 +64,8 @@ export default function ItemView() {
 
   const [photoBusy, setPhotoBusy] = useState(false);
 
+  const [actionBusy, setActionBusy] = useState(false);
+
   const showDialog = useDialogStore((state) => state.showDialog);
 
   useFocusEffect(
@@ -87,7 +97,8 @@ export default function ItemView() {
   );
 
   async function addPhoto(source: "camera" | "library") {
-    if (!ownerId || screen.status !== "ready" || photoBusy) return;
+    if (!ownerId || screen.status !== "ready" || photoBusy || actionBusy)
+      return;
 
     setPhotoBusy(true);
     let added: PunchItem["photos"][number] | null = null;
@@ -137,7 +148,8 @@ export default function ItemView() {
   async function removePhoto(
     photo: PunchItem["photos"][number],
   ): Promise<boolean> {
-    if (!ownerId || screen.status !== "ready" || photoBusy) return false;
+    if (!ownerId || screen.status !== "ready" || photoBusy || actionBusy)
+      return false;
 
     setPhotoBusy(true);
     try {
@@ -161,16 +173,60 @@ export default function ItemView() {
     }
   }
 
+  async function toggleAction(index: number) {
+    if (
+      !ownerId ||
+      screen.status !== "ready" ||
+      !screen.item.refinement ||
+      actionBusy ||
+      photoBusy
+    )
+      return;
+
+    const item = screen.item;
+    const refinement = item.refinement;
+    if (!refinement) return;
+    const actions = refinement.actions ?? [
+      { text: refinement.recommendedAction, completed: false },
+    ];
+    const selected = actions[index];
+    if (!selected) return;
+
+    setActionBusy(true);
+    try {
+      const updated: PunchItem = {
+        ...item,
+        refinement: {
+          ...refinement,
+          actions: actions.map((action, actionIndex) =>
+            actionIndex === index
+              ? { ...action, completed: !action.completed }
+              : action,
+          ),
+        },
+        updatedAt: Date.now(),
+      };
+      await createWalkthroughStorage(ownerId).saveItem(updated);
+      setScreen({ status: "ready", item: updated });
+    } catch {
+      showDialog("Couldn’t update action", "Please try again.");
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
       <StatusBar style={screen.status === "ready" ? "light" : "dark"} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {screen.status === "loading" ? (
-          <ActivityIndicator
-            color={colors.accent}
-            accessibilityLabel="Loading item"
-          />
+          <View style={styles.loading}>
+            <ActivityIndicator
+              color={colors.accent}
+              accessibilityLabel="Loading item"
+            />
+          </View>
         ) : null}
 
         {screen.status === "error" ? (
@@ -186,7 +242,7 @@ export default function ItemView() {
               color={getBannerColor(screen.item.id, screen.item.bannerColor)}
               imageUri={screen.item.bannerPhotoUri}
               action="edit"
-              disabled={photoBusy}
+              disabled={photoBusy || actionBusy}
               onAction={() =>
                 router.push({
                   pathname: "/walkthrough/item",
@@ -257,18 +313,12 @@ export default function ItemView() {
                   <AppText variant="title" style={styles.sectionTitle}>
                     Photos
                   </AppText>
-
-                  {screen.item.photos.length ? (
-                    <AppText style={styles.photoCount}>
-                      {screen.item.photos.length}
-                    </AppText>
-                  ) : null}
                 </View>
 
                 {screen.item.photos.length ? (
                   <PhotoGallery
                     photos={screen.item.photos}
-                    busy={photoBusy}
+                    busy={photoBusy || actionBusy}
                     onAdd={choosePhoto}
                     onRemove={removePhoto}
                   />
@@ -276,7 +326,7 @@ export default function ItemView() {
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="Add photos"
-                    disabled={photoBusy}
+                    disabled={photoBusy || actionBusy}
                     onPress={choosePhoto}
                     style={styles.addPhoto}
                   >
@@ -294,10 +344,88 @@ export default function ItemView() {
                   </Pressable>
                 )}
               </View>
+              {screen.item.refinement ? (
+                <View style={styles.section}>
+                  <View style={styles.headingRow}>
+                    <AppText variant="title" style={styles.sectionTitle}>
+                      Suggested actions
+                    </AppText>
+
+                    <Badge
+                      label={
+                        screen.item.refinement.usedPhoto
+                          ? "Photos included"
+                          : "Text only"
+                      }
+                    />
+                  </View>
+
+                  {(
+                    screen.item.refinement.actions ?? [
+                      {
+                        text: screen.item.refinement.recommendedAction,
+                        completed: false,
+                      },
+                    ]
+                  ).map((action, index) => (
+                    <Pressable
+                      key={`${index}-${action.text}`}
+                      accessibilityRole="checkbox"
+                      accessibilityLabel={action.text}
+                      accessibilityState={{
+                        checked: action.completed,
+                        disabled: actionBusy || photoBusy,
+                      }}
+                      disabled={actionBusy || photoBusy}
+                      onPress={() => void toggleAction(index)}
+                      style={styles.checklistRow}
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          action.completed && styles.checkboxSelected,
+                        ]}
+                      >
+                        {action.completed ? (
+                          <CheckIcon size={14} color={colors.onAccent} />
+                        ) : null}
+                      </View>
+
+                      <AppText
+                        style={[
+                          styles.checklistText,
+                          action.completed && styles.completedText,
+                        ]}
+                      >
+                        {action.text}
+                      </AppText>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : null}
             </View>
           </>
         ) : null}
       </ScrollView>
+
+      {screen.status === "ready" ? (
+        <View style={styles.actions}>
+          <View style={styles.action}>
+            <AppButton
+              title="Refine with AI"
+              variant="outline"
+              icon={<SparklesIcon size={20} color={colors.accent} />}
+              disabled={photoBusy || actionBusy}
+              onPress={() =>
+                router.push({
+                  pathname: "/walkthrough/refine",
+                  params: { id, walkthroughId },
+                } as Href)
+              }
+            />
+          </View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -305,6 +433,7 @@ export default function ItemView() {
 const styles = StyleSheet.create({
   container: { backgroundColor: colors.background, flex: 1 },
   scrollContent: { flexGrow: 1 },
+  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
   content: {
     flexGrow: 1,
     paddingHorizontal: 24,
@@ -364,6 +493,28 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   sectionTitle: { fontSize: 19, lineHeight: 26 },
+  checklistRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    paddingVertical: 7,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+  },
+  checkboxSelected: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  checklistText: { flex: 1, lineHeight: 22 },
+  completedText: { color: colors.muted, textDecorationLine: "line-through" },
   badges: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -379,7 +530,6 @@ const styles = StyleSheet.create({
   label: { color: colors.muted, fontSize: 13 },
   unspecified: { color: colors.muted },
   photos: { gap: 16 },
-  photoCount: { color: colors.muted, fontSize: 13 },
   addPhoto: {
     flexDirection: "row",
     alignItems: "center",
