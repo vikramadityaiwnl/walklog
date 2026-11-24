@@ -5,6 +5,7 @@ import {
   getDoc,
   getDocFromCache,
   getDocs,
+  getDocsFromCache,
   getFirestore,
   onSnapshot,
   query,
@@ -387,10 +388,12 @@ export function createWalkthroughStorage(ownerId: string) {
     async getWalkthrough(id: string): Promise<Walkthrough | null> {
       requireId(id, "Walkthrough ID");
       const store = useFirestoreStore.getState();
-      if (store.ownerId === ownerId && store.loaded.walkthroughs)
-        return store.walkthroughs.find((entry) => entry.id === id) ?? null;
-
-      const snapshot = await getDoc(walkthroughRef(id));
+      const snapshot =
+        store.ownerId === ownerId && store.loaded.walkthroughs
+          ? await getDocFromCache(walkthroughRef(id)).catch(() =>
+              getDoc(walkthroughRef(id)),
+            )
+          : await getDoc(walkthroughRef(id));
 
       return snapshot.exists() && snapshot.data().deletionPending !== true
         ? readWalkthrough(snapshot.data() as Walkthrough)
@@ -419,12 +422,17 @@ export function createWalkthroughStorage(ownerId: string) {
     async listItems(walkthroughId: string): Promise<PunchItem[]> {
       requireId(walkthroughId, "Walkthrough ID");
       const store = useFirestoreStore.getState();
-      if (store.ownerId === ownerId && store.loaded.items)
-        return store.items
-          .filter((item) => item.walkthroughId === walkthroughId)
+      if (store.ownerId === ownerId && store.loaded.items) {
+        const snapshot = await getDocsFromCache(
+          query(items, where("walkthroughId", "==", walkthroughId)),
+        );
+
+        return snapshot.docs
+          .map((entry) => readItem(entry.data() as StoredItem))
           .sort(
             (a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id),
           );
+      }
 
       if (
         (await getDoc(walkthroughRef(walkthroughId))).data()
