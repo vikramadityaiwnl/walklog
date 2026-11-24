@@ -486,7 +486,9 @@ export default function Profile() {
                   <AppText style={styles.settingDescription}>
                     {deviceModel.progress?.total
                       ? `Downloading ${formatBytes(deviceModel.progress.bytes)} of ${formatBytes(deviceModel.progress.total)}`
-                      : "Preparing download…"}
+                      : deviceModel.progress?.bytes
+                        ? `Downloaded ${formatBytes(deviceModel.progress.bytes)}`
+                        : "Android is preparing or downloading the model."}
                   </AppText>
                 </View>
               ) : null}

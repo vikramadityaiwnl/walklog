@@ -62,6 +62,7 @@ export function checkModelAvailability(): Promise<ModelAvailability> {
 
 export async function downloadModel(
   onProgress: (progress: ModelDownloadProgress) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   if (Platform.OS !== "android") {
     throw new Error(
@@ -74,9 +75,18 @@ export async function downloadModel(
     "onModelDownloadProgress",
     onProgress,
   );
+
+  let stopWaiting: (() => void) | undefined;
   try {
-    await module.downloadModel();
+    const stopped = new Promise<void>((resolve) => {
+      stopWaiting = () => resolve();
+      if (signal?.aborted) stopWaiting();
+      else signal?.addEventListener("abort", stopWaiting, { once: true });
+    });
+
+    await Promise.race([module.downloadModel(), stopped]);
   } finally {
+    if (stopWaiting) signal?.removeEventListener("abort", stopWaiting);
     subscription.remove();
   }
 }

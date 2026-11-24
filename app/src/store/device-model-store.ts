@@ -21,19 +21,32 @@ interface DeviceModelStore {
   download: () => Promise<void>;
 }
 
-let downloading = false;
+let activeDownload: {
+  controller: AbortController;
+  timer: ReturnType<typeof setInterval>;
+} | null = null;
 let refreshId = 0;
 
 export const useDeviceModelStore = create<DeviceModelStore>((set, get) => ({
   model: { status: "checking" },
   refresh: async () => {
-    if (downloading) return;
     const id = ++refreshId;
     try {
       const model: ModelAvailability = await checkModelAvailability();
-      if (id === refreshId && !downloading) set({ model });
+      if (id !== refreshId) return;
+
+      if (activeDownload) {
+        if (model.status !== "available") return;
+
+        const download = activeDownload;
+        activeDownload = null;
+        clearInterval(download.timer);
+        download.controller.abort();
+      }
+
+      set({ model });
     } catch {
-      if (id === refreshId && !downloading)
+      if (id === refreshId && !activeDownload)
         set({
           model: {
             status: "error",
@@ -45,11 +58,13 @@ export const useDeviceModelStore = create<DeviceModelStore>((set, get) => ({
   download: async () => {
     if (
       Platform.OS !== "android" ||
-      downloading ||
+      activeDownload ||
       get().model.status !== "downloadable"
     )
       return;
-    downloading = true;
+    const controller = new AbortController();
+    const timer = setInterval(() => void get().refresh(), 5000);
+    activeDownload = { controller, timer };
     ++refreshId;
     set({
       model: {
@@ -59,20 +74,29 @@ export const useDeviceModelStore = create<DeviceModelStore>((set, get) => ({
       },
     });
     try {
-      await downloadModel((progress) =>
+      await downloadModel((progress) => {
+        if (activeDownload?.controller !== controller) return;
+
         set({
           model: {
             status: "downloading",
             message: "Downloading on-device AI.",
             progress,
           },
-        }),
-      );
-      downloading = false;
+        });
+      }, controller.signal);
+      if (activeDownload?.controller !== controller) return;
+
+      clearInterval(timer);
+      activeDownload = null;
       await get().refresh();
     } catch (error) {
+      if (activeDownload?.controller !== controller) return;
+
       if (__DEV__) console.warn("On-device model download failed", error);
-      downloading = false;
+      clearInterval(timer);
+      activeDownload = null;
+      ++refreshId;
       set({
         model: {
           status: "error",
