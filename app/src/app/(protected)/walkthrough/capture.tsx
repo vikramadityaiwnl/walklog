@@ -1037,6 +1037,8 @@ export default function Capture() {
                 </View>
 
                 <TextInput
+                  selectionColor={colors.accent}
+                  cursorColor={colors.accent}
                   ref={transcriptInput}
                   accessibilityLabel="Transcript"
                   multiline
@@ -1155,6 +1157,8 @@ export default function Capture() {
             <AppText weight="semibold">Walkthrough notes</AppText>
 
             <TextInput
+              selectionColor={colors.accent}
+              cursorColor={colors.accent}
               accessibilityLabel="Walkthrough notes"
               multiline
               editable={operation.status === "idle"}

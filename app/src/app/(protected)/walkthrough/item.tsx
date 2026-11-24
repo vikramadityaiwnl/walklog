@@ -434,6 +434,8 @@ export default function ItemEdit() {
                 </AppText>
 
                 <TextInput
+                  selectionColor={colors.accent}
+                  cursorColor={colors.accent}
                   accessibilityLabel="Issue description"
                   multiline
                   value={draft.description}
@@ -454,6 +456,8 @@ export default function ItemEdit() {
                 </AppText>
 
                 <TextInput
+                  selectionColor={colors.accent}
+                  cursorColor={colors.accent}
                   accessibilityLabel="Room or location"
                   value={draft.location}
                   onChangeText={(location) =>
@@ -473,6 +477,8 @@ export default function ItemEdit() {
                 </AppText>
 
                 <TextInput
+                  selectionColor={colors.accent}
+                  cursorColor={colors.accent}
                   accessibilityLabel="Trade"
                   value={draft.trade ?? ""}
                   onChangeText={(trade) =>

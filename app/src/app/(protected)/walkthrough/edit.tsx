@@ -341,6 +341,8 @@ export default function WalkthroughEdit() {
                 </AppText>
 
                 <TextInput
+                  selectionColor={colors.accent}
+                  cursorColor={colors.accent}
                   accessibilityLabel="Walkthrough name"
                   value={draft.title}
                   onChangeText={(title) =>
@@ -360,6 +362,8 @@ export default function WalkthroughEdit() {
                 </AppText>
 
                 <TextInput
+                  selectionColor={colors.accent}
+                  cursorColor={colors.accent}
                   accessibilityLabel="Client"
                   value={draft.clientName}
                   onChangeText={(clientName) =>
@@ -379,6 +383,8 @@ export default function WalkthroughEdit() {
                 </AppText>
 
                 <TextInput
+                  selectionColor={colors.accent}
+                  cursorColor={colors.accent}
                   accessibilityLabel="Address"
                   value={draft.address}
                   onChangeText={(address) =>

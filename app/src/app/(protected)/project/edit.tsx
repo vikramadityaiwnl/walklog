@@ -286,6 +286,8 @@ export default function ProjectEdit() {
               <View style={styles.section}>
                 <AppText weight="semibold">Project name *</AppText>
                 <TextInput
+                  selectionColor={colors.accent}
+                  cursorColor={colors.accent}
                   accessibilityLabel="Project name"
                   value={form.name}
                   onChangeText={(name) => setForm({ ...form, name })}
