@@ -63,8 +63,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow walklog to attach site photos to items.",
-          "cameraPermission": "Allow walklog to photograph site issues.",
+          "photosPermission": "Allow walklog to select walkthrough photos and videos.",
+          "cameraPermission": "Allow walklog to photograph or record site issues.",
           "microphonePermission": "Allow walklog to record your site walkthrough."
         }
       ]

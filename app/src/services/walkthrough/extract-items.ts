@@ -90,7 +90,7 @@ function capitalizeWords(text: string): string {
     );
 }
 
-function parseItems(text: string, note?: string): ExtractedItem[] {
+export function parseItems(text: string, note?: string): ExtractedItem[] {
   const json = text
     .replace(/^```(?:json)?\s*/i, "")
     .replace(/\s*```$/, "")

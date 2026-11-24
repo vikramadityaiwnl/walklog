@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, type ComponentRef } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
+import * as Device from "expo-device";
 import * as Network from "expo-network";
-import { File, Paths } from "expo-file-system";
+import * as ImagePicker from "expo-image-picker";
+import { Directory, File, Paths } from "expo-file-system";
 import {
   requestRecordingPermissionsAsync,
   setAudioModeAsync,
@@ -18,6 +20,7 @@ import {
   ArrowUpTrayIcon,
   ArrowDownTrayIcon,
   PencilSquareIcon,
+  VideoCameraIcon,
 } from "react-native-heroicons/outline";
 import Svg, { Circle } from "react-native-svg";
 import {
@@ -42,12 +45,16 @@ import Animated, {
 import { AppButton } from "../../../components/app-button";
 import { AppText } from "../../../components/app-text";
 import { ErrorState } from "../../../components/error-state";
-import { EmptyState } from "../../../components/empty-state";
 import { useDeviceModelStatus } from "../../../components/device-model-status";
 import { useDeviceModelStore } from "../../../store/device-model-store";
 import { InferenceSelector } from "../../../components/inference-selector";
 import { LoadingState } from "../../../components/loading-state";
 import { SegmentedControl } from "../../../components/segmented-control";
+import {
+  extractVideoItems,
+  isVideoCameraAvailable,
+} from "../../../services/walkthrough/video-capture";
+import { deleteItemPhotos } from "../../../services/walkthrough/photos";
 import { extractItems } from "../../../services/walkthrough/extract-items";
 import { randomBannerColor } from "../../../utils/banner-colors";
 import { cleanTranscript } from "../../../services/transcription/transcript";
@@ -68,7 +75,7 @@ import { useInferenceStore } from "../../../store/inference-store";
 import { colors } from "../../../theme";
 import { formatBytes } from "../../../utils/format-bytes";
 
-type CaptureMode = "voice" | "type";
+type CaptureMode = "voice" | "type" | "video";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const fadeIn = FadeIn.duration(180).reduceMotion(ReduceMotion.System);
@@ -81,11 +88,15 @@ const ringCircumference = 2 * Math.PI * 51;
 function createAudioFile(prefix: string, suffix: string) {
   const timestamp = Date.now();
   let index = 0;
-  let file = new File(Paths.document, `${prefix}-${timestamp}${suffix}`);
+
+  const directory = new Directory(Paths.document, "walklog", "audio");
+  if (!directory.exists) directory.create({ intermediates: true });
+
+  let file = new File(directory, `${prefix}-${timestamp}${suffix}`);
 
   while (file.exists) {
     index += 1;
-    file = new File(Paths.document, `${prefix}-${timestamp}-${index}${suffix}`);
+    file = new File(directory, `${prefix}-${timestamp}-${index}${suffix}`);
   }
 
   return file;
@@ -114,6 +125,7 @@ type Operation =
     }
   | { status: "processing"; phase: "identifying" | "saving" }
   | { status: "failed"; message: string }
+  | { status: "photos-failed"; itemId?: string }
   | { status: "downloading"; progress: DownloadProgress }
   | { status: "recording"; muted: boolean };
 
@@ -141,7 +153,7 @@ export default function Capture() {
   const downloadDeviceModel = useDeviceModelStore((state) => state.download);
   const refreshDeviceModel = useDeviceModelStore((state) => state.refresh);
 
-  const [captureMode, setCaptureMode] = useState<CaptureMode>("voice");
+  const [captureMode, setCaptureMode] = useState<CaptureMode>("video");
   const [operation, setOperation] = useState<Operation>({ status: "idle" });
   const [modelAvailable, setModelAvailable] = useState(
     () => !!getWhisperModel(),
@@ -151,6 +163,7 @@ export default function Capture() {
     finalized: false,
   });
   const [note, setNote] = useState("");
+  const [video, setVideo] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [error, setError] = useState("");
   const [actionsWidth, setActionsWidth] = useState(0);
 
@@ -547,50 +560,122 @@ export default function Capture() {
     }
   }
 
+  async function selectVideo(source: "camera" | "library") {
+    try {
+      if (source === "camera" && Platform.OS === "ios" && !Device.isDevice)
+        throw new Error(
+          "Video recording isn’t available in the iOS Simulator. Import a video instead, or use a physical device to record.",
+        );
+
+      if (source === "camera" && !(await isVideoCameraAvailable()))
+        throw new Error(
+          "Video recording isn’t available on this device. Import a video instead.",
+        );
+
+      const permission =
+        source === "camera"
+          ? await ImagePicker.requestCameraPermissionsAsync()
+          : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted)
+        throw new Error("Allow access in device settings to select a video.");
+
+      const options: ImagePicker.ImagePickerOptions = {
+        mediaTypes: ["videos"],
+      };
+
+      const result =
+        source === "camera"
+          ? await ImagePicker.launchCameraAsync(options)
+          : await ImagePicker.launchImageLibraryAsync(options);
+      if (result.canceled) return;
+
+      const asset = result.assets[0];
+
+      setVideo(asset);
+      setError("");
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Couldn’t select this video.",
+      );
+    }
+  }
+
   function clearCapture() {
     setVoice({ transcript: "", finalized: false });
     recording.current.prefix = "";
     setNote("");
-    setCaptureMode("voice");
+    setVideo(null);
+    setCaptureMode("video");
     setError("");
   }
 
   async function complete() {
     if (!ownerId || !walkthroughId || operation.status !== "idle") return;
 
-    if (needsDeviceModel) return;
+    if (captureMode !== "video" && needsDeviceModel) return;
 
     setError("");
     setOperation({ status: "processing", phase: "identifying" });
 
     try {
-      if (mode === "cloud") {
+      if (mode === "cloud" || captureMode === "video") {
         const network = await Network.getNetworkStateAsync();
         if (!network.isConnected || network.isInternetReachable === false)
           throw new Error("Connect to the internet to use cloud processing.");
       }
 
-      const rawTranscript = captureMode === "type" ? note : transcript;
-      if (!rawTranscript.trim())
+      const rawTranscript =
+        captureMode === "type"
+          ? note
+          : captureMode === "voice"
+            ? transcript
+            : "";
+
+      if (captureMode !== "video" && !rawTranscript.trim())
         throw new Error("No speech was detected. Try recording again.");
 
-      const results = await extractItems(rawTranscript, mode);
+      const stagedPhotos: { localUri: string }[] = [];
+      const frameFailures = { count: 0 };
+      let items;
 
-      const now = Date.now();
-      const items = results.map((item) => ({
-        ...item,
-        id: createFirestoreId(ownerId, "items"),
-        walkthroughId,
-        bannerColor: randomBannerColor(),
-        rawTranscript,
-        processingMode: mode,
-        status: "Open" as const,
-        photos: [],
-        createdAt: now,
-        updatedAt: now,
-      }));
-      setOperation({ status: "processing", phase: "saving" });
-      await createWalkthroughStorage(ownerId).createItems(items);
+      try {
+        const results =
+          captureMode === "video" && video
+            ? await extractVideoItems(video, stagedPhotos, frameFailures)
+            : (await extractItems(rawTranscript, mode)).map((item) => ({
+                ...item,
+                photos: [],
+              }));
+
+        const now = Date.now();
+        items = results.map((item) => ({
+          ...item,
+          id: createFirestoreId(ownerId, "items"),
+          walkthroughId,
+          bannerColor: randomBannerColor(),
+          rawTranscript,
+          processingMode: captureMode === "video" ? ("cloud" as const) : mode,
+          status: "Open" as const,
+          createdAt: now,
+          updatedAt: now,
+        }));
+
+        setOperation({ status: "processing", phase: "saving" });
+        await createWalkthroughStorage(ownerId).createItems(items);
+      } catch (cause) {
+        await deleteItemPhotos(stagedPhotos).catch(() => {});
+
+        throw cause;
+      }
+
+      if (frameFailures.count) {
+        setOperation({
+          status: "photos-failed",
+          itemId: items.length === 1 ? items[0].id : undefined,
+        });
+
+        return;
+      }
 
       if (items.length === 1)
         router.replace({
@@ -610,7 +695,12 @@ export default function Capture() {
   }
 
   const busy = operation.status !== "idle" && operation.status !== "recording";
-  const hasDraft = captureMode === "type" ? !!note : !!audio || !!transcript;
+  const hasDraft =
+    captureMode === "type"
+      ? !!note
+      : captureMode === "video"
+        ? !!video
+        : !!audio || !!transcript;
   const needsDeviceModel =
     Platform.OS === "android" &&
     mode === "device" &&
@@ -661,10 +751,80 @@ export default function Capture() {
           description={
             saving
               ? "Adding the items to your walkthrough."
-              : "Reading your notes and identifying what needs attention."
+              : captureMode === "video"
+                ? "Analyzing your video and selecting photos."
+                : "Reading your notes and identifying what needs attention."
           }
         />
       </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    const isRecording = operation.status === "recording";
+
+    return (
+      <ErrorState
+        title="Something went wrong"
+        description={error}
+        actions={
+          isRecording
+            ? [
+                {
+                  title: "Stop recording",
+                  variant: "secondary",
+                  onPress: () => {
+                    setError("");
+                    void stopRecording();
+                  },
+                },
+                {
+                  title: "Continue recording",
+                  onPress: () => setError(""),
+                },
+              ]
+            : [
+                {
+                  title: captureMode === "video" ? "Import video" : "Go home",
+                  variant: "secondary",
+                  onPress: () => {
+                    if (captureMode === "video") {
+                      setError("");
+                      void selectVideo("library");
+                    } else router.replace("/(protected)/(tabs)");
+                  },
+                },
+                {
+                  title: "Try again",
+                  onPress: () => setError(""),
+                },
+              ]
+        }
+      />
+    );
+  }
+
+  if (operation.status === "photos-failed") {
+    const itemId = operation.itemId;
+
+    return (
+      <ErrorState
+        title="Some photos couldn’t be extracted"
+        description="Items were created. You can add or replace photos on each item."
+        actions={[
+          {
+            title: "View items",
+            onPress: () => {
+              if (itemId)
+                router.replace({
+                  pathname: "/walkthrough/item-view",
+                  params: { walkthroughId, id: itemId },
+                });
+              else router.back();
+            },
+          },
+        ]}
+      />
     );
   }
 
@@ -682,7 +842,6 @@ export default function Capture() {
           {
             title: "Try again",
             onPress: () => {
-              clearCapture();
               setOperation({ status: "idle" });
             },
           },
@@ -714,6 +873,7 @@ export default function Capture() {
             onChange={setCaptureMode}
             fullWidth
             options={[
+              { value: "video", label: "Video" },
               { value: "voice", label: "Voice" },
               { value: "type", label: "Type" },
             ]}
@@ -928,6 +1088,65 @@ export default function Capture() {
               </View>
             ) : null}
           </Animated.View>
+        ) : captureMode === "video" ? (
+          <Animated.View
+            key="video"
+            entering={fadeIn}
+            exiting={fadeOut}
+            layout={layoutTransition}
+            style={[styles.voice, !video && styles.initialVoice]}
+          >
+            {!video ? (
+              <>
+                <View style={styles.voiceIntro}>
+                  <View style={styles.recordControl}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Record video"
+                      onPress={() => void selectVideo("camera")}
+                      style={styles.bigMic}
+                    >
+                      <VideoCameraIcon size={38} color={colors.onAccent} />
+                    </Pressable>
+                  </View>
+
+                  <AppText weight="semibold">Record</AppText>
+                </View>
+
+                <View style={styles.importSection}>
+                  <View style={styles.divider}>
+                    <View style={styles.dividerLine} />
+
+                    <AppText style={styles.dividerText}>OR</AppText>
+
+                    <View style={styles.dividerLine} />
+                  </View>
+
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => void selectVideo("library")}
+                    style={styles.importButton}
+                  >
+                    <ArrowUpTrayIcon size={20} color={colors.foreground} />
+
+                    <AppText weight="semibold">Import video</AppText>
+                  </Pressable>
+                </View>
+              </>
+            ) : (
+              <View style={styles.section}>
+                <AppText weight="semibold">Video ready</AppText>
+
+                <AppText style={styles.subheading}>
+                  {video.fileName || "Your video is ready to process."}
+                </AppText>
+
+                <AppText style={styles.subheading}>
+                  Processed with cloud AI
+                </AppText>
+              </View>
+            )}
+          </Animated.View>
         ) : (
           <Animated.View
             key="type"
@@ -970,18 +1189,6 @@ export default function Capture() {
                 {deviceModel.message} Choose cloud processing if it’s available.
               </AppText>
             ) : null}
-          </Animated.View>
-        ) : null}
-
-        {error ? (
-          <Animated.View entering={fadeIn} layout={layoutTransition}>
-            <EmptyState
-              variant="error"
-              title="Something went wrong"
-              description={error}
-              compact
-              inline
-            />
           </Animated.View>
         ) : null}
       </ScrollView>
@@ -1065,6 +1272,7 @@ export default function Capture() {
       ) : null}
 
       {captureMode === "type" ||
+      (captureMode === "video" && !!video) ||
       (captureMode === "voice" && !!audio && operation.status === "idle") ? (
         <Animated.View
           entering={fadeIn}
@@ -1090,7 +1298,7 @@ export default function Capture() {
               actionsWidth > 0 ? createButtonStyle : styles.action,
             ]}
           >
-            {needsDeviceModel ? (
+            {captureMode !== "video" && needsDeviceModel ? (
               <View style={styles.deviceDownloadButton}>
                 <AppButton
                   title={
@@ -1135,7 +1343,9 @@ export default function Capture() {
                   operation.status !== "idle" ||
                   (captureMode === "voice"
                     ? !audio || !transcript.trim() || !transcriptFinalized
-                    : !note.trim())
+                    : captureMode === "video"
+                      ? !video
+                      : !note.trim())
                 }
                 onPress={complete}
               />

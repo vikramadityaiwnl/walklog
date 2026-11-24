@@ -6,6 +6,7 @@ group = 'expo.modules.firebaseaihybrid'
 version = '1.0.0'
 android { namespace "expo.modules.firebaseaihybrid" }
 dependencies {
+  implementation 'androidx.media3:media3-transformer:1.9.1'
   implementation 'com.google.firebase:firebase-ai:18.1.0'
   implementation 'com.google.firebase:firebase-ai-ondevice:16.0.0-beta07'
   implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0'

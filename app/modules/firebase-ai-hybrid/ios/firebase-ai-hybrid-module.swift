@@ -1,10 +1,58 @@
+import AVFoundation
 import ExpoModulesCore
 import FirebaseAILogic
 import FirebaseCore
+import UIKit
+import UniformTypeIdentifiers
 
 public class FirebaseAiHybridModule: Module {
   public func definition() -> ModuleDefinition {
     Name("FirebaseAiHybrid")
+
+    AsyncFunction("isVideoCameraAvailable") { () -> Bool in
+      guard UIImagePickerController.isSourceTypeAvailable(.camera) else { return false }
+
+      return UIImagePickerController.availableMediaTypes(for: .camera)?.contains(UTType.movie.identifier) == true
+    }.runOnQueue(DispatchQueue.main)
+
+    AsyncFunction("videoDuration") { (uri: String) async throws -> Double in
+      guard let url = URL(string: uri), url.isFileURL else {
+        throw NSError(domain: "FirebaseAiHybrid", code: 5, userInfo: [NSLocalizedDescriptionKey: "Couldn’t open this video."])
+      }
+
+      let duration = try await AVURLAsset(url: url).load(.duration).seconds
+      guard duration.isFinite && duration > 0 else {
+        throw NSError(domain: "FirebaseAiHybrid", code: 5, userInfo: [NSLocalizedDescriptionKey: "Couldn’t read the video duration."])
+      }
+
+      return duration
+    }
+
+    AsyncFunction("exportVideoChunk") { (uri: String, start: Double, end: Double) async throws -> String in
+      guard let url = URL(string: uri), url.isFileURL, start >= 0, end > start else {
+        throw NSError(domain: "FirebaseAiHybrid", code: 5, userInfo: [NSLocalizedDescriptionKey: "Couldn’t open this video."])
+      }
+
+      let asset = AVURLAsset(url: url)
+      guard let exporter = AVAssetExportSession(asset: asset, presetName: AVAssetExportPreset1280x720) else {
+        throw NSError(domain: "FirebaseAiHybrid", code: 5, userInfo: [NSLocalizedDescriptionKey: "Couldn’t prepare this video."])
+      }
+
+      let output = FileManager.default.temporaryDirectory.appendingPathComponent("walklog-video-\(UUID().uuidString).mp4")
+      exporter.outputURL = output
+      exporter.outputFileType = .mp4
+      exporter.timeRange = CMTimeRange(start: CMTime(seconds: start, preferredTimescale: 600), end: CMTime(seconds: end, preferredTimescale: 600))
+      exporter.shouldOptimizeForNetworkUse = true
+
+      await exporter.export()
+      guard exporter.status == .completed else {
+        try? FileManager.default.removeItem(at: output)
+        throw exporter.error ?? NSError(domain: "FirebaseAiHybrid", code: 5, userInfo: [NSLocalizedDescriptionKey: "Couldn’t prepare this video."])
+      }
+
+      return output.absoluteString
+    }
+
     AsyncFunction("generateTextWithImages") { (prompt: String, uris: [String]) async throws -> [String: String] in
       var parts: [any Part] = [TextPart(prompt)]
       var totalSize = 0
@@ -26,6 +74,7 @@ public class FirebaseAiHybridModule: Module {
       let response = try await model.generateContent([ModelContent(parts: parts)])
       return ["text": response.text ?? "", "source": "cloud"]
     }
+
     AsyncFunction("checkAvailability") { () -> [String: Any] in
       guard #available(iOS 26.0, *) else {
         return ["status": "unavailable", "message": "On-device AI requires iOS 26 or later."]

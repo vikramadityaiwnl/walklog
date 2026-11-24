@@ -6,6 +6,7 @@ import {
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
+import { frameDirectory } from "./media-refs";
 import type { PunchItem } from "../../models/walkthrough";
 
 const directory = `${FileSystem.documentDirectory}walkthrough-photos/`;
@@ -58,7 +59,11 @@ export async function selectItemPhoto(source: "camera" | "library") {
 export async function deleteItemPhotos(photos: PunchItem["photos"]) {
   await Promise.all(
     photos
-      .filter((photo) => photo.localUri.startsWith(directory))
+      .filter(
+        (photo) =>
+          photo.localUri.startsWith(directory) ||
+          photo.localUri.startsWith(frameDirectory),
+      )
       .map((photo) =>
         FileSystem.deleteAsync(photo.localUri, { idempotent: true }),
       ),
