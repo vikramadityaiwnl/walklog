@@ -1,11 +1,12 @@
 import { Redirect } from "expo-router";
 import { Image } from "expo-image";
 import { useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, G, Path } from "react-native-svg";
 import { AppButton } from "../components/app-button";
 import { AppText } from "../components/app-text";
+import { HowWalklogWorks } from "../components/how-walklog-works";
 import { EmptyState } from "../components/empty-state";
 import { signInWithGoogle } from "../services/firebase/google-sign-in";
 import { useAuthStore } from "../store/auth-store";
@@ -94,6 +95,8 @@ function GoogleIcon() {
 export default function AuthScreen() {
   const auth = useAuthStore((state) => state.auth);
 
+  const [howItWorksVisible, setHowItWorksVisible] = useState(false);
+
   const [signIn, setSignIn] = useState<SignInState>({ status: "idle" });
 
   async function handleSignIn() {
@@ -163,9 +166,24 @@ export default function AuthScreen() {
               disabled={signIn.status === "loading"}
               onPress={handleSignIn}
             />
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setHowItWorksVisible(true)}
+            >
+              <AppText style={styles.howItWorks}>
+                Before signing in, learn how walklog works and review AI
+                guidance.
+              </AppText>
+            </Pressable>
           </View>
         </View>
       </ScrollView>
+
+      <HowWalklogWorks
+        visible={howItWorksVisible}
+        onClose={() => setHowItWorksVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -193,4 +211,10 @@ const styles = StyleSheet.create({
   headingGroup: { gap: 8 },
   heading: { fontSize: 30, lineHeight: 38, letterSpacing: -0.8 },
   description: { color: colors.muted, lineHeight: 22 },
+  howItWorks: {
+    color: colors.muted,
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: "center",
+  },
 });
