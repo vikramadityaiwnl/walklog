@@ -412,7 +412,7 @@ export default function Profile() {
             </View>
 
             <View style={styles.settingText}>
-              <AppText weight="semibold">Choose a default</AppText>
+              <AppText>Choose a default</AppText>
 
               <AppText style={styles.settingDescription}>
                 Choose where walklog processes your notes. Availability depends
@@ -439,7 +439,7 @@ export default function Profile() {
                 </View>
 
                 <View style={styles.settingText}>
-                  <AppText weight="semibold">Gemini Nano</AppText>
+                  <AppText>Gemini Nano</AppText>
 
                   <AppText style={styles.settingDescription}>
                     {deviceModel.status === "available"
@@ -510,7 +510,7 @@ export default function Profile() {
             </View>
 
             <View style={styles.settingText}>
-              <AppText weight="semibold">Whisper tiny multilingual</AppText>
+              <AppText>Whisper tiny multilingual</AppText>
 
               <View style={styles.badges}>
                 <Badge label={formatBytes(whisperModelSize)} />
@@ -600,7 +600,7 @@ export default function Profile() {
           </View>
 
           <View style={styles.settingText}>
-            <AppText weight="semibold">Saved files</AppText>
+            <AppText>Saved files</AppText>
 
             <AppText style={styles.settingDescription}>
               Audio, photos and video frames
@@ -610,14 +610,14 @@ export default function Profile() {
           <ChevronRightIcon size={20} color={colors.muted} />
         </Pressable>
 
-        <View style={styles.settingSection}>
+        <View style={[styles.settingSection, styles.cacheSection]}>
           <View style={styles.settingTitleRow}>
             <View style={styles.settingIcon}>
               <CloudIcon size={20} color={colors.accent} />
             </View>
 
             <View style={styles.settingText}>
-              <AppText weight="semibold">Temporary files</AppText>
+              <AppText>Temporary files</AppText>
 
               <View style={styles.cacheSizeBadge}>
                 <Badge label={formatBytes(cache.bytes)} />
@@ -645,7 +645,7 @@ export default function Profile() {
           </AppText>
         </View>
 
-        <View style={styles.sectionHeading}>
+        <View style={[styles.sectionHeading, styles.infoSectionHeading]}>
           <AppText weight="bold" style={styles.sectionTitle}>
             Info
           </AppText>
@@ -656,6 +656,7 @@ export default function Profile() {
           onPress={() => setHowItWorksVisible(true)}
           style={({ pressed }) => [
             styles.infoRow,
+            styles.infoLinkRow,
             pressed && styles.actionDimmed,
           ]}
         >
@@ -664,7 +665,7 @@ export default function Profile() {
           </View>
 
           <View style={styles.settingText}>
-            <AppText weight="semibold">How walklog works</AppText>
+            <AppText>How walklog works</AppText>
 
             <AppText style={styles.settingDescription}>
               Learn where processing happens and what syncs.
@@ -763,7 +764,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
     gap: 16,
-    paddingVertical: 32,
+    paddingBottom: 32,
+    paddingTop: 16,
   },
   identityText: { flex: 1, gap: 4 },
   name: { fontSize: 20, lineHeight: 27 },
@@ -793,7 +795,9 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   sectionTitle: { fontSize: 16 },
+  infoSectionHeading: { paddingBottom: 2 },
   settingSection: { gap: 16, paddingBottom: 4 },
+  cacheSection: { marginTop: 12 },
   settingTitleRow: { alignItems: "center", flexDirection: "row", gap: 14 },
   settingIcon: {
     alignItems: "center",
@@ -830,6 +834,7 @@ const styles = StyleSheet.create({
     gap: 14,
     paddingVertical: 14,
   },
+  infoLinkRow: { paddingTop: 6 },
   signOut: { gap: 12, marginTop: 32 },
   modalContainer: { backgroundColor: colors.background, flex: 1 },
   modalHeading: {
