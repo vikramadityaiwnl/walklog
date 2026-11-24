@@ -1,7 +1,15 @@
 import { Image } from "expo-image";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { PlusIcon, XMarkIcon } from "react-native-heroicons/outline";
 import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  PlusIcon,
+  TrashIcon,
+  XMarkIcon,
+} from "react-native-heroicons/outline";
+import {
+  Animated as NativeAnimated,
+  Easing,
   Modal,
   Platform,
   Pressable,
@@ -20,6 +28,7 @@ import Animated, {
 import type { PunchItem } from "../models/walkthrough";
 import { colors } from "../theme";
 import { AppButton } from "./app-button";
+import { AppText } from "./app-text";
 import { AppDialog } from "./app-dialog";
 import { useDialogStore } from "../store/dialog-store";
 
@@ -41,11 +50,21 @@ export function PhotoGallery(props: Props) {
   const reducedMotion = useReducedMotion();
 
   const [viewer, setViewer] = useState<ViewerState>({ status: "closed" });
+  const slideX = useRef(new NativeAnimated.Value(0)).current;
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRemoval = useRef<Photo | null>(null);
   const onRemoved = useRef(props.onRemoved);
   onRemoved.current = props.onRemoved;
 
+  const photosRef = useRef(props.photos);
+  photosRef.current = props.photos;
+
+  const activePhotoIndex =
+    viewer.status === "closed"
+      ? -1
+      : props.photos.findIndex(
+          (photo) => photo.localUri === viewer.photo.localUri,
+        );
   const showDialog = useDialogStore((state) => state.showDialog);
 
   const { width } = useWindowDimensions();
@@ -65,6 +84,7 @@ export function PhotoGallery(props: Props) {
     dismissTimer.current = null;
     const removed = pendingRemoval.current;
     pendingRemoval.current = null;
+    slideX.setValue(0);
     setViewer((current) =>
       current.status === "closing" ? { status: "closed" } : current,
     );
@@ -74,6 +94,8 @@ export function PhotoGallery(props: Props) {
   function closeViewer() {
     if (viewer.status !== "open") return;
 
+    slideX.stopAnimation();
+    slideX.setValue(0);
     setViewer({ status: "closing", photo: viewer.photo });
     if (Platform.OS !== "ios") {
       dismissTimer.current = setTimeout(
@@ -81,6 +103,24 @@ export function PhotoGallery(props: Props) {
         reducedMotion ? 0 : 300,
       );
     }
+  }
+
+  function changePhoto(direction: "previous" | "next") {
+    if (viewer.status !== "open") return;
+
+    const nextIndex = activePhotoIndex + (direction === "next" ? 1 : -1);
+    const photo = photosRef.current[nextIndex];
+    if (!photo) return;
+
+    slideX.stopAnimation();
+    slideX.setValue(direction === "next" ? width : -width);
+    setViewer({ status: "open", photo });
+    NativeAnimated.timing(slideX, {
+      toValue: 0,
+      duration: 260,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
   }
 
   function confirmRemove() {
@@ -183,6 +223,11 @@ export function PhotoGallery(props: Props) {
       >
         <SafeAreaView style={styles.viewer}>
           <View style={styles.viewerHeader}>
+            <AppText style={styles.photoCount}>
+              {Math.max(activePhotoIndex + 1, 1)} of {props.photos.length}{" "}
+              {props.photos.length === 1 ? "image" : "images"}
+            </AppText>
+
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Close photo"
@@ -196,17 +241,61 @@ export function PhotoGallery(props: Props) {
           </View>
 
           {viewer.status !== "closed" ? (
-            <Image
-              source={{ uri: viewer.photo.localUri }}
-              contentFit="contain"
-              style={styles.fullImage}
-            />
+            <View style={styles.fullImage}>
+              <NativeAnimated.View
+                style={[
+                  styles.slideImage,
+                  { transform: [{ translateX: slideX }] },
+                ]}
+              >
+                <Image
+                  source={{ uri: viewer.photo.localUri }}
+                  contentFit="contain"
+                  style={styles.image}
+                />
+              </NativeAnimated.View>
+
+              {activePhotoIndex > 0 ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Previous photo"
+                  disabled={props.busy}
+                  onPress={() => changePhoto("previous")}
+                  style={({ pressed }) => [
+                    styles.navigationButton,
+                    styles.previousButton,
+                    pressed && styles.navigationButtonPressed,
+                  ]}
+                >
+                  <ChevronLeftIcon size={28} color={colors.onAccent} />
+                </Pressable>
+              ) : null}
+
+              {activePhotoIndex >= 0 &&
+              activePhotoIndex < props.photos.length - 1 ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Next photo"
+                  disabled={props.busy}
+                  onPress={() => changePhoto("next")}
+                  style={({ pressed }) => [
+                    styles.navigationButton,
+                    styles.nextButton,
+                    pressed && styles.navigationButtonPressed,
+                  ]}
+                >
+                  <ChevronRightIcon size={28} color={colors.onAccent} />
+                </Pressable>
+              ) : null}
+            </View>
           ) : null}
 
           <View style={styles.viewerActions}>
             <AppButton
               title="Delete photo"
-              variant="danger"
+              variant="secondary"
+              labelColor={colors.onAccent}
+              icon={<TrashIcon size={19} color={colors.onAccent} />}
               disabled={props.busy}
               onPress={confirmRemove}
             />
@@ -232,16 +321,39 @@ const styles = StyleSheet.create({
   },
   viewer: { flex: 1, backgroundColor: "#171717" },
   viewerHeader: {
-    alignItems: "flex-end",
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 8,
   },
+  photoCount: { color: colors.onAccent, fontSize: 14 },
   close: {
     width: 44,
     height: 44,
     alignItems: "center",
     justifyContent: "center",
   },
-  fullImage: { flex: 1, width: "100%" },
-  viewerActions: { paddingHorizontal: 24, paddingVertical: 16 },
+  fullImage: { flex: 1, overflow: "hidden", width: "100%" },
+  slideImage: { flex: 1, width: "100%" },
+  image: { flex: 1, width: "100%" },
+  navigationButton: {
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.42)",
+    borderRadius: 22,
+    height: 44,
+    justifyContent: "center",
+    opacity: 0.78,
+    position: "absolute",
+    top: "50%",
+    transform: [{ translateY: -22 }],
+    width: 44,
+  },
+  navigationButtonPressed: { opacity: 1 },
+  previousButton: { left: 16 },
+  nextButton: { right: 16 },
+  viewerActions: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+  },
 });

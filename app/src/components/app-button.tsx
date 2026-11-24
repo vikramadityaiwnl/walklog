@@ -14,6 +14,7 @@ interface Props {
   variant?: "danger" | "secondary" | "outline";
   accessibilityLabel?: string;
   icon?: ReactNode;
+  labelColor?: string;
 }
 
 export function AppButton(props: Props) {
@@ -39,6 +40,7 @@ export function AppButton(props: Props) {
           styles.label,
           props.variant === "secondary" && styles.secondaryLabel,
           props.variant === "outline" && styles.outlineLabel,
+          props.labelColor ? { color: props.labelColor } : null,
         ]}
       >
         {props.title}

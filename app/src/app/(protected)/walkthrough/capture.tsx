@@ -4,6 +4,7 @@ import * as DocumentPicker from "expo-document-picker";
 import * as Device from "expo-device";
 import * as Network from "expo-network";
 import * as ImagePicker from "expo-image-picker";
+import { VideoView, useVideoPlayer } from "expo-video";
 import { Directory, File, Paths } from "expo-file-system";
 import {
   requestRecordingPermissionsAsync,
@@ -164,6 +165,8 @@ export default function Capture() {
   });
   const [note, setNote] = useState("");
   const [video, setVideo] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const videoPlayer = useVideoPlayer(video?.uri ?? null);
+
   const [error, setError] = useState("");
   const [actionsWidth, setActionsWidth] = useState(0);
 
@@ -1134,17 +1137,12 @@ export default function Capture() {
                 </View>
               </>
             ) : (
-              <View style={styles.section}>
-                <AppText weight="semibold">Video ready</AppText>
-
-                <AppText style={styles.subheading}>
-                  {video.fileName || "Your video is ready to process."}
-                </AppText>
-
-                <AppText style={styles.subheading}>
-                  Processed with cloud AI
-                </AppText>
-              </View>
+              <VideoView
+                player={videoPlayer}
+                style={styles.videoPreview}
+                nativeControls
+                contentFit="contain"
+              />
             )}
           </Animated.View>
         ) : (
@@ -1170,6 +1168,7 @@ export default function Capture() {
         )}
 
         {captureMode === "type" ||
+        (captureMode === "video" && !!video) ||
         (captureMode === "voice" && !!audio && operation.status === "idle") ? (
           <Animated.View
             entering={fadeIn}
@@ -1179,9 +1178,13 @@ export default function Capture() {
           >
             <AppText weight="semibold">Process with</AppText>
 
-            <InferenceSelector requiresAudio={captureMode === "voice"} />
+            <InferenceSelector
+              lockedMode={captureMode === "video" ? "cloud" : undefined}
+              requiresAudio={captureMode === "voice"}
+            />
 
-            {Platform.OS === "android" &&
+            {captureMode !== "video" &&
+            Platform.OS === "android" &&
             mode === "device" &&
             (deviceModel.status === "error" ||
               deviceModel.status === "unavailable") ? (
@@ -1435,6 +1438,13 @@ const styles = StyleSheet.create({
   },
   completedTranscript: { color: colors.foreground },
   voice: { gap: 12 },
+  videoPreview: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+    overflow: "hidden",
+    borderRadius: 14,
+    backgroundColor: colors.accentFaint,
+  },
   initialVoice: { flexGrow: 1 },
   importSection: { gap: 20 },
   importButton: {

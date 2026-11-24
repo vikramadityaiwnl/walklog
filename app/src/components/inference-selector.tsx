@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { Platform } from "react-native";
 import { useNetworkState } from "expo-network";
 import { useShallow } from "zustand/react/shallow";
 import { useDeviceModelStatus } from "./device-model-status";
@@ -7,11 +6,13 @@ import { saveInferencePreference } from "../services/firebase/user-preferences";
 import { useAuthStore } from "../store/auth-store";
 import { useDialogStore } from "../store/dialog-store";
 import { useInferenceStore } from "../store/inference-store";
+import type { InferenceChoice } from "../store/inference-store";
 import { colors } from "../theme";
 import { SegmentedControl } from "./segmented-control";
 
 interface Props {
   align?: "start" | "center";
+  lockedMode?: InferenceChoice;
   requiresAudio?: boolean;
 }
 
@@ -37,13 +38,15 @@ export function InferenceSelector(props: Props) {
 
   useEffect(() => {
     if (preference === "device") {
-      if (localReady === true || Platform.OS === "android") setMode("device");
+      if (localReady === true) setMode("device");
       else if (localReady === false && cloudReady) setMode("cloud");
     } else if (cloudReady) setMode("cloud");
     else if (localReady === true) setMode("device");
   }, [preference, localReady, cloudReady, model.status, setMode]);
 
   function choose(option: "device" | "cloud") {
+    if (props.lockedMode) return;
+
     const ownerId = auth.status === "ready" ? auth.user?.uid : undefined;
     if (!ownerId) return;
 
@@ -60,7 +63,7 @@ export function InferenceSelector(props: Props) {
   return (
     <SegmentedControl
       label="AI processing mode"
-      value={mode}
+      value={props.lockedMode ?? mode}
       onChange={choose}
       align={props.align}
       compact
@@ -71,7 +74,7 @@ export function InferenceSelector(props: Props) {
         return {
           value: option,
           label: option === "device" ? "On device" : "Cloud",
-          disabled: !available,
+          disabled: !!props.lockedMode || !available,
           indicatorColor: available ? colors.success : colors.muted,
         };
       })}
