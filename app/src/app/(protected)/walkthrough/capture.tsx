@@ -608,7 +608,6 @@ export default function Capture() {
     recording.current.prefix = "";
     setNote("");
     setVideo(null);
-    setCaptureMode("video");
     setError("");
   }
 
