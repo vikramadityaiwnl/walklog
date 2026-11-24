@@ -4,6 +4,10 @@ walklog is an offline-first mobile app for construction and property walkthrough
 
 The app uses Firebase AI Logic for on-device and cloud AI, Firebase Authentication for Google sign-in, Cloud Firestore for records and offline synchronization, Cloud Storage for photos, and App Check to protect Firebase services. It is an iOS and Android app built with Expo and React Native.
 
+## Hackathon
+
+walklog was built for [#BuildHybridAI 2026](https://firebasehybridaihackathon.devpost.com/). It uses Firebase AI Logic to process walkthrough observations with on-device and cloud AI.
+
 ## How AI works
 
 walklog uses Firebase AI Logic for both on-device and cloud inference. It turns notes into structured items and can refine those items. Cloud processing uses `gemini-3.1-flash-lite` through the Gemini Developer API and requires an internet connection. Photo refinement is available in cloud mode and, on supported Android devices, with one photo in on-device mode.
