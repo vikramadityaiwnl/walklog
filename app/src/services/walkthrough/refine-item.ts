@@ -30,7 +30,7 @@ export async function refineItem(
     priority: item.priority ?? null,
     notes: item.rawTranscript,
   };
-  const prompt = `Refine this single property inspection item. Preserve the facts and do not invent details. Suggest a short checklist of distinct, practical next steps appropriate to the issue. If no photo is provided, keep advice generic and do not claim visual inspection. Return only JSON with issueSummary, location, trade, priority (High, Medium, Low or null), and actions (an array of concise strings). Use null for unknown trade or priority. Item: ${JSON.stringify(details)}`;
+  const prompt = `You refine a single property inspection punch item. Preserve the reported facts and do not invent damage, dimensions, materials, locations, or repairs. Produce a short checklist of concrete physical repair or corrective work that resolves the observed issue, not administrative steps such as contacting a contractor, obtaining quotes, or making a list. For example, a broken fence that needs repair could have the action "Repair the damaged fence"; do not assume which parts or materials need replacing. Use the photo only if one is supplied, and do not claim to have inspected a photo otherwise. If the issue or intended corrective work is too unclear to suggest a specific physical action without guessing, return status "needs_context", an empty actions array, and a brief message asking the user to add the missing context. Otherwise return status "ready" and at least one action. Return only JSON with status ("ready" or "needs_context"), message (string or null), issueSummary, location, trade, priority (High, Medium, Low or null), and actions (array of concise strings). Use null for unknown trade or priority. Item: ${JSON.stringify(details)}`;
   const temporaryUris: string[] = [];
   try {
     const photos = !refinementUsesPhoto(mode)
@@ -104,6 +104,11 @@ export async function refineItem(
     if (!value || typeof value !== "object")
       throw new Error("Invalid response");
     const record = value as Record<string, unknown>;
+    if (record.status === "needs_context")
+      throw new Error(
+        "There isn’t enough context to suggest a repair. Add more detail about the issue and what needs to be fixed, then try again.",
+      );
+
     const actions = Array.isArray(record.actions)
       ? record.actions
           .filter(
@@ -116,11 +121,14 @@ export async function refineItem(
         ? [record.recommendedAction.trim()]
         : [];
     if (
+      record.status !== "ready" ||
       typeof record.issueSummary !== "string" ||
       !record.issueSummary.trim() ||
       !actions.length
     )
-      throw new Error("Invalid response");
+      throw new Error(
+        "Couldn’t suggest a clear repair. Add more detail about the issue and try again.",
+      );
 
     return {
       issueSummary: record.issueSummary.trim(),

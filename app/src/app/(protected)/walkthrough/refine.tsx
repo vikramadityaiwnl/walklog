@@ -12,6 +12,7 @@ import { AppText } from "../../../components/app-text";
 import { AppButton } from "../../../components/app-button";
 import { LoadingState } from "../../../components/loading-state";
 import { ErrorState } from "../../../components/error-state";
+import { EmptyState } from "../../../components/empty-state";
 import { InferenceSelector } from "../../../components/inference-selector";
 import { useAuthStore } from "../../../store/auth-store";
 import { useInferenceStore } from "../../../store/inference-store";
@@ -180,40 +181,14 @@ export default function RefineItem() {
     );
   }
 
-  if (
-    screen.status === "error" ||
-    (screen.status === "ready" && screen.message)
-  ) {
-    const message =
-      screen.status === "error"
-        ? screen.message
-        : (screen.message ?? "Please try again.");
-
+  if (screen.status === "error") {
     return (
       <ErrorState
         title="Couldn’t refine item"
-        description={message}
-        actions={
-          screen.status === "ready"
-            ? [
-                {
-                  title: "Back",
-                  variant: "secondary",
-                  onPress: () => router.back(),
-                },
-                {
-                  title: "Try again",
-                  onPress: () => setScreen({ ...screen, message: undefined }),
-                },
-              ]
-            : [
-                {
-                  title: "Back",
-                  variant: "secondary",
-                  onPress: () => router.back(),
-                },
-              ]
-        }
+        description={screen.message}
+        actions={[
+          { title: "Back", variant: "secondary", onPress: () => router.back() },
+        ]}
       />
     );
   }
@@ -235,6 +210,17 @@ export default function RefineItem() {
               Review the updated details before applying them.
             </AppText>
           </View>
+
+          <View style={styles.reviewDivider} />
+
+          {screen.message ? (
+            <EmptyState
+              variant="error"
+              inline
+              title="Couldn’t save refinement"
+              description={screen.message}
+            />
+          ) : null}
 
           <View style={styles.reviewSection}>
             <AppText weight="semibold" style={styles.reviewTitle}>
@@ -277,7 +263,11 @@ export default function RefineItem() {
             <View style={styles.reviewChecklist}>
               {result.actions.map((action, index) => (
                 <View key={`${index}-${action}`} style={styles.reviewAction}>
-                  <View style={styles.checkbox} />
+                  <View
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ disabled: true, checked: false }}
+                    style={styles.checkbox}
+                  />
 
                   <AppText style={styles.checklistText}>{action}</AppText>
                 </View>
@@ -323,6 +313,15 @@ export default function RefineItem() {
 
         {screen.status === "ready" ? (
           <>
+            {screen.message ? (
+              <EmptyState
+                variant="error"
+                inline
+                title="Couldn’t refine item"
+                description={screen.message}
+              />
+            ) : null}
+
             <View style={styles.section}>
               <InferenceSelector />
 
@@ -454,6 +453,7 @@ const styles = StyleSheet.create({
     gap: 32,
   },
   reviewIntro: { gap: 8 },
+  reviewDivider: { borderTopWidth: 1, borderTopColor: colors.border },
   reviewSection: { gap: 12 },
   reviewTitle: { fontSize: 17, lineHeight: 24 },
   reviewChecklist: { gap: 4 },
@@ -514,6 +514,8 @@ const styles = StyleSheet.create({
     height: 22,
     borderWidth: 1,
     borderColor: colors.border,
+    backgroundColor: colors.neutralSoft,
+    opacity: 0.6,
     borderRadius: 11,
     marginTop: 1,
   },
