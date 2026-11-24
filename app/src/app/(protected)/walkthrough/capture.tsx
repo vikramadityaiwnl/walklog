@@ -712,7 +712,6 @@ export default function Capture() {
             label="Capture mode"
             value={captureMode}
             onChange={setCaptureMode}
-            disabled={operation.status !== "idle"}
             fullWidth
             options={[
               { value: "voice", label: "Voice" },

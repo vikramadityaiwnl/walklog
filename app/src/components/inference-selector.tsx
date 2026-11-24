@@ -72,7 +72,6 @@ export function InferenceSelector(props: Props) {
           value: option,
           label: option === "device" ? "On device" : "Cloud",
           disabled: !available,
-          muted: !available,
           indicatorColor: available ? colors.success : colors.muted,
         };
       })}
