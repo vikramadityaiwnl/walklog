@@ -13,7 +13,6 @@ interface Segment<T extends string> {
   value: T;
   label: string;
   disabled?: boolean;
-  muted?: boolean;
   indicatorColor?: string;
 }
 
@@ -24,7 +23,6 @@ interface Props<T extends string> {
   onChange: (value: T) => void;
   fullWidth?: boolean;
   align?: "start" | "center";
-  disabled?: boolean;
   compact?: boolean;
 }
 
@@ -77,7 +75,7 @@ export function SegmentedControl<T extends string>(props: Props<T>) {
       />
 
       {props.options.map((option) => {
-        const disabled = !!props.disabled || !!option.disabled;
+        const disabled = !!option.disabled;
 
         return (
           <Pressable
@@ -122,7 +120,7 @@ export function SegmentedControl<T extends string>(props: Props<T>) {
               weight="semibold"
               style={[
                 props.compact && styles.compactLabel,
-                (option.disabled || option.muted) && styles.disabled,
+                disabled && styles.disabled,
               ]}
             >
               {option.label}

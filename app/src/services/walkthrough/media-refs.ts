@@ -1,11 +1,14 @@
 import * as FileSystem from "expo-file-system/legacy";
 
 const directory = `${FileSystem.documentDirectory}walkthrough-photos/`;
+export const frameDirectory = `${FileSystem.documentDirectory}walklog/frames/`;
 
 export function localMediaId(uri?: string): string | undefined {
   if (!uri || !uri.startsWith("file://")) return undefined;
 
-  const match = uri.match(/\/walkthrough-photos\/([a-zA-Z0-9-]+)\.jpg$/);
+  const match = uri.match(
+    /\/(?:walkthrough-photos|frames)\/([a-zA-Z0-9-]+)\.jpg$/,
+  );
 
   return match?.[1];
 }
@@ -13,7 +16,7 @@ export function localMediaId(uri?: string): string | undefined {
 export function localMediaUri(id: string): string {
   if (!/^[a-zA-Z0-9-]+$/.test(id)) throw new Error("Invalid image ID");
 
-  return `${directory}${id}.jpg`;
+  return `${id.startsWith("frame-") ? frameDirectory : directory}${id}.jpg`;
 }
 
 export function isRemoteMedia(uri?: string): uri is string {

@@ -27,6 +27,13 @@
     },
     "plugins": [
       "expo-audio",
+      [
+        "expo-file-system",
+        {
+          "supportsOpeningDocumentsInPlace": true,
+          "enableFileSharing": true
+        }
+      ],
       "expo-router",
       "@react-native-firebase/app",
       "@react-native-firebase/app-check",
@@ -56,8 +63,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow walklog to attach site photos to items.",
-          "cameraPermission": "Allow walklog to photograph site issues.",
+          "photosPermission": "Allow walklog to select walkthrough photos and videos.",
+          "cameraPermission": "Allow walklog to photograph or record site issues.",
           "microphonePermission": "Allow walklog to record your site walkthrough."
         }
       ]
