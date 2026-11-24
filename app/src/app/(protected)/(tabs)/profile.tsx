@@ -12,7 +12,9 @@ import {
   ArrowDownTrayIcon,
   CloudArrowUpIcon,
   CloudIcon,
+  ChevronRightIcon,
   CpuChipIcon,
+  FolderIcon,
   InformationCircleIcon,
   MicrophoneIcon,
   TrashIcon,
@@ -42,6 +44,7 @@ import {
   getTemporaryCacheSize,
 } from "../../../services/device-cache";
 import { signOutUser } from "../../../services/firebase/google-sign-in";
+import { openSavedFiles } from "../../../services/saved-files";
 import { useShallow } from "zustand/react/shallow";
 import {
   deleteWhisperModel,
@@ -217,6 +220,17 @@ export default function Profile() {
         },
       ],
     );
+  }
+
+  async function showSavedFiles() {
+    try {
+      await openSavedFiles();
+    } catch (cause) {
+      showDialog(
+        "Couldn’t open saved files",
+        cause instanceof Error ? cause.message : "Please try again.",
+      );
+    }
   }
 
   function clearCache() {
@@ -572,6 +586,29 @@ export default function Profile() {
             Storage & cache
           </AppText>
         </View>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => void showSavedFiles()}
+          style={({ pressed }) => [
+            styles.infoRow,
+            pressed && styles.actionDimmed,
+          ]}
+        >
+          <View style={styles.settingIcon}>
+            <FolderIcon size={20} color={colors.accent} />
+          </View>
+
+          <View style={styles.settingText}>
+            <AppText weight="semibold">Saved files</AppText>
+
+            <AppText style={styles.settingDescription}>
+              Audio, photos and video frames
+            </AppText>
+          </View>
+
+          <ChevronRightIcon size={20} color={colors.muted} />
+        </Pressable>
 
         <View style={styles.settingSection}>
           <View style={styles.settingTitleRow}>

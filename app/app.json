@@ -27,6 +27,13 @@
     },
     "plugins": [
       "expo-audio",
+      [
+        "expo-file-system",
+        {
+          "supportsOpeningDocumentsInPlace": true,
+          "enableFileSharing": true
+        }
+      ],
       "expo-router",
       "@react-native-firebase/app",
       "@react-native-firebase/app-check",
