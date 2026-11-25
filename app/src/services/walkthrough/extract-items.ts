@@ -70,14 +70,7 @@ async function extractChunk(
     mode,
   );
 
-  return parseItems(result.text, note);
-}
-
-function normalizeEvidence(text: string): string {
-  return text
-    .toLocaleLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim();
+  return parseItems(result.text);
 }
 
 function capitalizeWords(text: string): string {
@@ -90,11 +83,15 @@ function capitalizeWords(text: string): string {
     );
 }
 
-export function parseItems(text: string, note?: string): ExtractedItem[] {
-  const json = text
+export function parseItems(text: string): ExtractedItem[] {
+  const cleaned = text
     .replace(/^```(?:json)?\s*/i, "")
     .replace(/\s*```$/, "")
     .trim();
+  const start = cleaned.indexOf("[");
+  const end = cleaned.lastIndexOf("]");
+  const json =
+    start >= 0 && end > start ? cleaned.slice(start, end + 1) : cleaned;
   let parsed: unknown;
   try {
     parsed = JSON.parse(json);
@@ -114,14 +111,6 @@ export function parseItems(text: string, note?: string): ExtractedItem[] {
     const item = value as Record<string, unknown>;
     if (typeof item.issueSummary !== "string" || !item.issueSummary.trim())
       return [];
-
-    if (note !== undefined) {
-      const excerpt =
-        typeof item.sourceExcerpt === "string"
-          ? normalizeEvidence(item.sourceExcerpt)
-          : "";
-      if (!excerpt || !normalizeEvidence(note).includes(excerpt)) return [];
-    }
 
     return [
       {
