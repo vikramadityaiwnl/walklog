@@ -17,7 +17,27 @@ interface VideoItem extends ExtractedItem {
   photos: { localUri: string }[];
 }
 
-const prompt = `Analyze this walkthrough video and its audio for distinct, actionable property or site issues. Do not invent defects or details. Return only a JSON array. Each object must contain issueSummary, location, trade, priority, missingInfoHint, and timestamps. Use null for unknown fields. Priority must be High, Medium, Low, or null. timestamps must be an array of up to two numbers in seconds from the start of the video provided, showing the issue clearly. If the issue is not visibly shown, return an empty timestamps array. If there are no actionable issues, return [].`;
+const prompt = `Analyze this walkthrough video and its audio for distinct, actionable property or site issues. Do not invent defects or details. Return only a JSON array. Each object must contain issueSummary, location, trade, priority, missingInfoHint, and frames. Use null for unknown fields. Priority must be High, Medium, Low, or null. frames must be an array of up to two objects showing the issue clearly. Each frame must have time, a number in seconds from the start of the video provided, and box, an array [ymin, xmin, ymax, xmax] with coordinates normalized from 0 to 1000 relative to the full frame. The box should encompass only the issue with enough surrounding context to understand it. If the issue cannot be localized, use null for box. If the issue is not visibly shown, return an empty frames array. If there are no actionable issues, return [].`;
+
+function cropForFrame(box: unknown, width: number, height: number) {
+  if (
+    !Array.isArray(box) ||
+    box.length !== 4 ||
+    !box.every((value) => typeof value === "number" && Number.isFinite(value))
+  )
+    return null;
+
+  const [top, left, bottom, right] = box.map((value) =>
+    Math.max(0, Math.min(1000, value)),
+  );
+  const originX = Math.floor((left / 1000) * width);
+  const originY = Math.floor((top / 1000) * height);
+  const cropWidth = Math.ceil((right / 1000) * width) - originX;
+  const cropHeight = Math.ceil((bottom / 1000) * height) - originY;
+  if (cropWidth < 1 || cropHeight < 1) return null;
+
+  return { originX, originY, width: cropWidth, height: cropHeight };
+}
 
 interface VideoNativeModule {
   isVideoCameraAvailable(): Promise<boolean>;
@@ -157,10 +177,17 @@ export async function extractVideoItems(
       if (!item) continue;
 
       const record = value as Record<string, unknown>;
-      const times = Array.isArray(record.timestamps) ? record.timestamps : [];
+      const frames = Array.isArray(record.frames)
+        ? record.frames
+        : Array.isArray(record.timestamps)
+          ? record.timestamps.map((time) => ({ time }))
+          : [];
       const photos: { localUri: string }[] = [];
 
-      for (const time of times.slice(0, 2)) {
+      for (const frame of frames.slice(0, 2)) {
+        if (!frame || typeof frame !== "object") continue;
+
+        const { time, box } = frame as Record<string, unknown>;
         if (
           typeof time !== "number" ||
           !Number.isFinite(time) ||
@@ -182,7 +209,17 @@ export async function extractVideoItems(
 
           const context =
             ImageManipulator.ImageManipulator.manipulate(thumbnail);
-          const image = await context.renderAsync();
+          const crop = cropForFrame(box, thumbnail.width, thumbnail.height);
+          let image;
+          try {
+            if (crop) context.crop(crop);
+            image = await context.renderAsync();
+          } catch {
+            image =
+              await ImageManipulator.ImageManipulator.manipulate(
+                thumbnail,
+              ).renderAsync();
+          }
           const saved = await image.saveAsync({
             compress: 0.85,
             format: ImageManipulator.SaveFormat.JPEG,
@@ -204,7 +241,7 @@ export async function extractVideoItems(
         } catch {}
       }
 
-      if (times.length && !photos.length) frameFailures.count += 1;
+      if (frames.length && !photos.length) frameFailures.count += 1;
 
       items.push({ ...item, photos });
     }
