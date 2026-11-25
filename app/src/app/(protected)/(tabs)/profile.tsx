@@ -1,7 +1,6 @@
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -26,13 +25,13 @@ import Animated, {
   LinearTransition,
   ReduceMotion,
   useAnimatedStyle,
-  useReducedMotion,
   withTiming,
 } from "react-native-reanimated";
 import { router, useFocusEffect } from "expo-router";
 import { AppButton } from "../../../components/app-button";
 import { AppHeader } from "../../../components/app-header";
 import { AppText } from "../../../components/app-text";
+import { HowWalklogWorks } from "../../../components/how-walklog-works";
 import { Avatar } from "../../../components/avatar";
 import { Badge } from "../../../components/badge";
 import { useDeviceModelStatus } from "../../../components/device-model-status";
@@ -76,8 +75,6 @@ type CacheState =
   | { status: "error"; bytes: number; message: string };
 
 export default function Profile() {
-  const reducedMotion = useReducedMotion();
-
   const auth = useAuthStore((state) => state.auth);
 
   const { pendingChanges, deletionsPending, deletionError } = useFirestoreStore(
@@ -489,7 +486,9 @@ export default function Profile() {
                   <AppText style={styles.settingDescription}>
                     {deviceModel.progress?.total
                       ? `Downloading ${formatBytes(deviceModel.progress.bytes)} of ${formatBytes(deviceModel.progress.total)}`
-                      : "Preparing download…"}
+                      : deviceModel.progress?.bytes
+                        ? `Downloaded ${formatBytes(deviceModel.progress.bytes)}`
+                        : "Android is preparing or downloading the model."}
                   </AppText>
                 </View>
               ) : null}
@@ -684,73 +683,10 @@ export default function Profile() {
         </View>
       </ScrollView>
 
-      <Modal
+      <HowWalklogWorks
         visible={howItWorksVisible}
-        animationType={reducedMotion ? "none" : "slide"}
-        onRequestClose={() => setHowItWorksVisible(false)}
-      >
-        <SafeAreaView style={styles.modalContainer} edges={["top", "bottom"]}>
-          <View style={styles.modalHeading}>
-            <AppText variant="title" style={styles.modalTitle}>
-              How walklog works
-            </AppText>
-
-            <AppText style={styles.settingDescription}>
-              Choose how AI runs; walklog keeps your saved records available
-              offline.
-            </AppText>
-          </View>
-
-          <ScrollView contentContainerStyle={styles.modalContent}>
-            <View style={styles.infoCard}>
-              <AppText weight="semibold">1. Transcribe on your device</AppText>
-
-              <AppText style={styles.infoDescription}>
-                Whisper converts recordings to text locally. The audio is not
-                sent to the transcription model in the cloud.
-              </AppText>
-            </View>
-
-            <View style={styles.infoCard}>
-              <AppText weight="semibold">
-                2. Choose where AI inference runs
-              </AppText>
-
-              <AppText style={styles.infoDescription}>
-                On-device inference keeps the AI prompt on this device. Cloud
-                inference sends the prompt and any selected media to Firebase AI
-                for processing.
-              </AppText>
-            </View>
-
-            <View style={styles.infoCard}>
-              <AppText weight="semibold">3. Sync your walklog data</AppText>
-
-              <AppText style={styles.infoDescription}>
-                Saved walkthroughs sync to your Firestore account. Attached
-                photos sync separately to Firebase Storage. Offline edits are
-                queued and sync when you reconnect.
-              </AppText>
-            </View>
-
-            <View style={styles.infoCard}>
-              <AppText weight="semibold">4. Clear only temporary files</AppText>
-
-              <AppText style={styles.infoDescription}>
-                Clearing the app cache removes temporary files, while keeping
-                saved records and Firestore’s offline cache intact.
-              </AppText>
-            </View>
-          </ScrollView>
-
-          <View style={styles.modalFooter}>
-            <AppButton
-              title="Done"
-              onPress={() => setHowItWorksVisible(false)}
-            />
-          </View>
-        </SafeAreaView>
-      </Modal>
+        onClose={() => setHowItWorksVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -836,21 +772,4 @@ const styles = StyleSheet.create({
   },
   infoLinkRow: { paddingTop: 6 },
   signOut: { gap: 12, marginTop: 32 },
-  modalContainer: { backgroundColor: colors.background, flex: 1 },
-  modalHeading: {
-    gap: 6,
-    paddingHorizontal: 24,
-    paddingTop: 22,
-    paddingBottom: 18,
-  },
-  modalTitle: { fontSize: 26, lineHeight: 34 },
-  modalContent: { gap: 12, paddingHorizontal: 24, paddingBottom: 24 },
-  infoCard: {
-    backgroundColor: colors.accentFaint,
-    borderRadius: 14,
-    gap: 8,
-    padding: 16,
-  },
-  infoDescription: { color: colors.muted, fontSize: 14, lineHeight: 21 },
-  modalFooter: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 12 },
 });

@@ -104,7 +104,9 @@ export function DeviceModelBanner() {
             <AppText style={styles.description}>
               {model.progress?.total
                 ? `Downloading ${formatBytes(model.progress.bytes)} of ${formatBytes(model.progress.total)}`
-                : "Preparing the model on this device."}
+                : model.progress?.bytes
+                  ? `Downloaded ${formatBytes(model.progress.bytes)}`
+                  : "Android is preparing or downloading the model."}
             </AppText>
           ) : null}
         </View>

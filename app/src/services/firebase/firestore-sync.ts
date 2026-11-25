@@ -27,8 +27,6 @@ export function observeFirestore(ownerId: string): () => void {
         useFirestoreStore
           .getState()
           .setPending([...pendingCollections.values()].some(Boolean));
-        if (snapshot.docChanges().length)
-          useFirestoreStore.getState().notifyChange();
         const store = useFirestoreStore.getState();
         if (name === "projects")
           store.setProjects(
@@ -56,6 +54,8 @@ export function observeFirestore(ownerId: string): () => void {
               readItem({ ...entry.data(), id: entry.id } as StoredItem),
             ),
           );
+        if (snapshot.docChanges().length)
+          useFirestoreStore.getState().notifyChange();
       },
       () => {
         useDialogStore

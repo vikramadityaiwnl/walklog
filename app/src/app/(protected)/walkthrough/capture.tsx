@@ -608,7 +608,6 @@ export default function Capture() {
     recording.current.prefix = "";
     setNote("");
     setVideo(null);
-    setCaptureMode("video");
     setError("");
   }
 
@@ -1038,6 +1037,8 @@ export default function Capture() {
                 </View>
 
                 <TextInput
+                  selectionColor={colors.accent}
+                  cursorColor={colors.accent}
                   ref={transcriptInput}
                   accessibilityLabel="Transcript"
                   multiline
@@ -1046,6 +1047,7 @@ export default function Capture() {
                   onChangeText={(transcript) =>
                     setVoice((current) => ({ ...current, transcript }))
                   }
+                  placeholderTextColor={colors.muted}
                   placeholder={
                     muted ? "Microphone muted" : "Your words will appear here"
                   }
@@ -1156,11 +1158,14 @@ export default function Capture() {
             <AppText weight="semibold">Walkthrough notes</AppText>
 
             <TextInput
+              selectionColor={colors.accent}
+              cursorColor={colors.accent}
               accessibilityLabel="Walkthrough notes"
               multiline
               editable={operation.status === "idle"}
               value={note}
               onChangeText={setNote}
+              placeholderTextColor={colors.muted}
               placeholder="Describe what needs attention"
               style={[styles.input, styles.multiline]}
             />

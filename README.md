@@ -1,14 +1,34 @@
+<a href="submission/walklog-v1.mp4">
+  <img src="submission/thumbnail.png" alt="walklog: turn site observations into actionable punch lists" width="640" />
+</a>
+
 # walklog
 
-walklog is an offline-first mobile app for construction and property walkthroughs. It turns typed or spoken observations into structured punch-list items, lets users attach photos and track work, and produces a report to share. It is built for people who need to document issues on site, including when their connection is unreliable.
+walklog is an offline-first mobile app for construction and property walkthroughs. It turns typed, spoken, or video walkthrough observations into structured punch-list items, lets users attach photos and track work, and produces a report to share. It is built for people who need to document issues on site, including when their connection is unreliable.
 
 The app uses Firebase AI Logic for on-device and cloud AI, Firebase Authentication for Google sign-in, Cloud Firestore for records and offline synchronization, Cloud Storage for photos, and App Check to protect Firebase services. It is an iOS and Android app built with Expo and React Native.
+
+## Hackathon
+
+walklog was built for [#BuildHybridAI 2026](https://firebasehybridaihackathon.devpost.com/). It uses Firebase AI Logic to process walkthrough observations with on-device and cloud AI.
+
+[Watch the walklog demo](submission/walklog-v1.mp4)
+
+### Demo media
+
+The demo uses AI-generated sample imagery and a fictional property. Try the same walkthrough media in the app:
+
+- [Kitchen walkthrough video](submission/references/kitch-walkthrough.mp4)
+- [Kitchen walkthrough image](submission/references/kitchen-walkthrough.png)
+- [Exterior wall image](submission/references/outdoor-walkthrough.png)
 
 ## How AI works
 
 walklog uses Firebase AI Logic for both on-device and cloud inference. It turns notes into structured items and can refine those items. Cloud processing uses `gemini-3.1-flash-lite` through the Gemini Developer API and requires an internet connection. Photo refinement is available in cloud mode and, on supported Android devices, with one photo in on-device mode.
 
 Voice capture uses a separate Whisper tiny multilingual model (about 78 MB) for on-device transcription. The app offers a download when it is needed.
+
+Video capture analyzes recorded or imported video and its audio using cloud AI to identify issues and select and crop relevant video frames as photos. It requires an internet connection. Review the resulting items and photos before saving them.
 
 Firebase AI Logic hybrid inference is experimental; see the [iOS](https://firebase.google.com/docs/ai-logic/hybrid/ios/get-started) and [Android](https://firebase.google.com/docs/ai-logic/hybrid/android/get-started) documentation.
 
@@ -24,7 +44,7 @@ This project uses custom native modules, Firebase native SDKs, and `whisper.rn`.
 
 ## Set up Firebase
 
-Use your own Firebase project for development. The repository contains Firebase app configuration files for the original project; they identify that project and are not a reusable authorization grant. Replace **both** files before building, even when building only iOS: the JavaScript sign-in code reads the web OAuth client ID from the Android configuration.
+Use your own Firebase project for development. Firebase app configuration files are not included in the repository. Add **both** files before building, even when building only iOS: the JavaScript sign-in code reads the web OAuth client ID from the Android configuration.
 
 1. Create a Firebase project. Register an Android app and an iOS app in that **same** project. Their identifiers must match `expo.android.package` and `expo.ios.bundleIdentifier` in [`app/app.json`](app/app.json); both currently default to `com.thevikramaditya.walklog`. If you change either identifier, register and download matching Firebase app configurations.
 2. In **Authentication → Sign-in method**, enable Google. Set the support email and configure the Google OAuth consent screen/audience as needed; add test users if your consent screen is in testing mode. For Android Google sign-in, register the SHA-1 of the certificate used to sign the build in Firebase Project Settings. Include the appropriate debug, release, or Play App Signing certificate for each build you distribute.
@@ -91,17 +111,18 @@ For Android sign-in with the default local debug keystore, you can obtain its SH
 keytool -list -v -alias androiddebugkey -keystore "$HOME/.android/debug.keystore" -storepass android -keypass android
 ```
 
-The debug keystore is usually created by the first Android debug build. If it does not exist yet, build once, register the SHA-1 in Firebase, download the updated `google-services.json`, and rebuild. A different signing key has a different fingerprint.
+The debug keystore is usually created by the first Android debug build. If it does not exist yet, build once, register the SHA-1 in Firebase, download the updated `google-services.json`, and rebuild. Your generated Android project may use a different keystore; run `cd android && ./gradlew :app:signingReport` from `app/` to check the certificate actually configured for the app. A different signing key has a different fingerprint.
 
-The checked-in Expo configuration also contains the original owner's EAS project and update URL. Local native development does not require access to that EAS project. If you intend to use EAS Build or Updates under your own account, configure your own project, signing credentials, channels, and update URL instead of publishing to the existing project. See [Expo EAS](https://docs.expo.dev/eas/).
+The checked-in Expo configuration also contains the original owner's EAS project and update URL. Local native development does not require access to that EAS project. If you intend to use EAS Build or Updates under your own account, configure your own project, signing credentials, channels, and update URL instead of publishing to the existing project. The ignored Firebase configuration files must also be supplied to EAS Build; see [Expo's guidance for ignored files](https://docs.expo.dev/build-reference/easignore/). See [Expo EAS](https://docs.expo.dev/eas/).
 
 ## Try the app
 
 1. Start online and sign in with a Google account. Create a project or a walkthrough.
 2. Open a walkthrough and add notes. For a quick text test, use: “The kitchen tap is leaking. The living room window has a cracked pane.” Select an available processing mode and create items.
 3. For voice, download the transcription model when prompted, record or import audio, and review the transcript before creating items.
-4. Open an item, edit it, add a photo, and try refinement. Choose cloud processing to include photos on iOS. Generate and share a report from the walkthrough.
-5. To exercise offline behavior, first sign in, make the relevant data available locally, and ensure the on-device model is ready. Disconnect and make changes; reconnect to allow pending records and photos to sync. First sign-in, initial model downloads, cloud AI, and synchronization require connectivity.
+4. For video, record or import a walkthrough, connect to the internet, and create items. Review the identified issues and selected photos. Recording requires a device with a camera; on the iOS simulator, import a video instead.
+5. Open an item, edit it, add a photo, and try refinement. Choose cloud processing to include photos on iOS. Generate and share a report from the walkthrough.
+6. To exercise offline behavior, first sign in, make the relevant data available locally, and ensure the on-device model is ready. Disconnect and make changes; reconnect to allow pending records and photos to sync. First sign-in, initial model downloads, cloud AI, and synchronization require connectivity.
 
 On-device AI availability depends on the device and its settings. Cloud processing is available when online. Generated AI results can be imperfect; review items and suggested actions before sharing.
 

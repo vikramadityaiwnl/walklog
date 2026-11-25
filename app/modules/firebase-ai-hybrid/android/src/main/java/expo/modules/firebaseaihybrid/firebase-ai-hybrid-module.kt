@@ -29,7 +29,7 @@ import java.util.UUID
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 
@@ -162,18 +162,23 @@ class FirebaseAiHybridModule : Module() {
       val extension = model().onDeviceExtension
         ?: throw IllegalStateException("On-device AI is unavailable.")
       var total = 0L
-      extension.download().collect { status ->
+      extension.download().first { status ->
         when (status) {
           is DownloadStatus.DownloadStarted -> {
             total = status.bytesToDownload
             sendEvent("onModelDownloadProgress", mapOf("bytes" to 0.0, "total" to total.toDouble()))
+            false
           }
-          is DownloadStatus.DownloadInProgress -> sendEvent(
-            "onModelDownloadProgress",
-            mapOf("bytes" to status.totalBytesDownloaded.toDouble(), "total" to total.toDouble()),
-          )
+          is DownloadStatus.DownloadInProgress -> {
+            sendEvent(
+              "onModelDownloadProgress",
+              mapOf("bytes" to status.totalBytesDownloaded.toDouble(), "total" to total.toDouble()),
+            )
+            false
+          }
           is DownloadStatus.DownloadFailed -> throw status.exception
-          else -> Unit
+          is DownloadStatus.DownloadCompleted -> true
+          else -> false
         }
       }
       if (extension.checkStatus() != OnDeviceModelStatus.AVAILABLE) {

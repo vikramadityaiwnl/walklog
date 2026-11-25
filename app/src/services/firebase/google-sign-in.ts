@@ -24,6 +24,9 @@ export async function signInWithGoogle(): Promise<void> {
   });
   if (!hasPlayServices)
     throw new Error("Google Play services are unavailable.");
+
+  await GoogleSignin.signOut();
+
   const response = await GoogleSignin.signIn();
 
   if (!isSuccessResponse(response)) return;

@@ -149,6 +149,8 @@ export function ProjectPicker(props: Props) {
                   <AppText weight="semibold">Project name</AppText>
 
                   <TextInput
+                    selectionColor={colors.accent}
+                    cursorColor={colors.accent}
                     accessibilityLabel="Project name"
                     value={state.name}
                     onChangeText={(name) =>

@@ -341,6 +341,8 @@ export default function WalkthroughEdit() {
                 </AppText>
 
                 <TextInput
+                  selectionColor={colors.accent}
+                  cursorColor={colors.accent}
                   accessibilityLabel="Walkthrough name"
                   value={draft.title}
                   onChangeText={(title) =>
@@ -349,6 +351,7 @@ export default function WalkthroughEdit() {
                       draft: { ...current.draft, title },
                     }))
                   }
+                  placeholderTextColor={colors.muted}
                   placeholder="e.g. Apartment 4B"
                   style={styles.input}
                 />
@@ -360,6 +363,8 @@ export default function WalkthroughEdit() {
                 </AppText>
 
                 <TextInput
+                  selectionColor={colors.accent}
+                  cursorColor={colors.accent}
                   accessibilityLabel="Client"
                   value={draft.clientName}
                   onChangeText={(clientName) =>
@@ -368,6 +373,7 @@ export default function WalkthroughEdit() {
                       draft: { ...current.draft, clientName },
                     }))
                   }
+                  placeholderTextColor={colors.muted}
                   placeholder="Client name"
                   style={styles.input}
                 />
@@ -379,6 +385,8 @@ export default function WalkthroughEdit() {
                 </AppText>
 
                 <TextInput
+                  selectionColor={colors.accent}
+                  cursorColor={colors.accent}
                   accessibilityLabel="Address"
                   value={draft.address}
                   onChangeText={(address) =>
@@ -387,6 +395,7 @@ export default function WalkthroughEdit() {
                       draft: { ...current.draft, address },
                     }))
                   }
+                  placeholderTextColor={colors.muted}
                   placeholder="Site address"
                   style={styles.input}
                 />
