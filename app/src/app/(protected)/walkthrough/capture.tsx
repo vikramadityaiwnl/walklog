@@ -1047,6 +1047,7 @@ export default function Capture() {
                   onChangeText={(transcript) =>
                     setVoice((current) => ({ ...current, transcript }))
                   }
+                  placeholderTextColor={colors.muted}
                   placeholder={
                     muted ? "Microphone muted" : "Your words will appear here"
                   }
@@ -1164,6 +1165,7 @@ export default function Capture() {
               editable={operation.status === "idle"}
               value={note}
               onChangeText={setNote}
+              placeholderTextColor={colors.muted}
               placeholder="Describe what needs attention"
               style={[styles.input, styles.multiline]}
             />

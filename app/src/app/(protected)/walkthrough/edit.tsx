@@ -351,6 +351,7 @@ export default function WalkthroughEdit() {
                       draft: { ...current.draft, title },
                     }))
                   }
+                  placeholderTextColor={colors.muted}
                   placeholder="e.g. Apartment 4B"
                   style={styles.input}
                 />
@@ -372,6 +373,7 @@ export default function WalkthroughEdit() {
                       draft: { ...current.draft, clientName },
                     }))
                   }
+                  placeholderTextColor={colors.muted}
                   placeholder="Client name"
                   style={styles.input}
                 />
@@ -393,6 +395,7 @@ export default function WalkthroughEdit() {
                       draft: { ...current.draft, address },
                     }))
                   }
+                  placeholderTextColor={colors.muted}
                   placeholder="Site address"
                   style={styles.input}
                 />

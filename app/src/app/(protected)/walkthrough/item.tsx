@@ -445,6 +445,7 @@ export default function ItemEdit() {
                       draft: { ...current.draft, description },
                     }))
                   }
+                  placeholderTextColor={colors.muted}
                   placeholder="What needs attention?"
                   style={[styles.input, styles.multiline]}
                 />
@@ -466,6 +467,7 @@ export default function ItemEdit() {
                       draft: { ...current.draft, location },
                     }))
                   }
+                  placeholderTextColor={colors.muted}
                   placeholder="e.g. Kitchen"
                   style={styles.input}
                 />
@@ -487,6 +489,7 @@ export default function ItemEdit() {
                       draft: { ...current.draft, trade: trade || undefined },
                     }))
                   }
+                  placeholderTextColor={colors.muted}
                   placeholder="e.g. Plumbing"
                   style={styles.input}
                 />

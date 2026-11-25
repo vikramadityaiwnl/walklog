@@ -291,6 +291,7 @@ export default function ProjectEdit() {
                   accessibilityLabel="Project name"
                   value={form.name}
                   onChangeText={(name) => setForm({ ...form, name })}
+                  placeholderTextColor={colors.muted}
                   placeholder="e.g. Apartment renovation"
                   style={styles.input}
                 />
