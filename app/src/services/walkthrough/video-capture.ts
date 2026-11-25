@@ -165,15 +165,13 @@ export async function extractVideoItems(
           typeof time !== "number" ||
           !Number.isFinite(time) ||
           time < 0 ||
-          time >= duration
-        ) {
-          frameFailures.count += 1;
+          time > duration
+        )
           continue;
-        }
 
         try {
           const [thumbnail] = await player.generateThumbnailsAsync(
-            time + offset,
+            Math.min(time, Math.max(0, duration - 0.05)) + offset,
             {
               maxWidth: 1600,
               maxHeight: 1600,
@@ -203,10 +201,10 @@ export async function extractVideoItems(
 
           staged.push(photo);
           photos.push(photo);
-        } catch {
-          frameFailures.count += 1;
-        }
+        } catch {}
       }
+
+      if (times.length && !photos.length) frameFailures.count += 1;
 
       items.push({ ...item, photos });
     }
