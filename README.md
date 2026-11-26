@@ -1,4 +1,4 @@
-<a href="submission/walklog-v1.mp4">
+<a href="submission/walklog-v2.mp4">
   <img src="submission/thumbnail.png" alt="walklog: turn site observations into actionable punch lists" width="640" />
 </a>
 
@@ -12,7 +12,7 @@ The app uses Firebase AI Logic for on-device and cloud AI, Firebase Authenticati
 
 walklog was built for [#BuildHybridAI 2026](https://firebasehybridaihackathon.devpost.com/). It uses Firebase AI Logic to process walkthrough observations with on-device and cloud AI.
 
-[Watch the walklog demo](submission/walklog-v1.mp4)
+[Watch the walklog demo](submission/walklog-v2.mp4)
 
 ### Demo media
 
